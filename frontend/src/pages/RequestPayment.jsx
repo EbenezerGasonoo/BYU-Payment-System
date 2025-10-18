@@ -91,7 +91,8 @@ function RequestPayment() {
       totalPaidGHS,
       exchangeRate,
       byuId: formData.byuId,
-      studentName: localStorage.getItem('userName') || 'Student'
+      studentName: localStorage.getItem('userName') || 'Student',
+      studentEmail: localStorage.getItem('userEmail') || ''
     });
     setShowPayment(true);
   };

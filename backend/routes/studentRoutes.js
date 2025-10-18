@@ -234,21 +234,24 @@ router.post('/payment-failed', async (req, res) => {
 // Initiate Hubtel Payment
 router.post('/initiate-hubtel-payment', async (req, res) => {
   try {
-    const { phoneNumber, amount, paymentReference, studentName } = req.body;
+    const { phoneNumber, amount, paymentReference, studentName, studentEmail } = req.body;
 
     console.log('🎯 Initiating Hubtel payment request:', {
       phoneNumber,
       amount,
       paymentReference,
-      studentName
+      studentName,
+      studentEmail
     });
 
-    // Initiate Hubtel payment
+    // Initiate Hubtel payment with customer details
     const result = await initiatePayment(
       phoneNumber,
       amount,
       paymentReference,
-      `BYU Payment - ${studentName || 'Student'}`
+      `BYU Virtual Card Payment - ${studentName || 'Student'}`,
+      studentName || 'Student',
+      studentEmail || ''
     );
 
     if (result.success) {

@@ -36,7 +36,8 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
           phoneNumber,
           amount: totalPaidGHS,
           paymentReference,
-          studentName: studentName || 'Student'
+          studentName: studentName || 'Student',
+          studentEmail: studentEmail || ''
         });
 
         if (response.success) {

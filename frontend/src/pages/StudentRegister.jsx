@@ -40,6 +40,8 @@ function StudentRegister() {
       setMessage({ type: 'success', text: response.message });
       localStorage.setItem('hasRegistered', 'true');
       localStorage.setItem('userByuId', formData.byuId);
+      localStorage.setItem('userName', formData.name);
+      localStorage.setItem('userEmail', formData.email);
       
       // Show success and guide to next step
       setTimeout(() => {
