@@ -206,7 +206,23 @@ BYU-Payment-System/
 - `start-frontend.bat` - Starts the frontend development server
 
 ### Production Deployment
-- Deploy backend to Heroku, Railway, or similar
+This project includes **automatic deployment** with GitHub Actions:
+
+- **Frontend:** Deploys to Vercel automatically
+- **Backend:** Deploys to Railway automatically
+- **Database:** Uses MongoDB Atlas for production
+- **CI/CD:** Every push to main branch triggers deployment
+
+#### Quick Setup:
+1. **Fork/Clone** this repository
+2. **Set up accounts:** Vercel + Railway + MongoDB Atlas
+3. **Configure secrets** in GitHub repository settings
+4. **Push to main branch** - automatic deployment starts!
+
+📖 **Detailed deployment guide:** See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete setup instructions.
+
+#### Manual Deployment:
+- Deploy backend to Railway, Heroku, or similar
 - Deploy frontend to Vercel, Netlify, or similar
 - Configure environment variables for production
 - Set up MongoDB Atlas for cloud database
