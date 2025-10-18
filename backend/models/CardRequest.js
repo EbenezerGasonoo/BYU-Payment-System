@@ -10,6 +10,22 @@ const cardRequestSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  amountInGHS: {
+    type: Number,
+    required: true
+  },
+  exchangeRate: {
+    type: Number,
+    required: true
+  },
+  chargebackFee: {
+    type: Number,
+    default: 5 // 5% fee
+  },
+  totalPaidGHS: {
+    type: Number,
+    required: true
+  },
   purpose: {
     type: String,
     default: 'School Fees Payment'
@@ -18,6 +34,24 @@ const cardRequestSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'assigned', 'paid', 'expired', 'declined'],
     default: 'pending'
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['unpaid', 'pending', 'paid', 'failed'],
+    default: 'unpaid'
+  },
+  paymentReference: {
+    type: String,
+    default: null
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['momo', 'card', 'bank', 'cash', null],
+    default: null
+  },
+  paymentVerifiedAt: {
+    type: Date,
+    default: null
   },
   requestToken: {
     type: String,

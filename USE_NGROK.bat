@@ -11,7 +11,7 @@ echo.
 if exist ngrok.exe (
     echo ✅ Ngrok found!
     echo.
-    echo Starting tunnel on port 5175...
+    echo Starting tunnel on port 5173...
     echo.
     echo ════════════════════════════════════════════════════════════
     echo  SHARE THE URL THAT APPEARS BELOW:

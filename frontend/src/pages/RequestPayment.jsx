@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { studentAPI } from '../api/api';
 import { useNavigate } from 'react-router-dom';
+import HubtelPayment from '../components/HubtelPayment';
 
 function RequestPayment() {
   const [formData, setFormData] = useState({
@@ -16,6 +17,8 @@ function RequestPayment() {
   const [exchangeRate, setExchangeRate] = useState(15.50); // Default GHS to USD rate
   const [rateLastUpdated, setRateLastUpdated] = useState(null);
   const [fetchingRate, setFetchingRate] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
   const CHARGE_FEE_PERCENT = 5; // 5% chargeback fee
   const navigate = useNavigate();
 
@@ -75,36 +78,74 @@ function RequestPayment() {
       return;
     }
 
+    // Calculate payment details
+    const amount = parseFloat(formData.amount);
+    const amountInGHS = amount * exchangeRate;
+    const totalPaidGHS = amountInGHS * (1 + CHARGE_FEE_PERCENT / 100);
+
+    // Show payment modal
+    setPaymentData({
+      amount,
+      amountInGHS,
+      totalPaidGHS,
+      exchangeRate,
+      byuId: formData.byuId
+    });
+    setShowPayment(true);
+  };
+
+  const handlePaymentSuccess = async (paymentReference, paymentMethod) => {
+    setShowPayment(false);
     setLoading(true);
     setMessage({ type: '', text: '' });
-    setRequestToken('');
 
     try {
-      const response = await studentAPI.requestCard({
+      // First create the card request with payment pending
+      const amount = parseFloat(formData.amount);
+      const amountInGHS = amount * exchangeRate;
+      const totalPaidGHS = amountInGHS * (1 + CHARGE_FEE_PERCENT / 100);
+
+      const requestResponse = await studentAPI.requestCard({
         byuId: formData.byuId,
-        amount: parseFloat(formData.amount)
+        amount,
+        amountInGHS,
+        exchangeRate,
+        totalPaidGHS,
+        paymentMethod
       });
 
-      setMessage({ type: 'success', text: response.message });
-      setRequestToken(response.data.requestToken);
+      // Then verify the payment
+      const verifyResponse = await studentAPI.verifyPayment({
+        paymentReference: requestResponse.data.paymentReference,
+        hubtelReference: paymentReference // This would be from Hubtel callback in production
+      });
+
+      setMessage({ type: 'success', text: verifyResponse.message });
+      setRequestToken(verifyResponse.data.requestToken);
       localStorage.setItem('hasRequestedCard', 'true');
       
       // Guide to next step
       setTimeout(() => {
-        if (confirm('Request submitted! Admin will be notified. Would you like to check your dashboard?')) {
+        if (confirm('Payment verified! Your card request has been submitted. Would you like to check your dashboard?')) {
           navigate('/dashboard');
         }
       }, 3000);
       
       setFormData({ byuId: formData.byuId, amount: '' });
+      setTermsAccepted(false);
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error.response?.data?.message || 'Request failed'
+        text: error.response?.data?.message || 'Payment verification failed. Please contact admin with your payment reference.'
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPayment(false);
+    setPaymentData(null);
   };
 
   return (
@@ -319,8 +360,11 @@ function RequestPayment() {
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loading || !termsAccepted}>
-            {loading ? 'Submitting...' : 'Submit Request'}
+            {loading ? 'Processing...' : 'Proceed to Payment'}
           </button>
+          <p className="small-text" style={{ marginTop: '0.5rem', textAlign: 'center', color: '#666' }}>
+            💳 You will be redirected to Hubtel to complete payment
+          </p>
         </form>
       </div>
 
@@ -425,6 +469,15 @@ function RequestPayment() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Hubtel Payment Modal */}
+      {showPayment && paymentData && (
+        <HubtelPayment
+          paymentData={paymentData}
+          onSuccess={handlePaymentSuccess}
+          onCancel={handlePaymentCancel}
+        />
       )}
     </div>
   );

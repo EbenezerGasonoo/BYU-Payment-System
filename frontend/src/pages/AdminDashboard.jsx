@@ -183,7 +183,31 @@ function AdminDashboard() {
                   <p><strong>BYU ID:</strong> {request.student.byuId}</p>
                   <p><strong>Email:</strong> {request.student.email}</p>
                   <p><strong>Phone:</strong> {request.student.phone}</p>
-                  <p><strong>Amount:</strong> GHS {request.amount}</p>
+                  <p><strong>Amount (USD):</strong> ${request.amount}</p>
+                  {request.amountInGHS && (
+                    <>
+                      <p><strong>Amount (GHS):</strong> GHS {request.amountInGHS.toFixed(2)}</p>
+                      <p><strong>Total Paid:</strong> GHS {request.totalPaidGHS.toFixed(2)} <small>(incl. {request.chargebackFee}% fee)</small></p>
+                      <p><strong>Exchange Rate:</strong> 1 USD = {request.exchangeRate.toFixed(2)} GHS</p>
+                    </>
+                  )}
+                  {request.paymentStatus && (
+                    <p>
+                      <strong>Payment:</strong>{' '}
+                      <span className={`badge ${
+                        request.paymentStatus === 'paid' ? 'badge-success' :
+                        request.paymentStatus === 'pending' ? 'badge-warning' :
+                        request.paymentStatus === 'failed' ? 'badge-danger' :
+                        'badge-secondary'
+                      }`}>
+                        {request.paymentStatus.toUpperCase()}
+                      </span>
+                      {request.paymentMethod && ` via ${request.paymentMethod.toUpperCase()}`}
+                    </p>
+                  )}
+                  {request.paymentReference && (
+                    <p><strong>Payment Ref:</strong> <code style={{fontSize: '0.85rem', background: 'rgba(255,184,28,0.1)', padding: '0.25rem 0.5rem', borderRadius: '4px'}}>{request.paymentReference}</code></p>
+                  )}
                   <p><strong>Requested:</strong> {formatDate(request.createdAt)}</p>
 
                   {request.status === 'assigned' && (

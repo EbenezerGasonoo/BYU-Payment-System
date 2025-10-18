@@ -31,6 +31,16 @@ export const studentAPI = {
     return response.data;
   },
 
+  verifyPayment: async (data) => {
+    const response = await axios.post(`${API_BASE_URL}/student/verify-payment`, data);
+    return response.data;
+  },
+
+  paymentFailed: async (data) => {
+    const response = await axios.post(`${API_BASE_URL}/student/payment-failed`, data);
+    return response.data;
+  },
+
   getDashboard: async (byuId) => {
     const response = await axios.get(`${API_BASE_URL}/student/dashboard/${byuId}`);
     return response.data;

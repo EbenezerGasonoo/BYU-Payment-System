@@ -62,16 +62,16 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Request virtual card
+// Request virtual card (with payment)
 router.post('/request-card', async (req, res) => {
   try {
-    const { byuId, amount } = req.body;
+    const { byuId, amount, amountInGHS, exchangeRate, totalPaidGHS, paymentMethod } = req.body;
 
     // Validate required fields
-    if (!byuId || !amount) {
+    if (!byuId || !amount || !amountInGHS || !exchangeRate || !totalPaidGHS || !paymentMethod) {
       return res.status(400).json({
         success: false,
-        message: 'BYU Student ID and amount are required'
+        message: 'All payment details are required'
       });
     }
 
@@ -92,46 +92,136 @@ router.post('/request-card', async (req, res) => {
       });
     }
 
-    // Check if student has a pending or assigned request
+    // Check if student has a pending or assigned request with unpaid/pending payment
     const existingRequest = await CardRequest.findOne({
       student: student._id,
-      status: { $in: ['pending', 'assigned'] }
+      status: { $in: ['pending', 'assigned'] },
+      paymentStatus: { $in: ['unpaid', 'pending'] }
     });
 
     if (existingRequest) {
       return res.status(400).json({
         success: false,
-        message: 'You already have a pending or active card request',
+        message: 'You already have a pending payment or active card request',
         data: existingRequest
       });
     }
 
-    // Generate unique request token
+    // Generate unique request token and payment reference
     const requestToken = crypto.randomBytes(8).toString('hex').toUpperCase();
+    const paymentReference = `BYU-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
-    // Create card request
+    // Create card request with payment pending
     const cardRequest = new CardRequest({
       student: student._id,
       amount,
-      requestToken
+      amountInGHS,
+      exchangeRate,
+      totalPaidGHS,
+      requestToken,
+      paymentReference,
+      paymentMethod,
+      paymentStatus: 'pending',
+      status: 'pending'
     });
     await cardRequest.save();
 
-    // Send notification to admin
-    await notifyAdminNewRequest(student, cardRequest);
-
     res.status(201).json({
       success: true,
-      message: 'Card request submitted successfully. Admin will be notified.',
+      message: 'Payment initiated. Please complete payment to submit card request.',
       data: {
         requestToken,
+        paymentReference,
         amount,
+        amountInGHS,
+        totalPaidGHS,
+        paymentMethod,
         status: cardRequest.status,
+        paymentStatus: cardRequest.paymentStatus,
         createdAt: cardRequest.createdAt
       }
     });
   } catch (error) {
     console.error('Error requesting card:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Verify payment and complete card request
+router.post('/verify-payment', async (req, res) => {
+  try {
+    const { paymentReference, hubtelReference } = req.body;
+
+    if (!paymentReference) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment reference is required'
+      });
+    }
+
+    // Find the card request
+    const cardRequest = await CardRequest.findOne({ paymentReference }).populate('student');
+    if (!cardRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment reference not found'
+      });
+    }
+
+    // Update payment status to paid
+    cardRequest.paymentStatus = 'paid';
+    cardRequest.paymentVerifiedAt = new Date();
+    if (hubtelReference) {
+      cardRequest.paymentReference = hubtelReference; // Store Hubtel's reference
+    }
+    await cardRequest.save();
+
+    // Send notification to admin about paid request
+    await notifyAdminNewRequest(cardRequest.student, cardRequest);
+
+    res.json({
+      success: true,
+      message: 'Payment verified successfully! Your card request has been submitted to admin.',
+      data: {
+        requestToken: cardRequest.requestToken,
+        paymentStatus: cardRequest.paymentStatus,
+        status: cardRequest.status,
+        amount: cardRequest.amount,
+        totalPaidGHS: cardRequest.totalPaidGHS
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Mark payment as failed
+router.post('/payment-failed', async (req, res) => {
+  try {
+    const { paymentReference, reason } = req.body;
+
+    const cardRequest = await CardRequest.findOne({ paymentReference });
+    if (cardRequest) {
+      cardRequest.paymentStatus = 'failed';
+      cardRequest.status = 'declined';
+      await cardRequest.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment status updated'
+    });
+  } catch (error) {
+    console.error('Error updating payment status:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
