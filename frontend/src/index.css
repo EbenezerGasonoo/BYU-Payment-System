@@ -1,0 +1,117 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #002E5D 0%, #003D82 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated gradient background with floating orbs */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(255, 184, 28, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(0, 46, 93, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 40% 90%, rgba(255, 184, 28, 0.12) 0%, transparent 50%);
+  animation: gradientShift 20s ease infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Floating orbs for extra visual interest */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 60% 20%, rgba(255, 184, 28, 0.18) 0%, transparent 40%),
+    radial-gradient(circle at 10% 80%, rgba(0, 46, 93, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 90% 50%, rgba(255, 184, 28, 0.15) 0%, transparent 40%);
+  animation: orbFloat 25s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1) rotate(0deg);
+  }
+  33% {
+    opacity: 0.8;
+    transform: scale(1.05) rotate(2deg);
+  }
+  66% {
+    opacity: 0.7;
+    transform: scale(1.08) rotate(-2deg);
+  }
+}
+
+@keyframes orbFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  33% {
+    transform: translate(30px, -30px) scale(1.1);
+    opacity: 0.7;
+  }
+  66% {
+    transform: translate(-20px, 40px) scale(0.95);
+    opacity: 0.6;
+  }
+}
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: -webkit-fill-available; /* iOS Safari */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* Safe area support for mobile (notches, etc) */
+@supports (padding: max(0px)) {
+  .navbar .container,
+  .container,
+  .help-button-container,
+  .progress-indicator {
+    padding-left: max(1.25rem, env(safe-area-inset-left));
+    padding-right: max(1.25rem, env(safe-area-inset-right));
+  }
+
+  .help-button-container {
+    bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+
+  .footer {
+    padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+  }
+}
+

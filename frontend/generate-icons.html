@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Icon Generator</title>
+</head>
+<body>
+  <h2>Generate PWA Icons</h2>
+  <p>This will generate placeholder icons. Right-click each canvas and "Save image as..." to the public/icons/ folder.</p>
+  
+  <div id="icons"></div>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const container = document.getElementById('icons');
+
+    sizes.forEach(size => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Gradient background - BYU Pathway official colors
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#002E5D');
+      gradient.addColorStop(1, '#003D82');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      // Yellow circle (BYU Pathway signature color)
+      ctx.fillStyle = '#FFB81C';
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      // BYU text in navy
+      ctx.fillStyle = '#002E5D';
+      ctx.font = `bold ${size * 0.25}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('BYU', size / 2, size / 2);
+
+      // Card icon in navy
+      ctx.strokeStyle = '#002E5D';
+      ctx.lineWidth = size * 0.02;
+      ctx.strokeRect(size * 0.25, size * 0.65, size * 0.5, size * 0.2);
+
+      const wrapper = document.createElement('div');
+      wrapper.style.display = 'inline-block';
+      wrapper.style.margin = '10px';
+      wrapper.style.textAlign = 'center';
+
+      const label = document.createElement('p');
+      label.textContent = `icon-${size}x${size}.png`;
+      label.style.fontSize = '12px';
+
+      wrapper.appendChild(canvas);
+      wrapper.appendChild(label);
+      container.appendChild(wrapper);
+
+      // Auto-download
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon-${size}x${size}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    });
+
+    console.log('✅ Icons generated! Check your downloads folder.');
+    console.log('📁 Move them to: frontend/public/icons/');
+  </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    canvas {
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+  </style>
+</body>
+</html>
+

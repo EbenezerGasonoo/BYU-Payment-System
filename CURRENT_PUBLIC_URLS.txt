@@ -1,0 +1,92 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║   🌍 YOUR APP'S PUBLIC ACCESS URLS                                         ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+📡 LOCALTUNNEL URLS (Active):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  https://six-plants-wash.loca.lt
+  
+  ⚠️ PASSWORD REQUIRED on first visit
+  
+  The password is shown in the terminal where the tunnel is running.
+  Look for: "Tunnel Password: xxxxxxxx"
+  
+  OR check the background process output.
+
+
+🔓 LOCALTUNNEL PASSWORD WORKAROUND:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  The password is typically the public IP of your tunnel.
+  
+  Try visiting: https://six-plants-wash.loca.lt
+  
+  On the password page, click "Click to Continue"
+  
+  OR look for the password in your running terminal.
+
+
+🔥 BETTER SOLUTION - USE NGROK:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  NO PASSWORD SCREEN!
+  
+  Download: https://ngrok.com/download
+  Setup:    3 minutes
+  Result:   https://your-unique-id.ngrok-free.app
+  
+  See: SETUP_NGROK_GUIDE.txt for instructions
+
+
+💻 LOCAL ACCESS (No password ever):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Your Computer:
+    http://localhost:5175
+  
+  Same WiFi Network:
+    http://192.168.100.9:5175
+  
+  Backend API:
+    http://localhost:3000
+
+
+🎯 RECOMMENDED NEXT STEPS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FOR QUICK SHARING (3 min):
+    → Download ngrok
+    → Follow SETUP_NGROK_GUIDE.txt
+    → Get password-free URL!
+  
+  FOR PRODUCTION (5 min):
+    → Deploy to Vercel
+    → Get permanent URL
+    → No tunnels needed!
+
+
+📞 QUICK HELP:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ❓ Want NO password?
+     → Use ngrok or deploy to Vercel
+  
+  ❓ Can't find localtunnel password?
+     → Check the terminal where npx localtunnel is running
+     → Or just use ngrok instead
+  
+  ❓ Want permanent URL?
+     → Deploy to Vercel: npx vercel --prod
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║  BEST SOLUTION: Download ngrok (takes 3 minutes)                           ║
+║  https://ngrok.com/download                                                ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+
