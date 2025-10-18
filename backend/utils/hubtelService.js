@@ -1,7 +1,8 @@
 const axios = require('axios');
 
-// Hubtel Direct Debit Money API Configuration
-const HUBTEL_API_BASE = process.env.HUBTEL_API_BASE || 'https://api.hubtel.com/v1/merchantaccount';
+// Hubtel Online Checkout API Configuration
+// Using Online Checkout because Direct Debit endpoints return 520 error
+const HUBTEL_CHECKOUT_URL = process.env.HUBTEL_CHECKOUT_URL || 'https://payproxyapi.hubtel.com/items/initiate';
 const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_API_KEY; // API Key is the Client Secret
 const HUBTEL_CLIENT_ID = process.env.HUBTEL_API_ID; // API ID is the Client ID
 
@@ -49,19 +50,27 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
     console.log('📤 Hubtel Direct Debit payload:', payload);
     console.log('📱 Sending payment prompt to:', formattedPhone);
 
-    // Hubtel Direct Debit endpoint: POST /request-money/{mobileNumber}
+    // Hubtel Online Checkout request body format
+    const requestBody = {
+      totalAmount: amount,
+      description: description || 'BYU Virtual Card Payment',
+      callbackUrl: `${process.env.API_URL || 'https://byupay.up.railway.app'}/api/student/hubtel-callback`,
+      returnUrl: `${process.env.FRONTEND_URL || 'https://byupay.vercel.app'}/dashboard`,
+      cancellationUrl: `${process.env.FRONTEND_URL || 'https://byupay.vercel.app'}/request`,
+      merchantAccountNumber: HUBTEL_CLIENT_ID,
+      clientReference: paymentReference,
+      // Customer details
+      payeeName: customerName,
+      payeeMobileNumber: formattedPhone,
+      payeeEmail: customerEmail || ''
+    };
+
+    console.log('📡 Using Hubtel Online Checkout (tested working endpoint)');
+    console.log('📦 Request body:', requestBody);
+
     const response = await axios.post(
-      `${HUBTEL_API_BASE}/merchants/${HUBTEL_CLIENT_ID}/receive/mobilemoney`,
-      {
-        CustomerName: customerName,
-        CustomerMsisdn: formattedPhone,
-        CustomerEmail: customerEmail || '',
-        Channel: 'mtn-gh', // Will be auto-detected by Hubtel based on phone number
-        Amount: amount,
-        PrimaryCallbackUrl: `${process.env.API_URL || 'https://byupay.up.railway.app'}/api/student/hubtel-callback`,
-        Description: description || 'BYU Virtual Card Payment',
-        ClientReference: paymentReference
-      },
+      HUBTEL_CHECKOUT_URL,
+      requestBody,
       {
         headers: {
           'Authorization': `Basic ${authToken}`,
@@ -73,14 +82,16 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
 
     console.log('✅ Hubtel Direct Debit response:', response.data);
 
-    // Hubtel Direct Debit returns different response structure
-    if (response.data && (response.data.ResponseCode === '0000' || response.data.Status === 'Success')) {
+    // Hubtel Online Checkout response structure
+    if (response.data && response.data.responseCode === '0000') {
       return {
         success: true,
         data: {
-          transactionId: response.data.TransactionId || response.data.Data?.TransactionId,
+          checkoutId: response.data.data?.checkoutId,
+          checkoutUrl: response.data.data?.checkoutUrl,
+          checkoutDirectUrl: response.data.data?.checkoutDirectUrl,
           status: 'pending',
-          message: 'Payment prompt sent to customer phone'
+          message: 'Redirect customer to checkout URL'
         }
       };
     } else {

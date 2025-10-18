@@ -41,13 +41,15 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
         });
 
         if (response.success) {
-          // Show instructions - prompt sent to phone
-          setShowInstructions(true);
           setMessage({
             type: 'success',
-            text: `Payment prompt sent to ${phoneNumber}! Check your phone now.`
+            text: 'Redirecting to Hubtel payment page...'
           });
-          setProcessing(false);
+
+          // Redirect to Hubtel checkout URL
+          setTimeout(() => {
+            window.location.href = response.data.checkoutUrl;
+          }, 1500);
         } else {
           setMessage({
             type: 'error',

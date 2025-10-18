@@ -255,20 +255,21 @@ router.post('/initiate-hubtel-payment', async (req, res) => {
     );
 
     if (result.success) {
-      // Update card request with Hubtel transaction ID
+      // Update card request with Hubtel checkout ID
       const cardRequest = await CardRequest.findOne({ paymentReference });
       if (cardRequest) {
-        cardRequest.hubtelCheckoutId = result.data.transactionId; // Store transaction ID
+        cardRequest.hubtelCheckoutId = result.data.checkoutId;
         await cardRequest.save();
       }
 
       res.json({
         success: true,
-        message: 'Payment prompt sent to customer phone',
+        message: 'Payment checkout ready',
         data: {
-          transactionId: result.data.transactionId,
-          status: result.data.status,
-          message: result.data.message
+          checkoutId: result.data.checkoutId,
+          checkoutUrl: result.data.checkoutUrl,
+          checkoutDirectUrl: result.data.checkoutDirectUrl,
+          status: result.data.status
         }
       });
     } else {
