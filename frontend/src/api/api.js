@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Use Railway backend in production, proxy in development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.MODE === 'production' 
+    ? 'https://byupay.up.railway.app/api' 
+    : '/api');
 
 // Student API calls
 export const studentAPI = {
