@@ -41,15 +41,13 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
         });
 
         if (response.success) {
+          // Show instructions - prompt sent to phone
+          setShowInstructions(true);
           setMessage({
             type: 'success',
-            text: 'Redirecting to Hubtel payment page...'
+            text: `Payment prompt sent to ${phoneNumber}! Check your phone now.`
           });
-
-          // Redirect to Hubtel checkout URL
-          setTimeout(() => {
-            window.location.href = response.data.checkoutUrl;
-          }, 1500);
+          setProcessing(false);
         } else {
           setMessage({
             type: 'error',
@@ -179,24 +177,44 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
 
             {paymentMethod === 'momo-hubtel' && (
               <div className="instruction-card">
-                <h4>📱 Mobile Money (Hubtel)</h4>
-                <p style={{ marginBottom: '1rem', color: '#28a745', fontWeight: '600' }}>
-                  🚀 Automated payment via Hubtel - You will receive a prompt on your phone
-                </p>
+                <h4>📱 Mobile Money Payment Prompt Sent!</h4>
+                <div style={{ background: 'rgba(40, 167, 69, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>
+                  <p style={{ marginBottom: '0.5rem', color: '#28a745', fontWeight: '700', fontSize: '1.2rem' }}>
+                    ✅ Payment prompt sent to {phoneNumber}
+                  </p>
+                  <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
+                    Check your phone NOW!
+                  </p>
+                </div>
+                
+                <h4 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>What to do now:</h4>
                 <ol>
-                  <li>A payment request will be sent to <strong>{phoneNumber}</strong></li>
-                  <li>Check your phone for the MoMo prompt</li>
-                  <li>You will see a pending payment of <strong>GHS {totalPaidGHS.toFixed(2)}</strong></li>
-                  <li>Enter your MOMO PIN to approve the payment</li>
-                  <li>You will receive a confirmation SMS</li>
-                  <li>Your card request will be automatically submitted to admin</li>
+                  <li><strong>Check your phone ({phoneNumber})</strong> for a payment notification</li>
+                  <li>You should receive a <strong>MoMo prompt</strong> asking you to approve GHS {totalPaidGHS.toFixed(2)}</li>
+                  <li><strong>Approve the payment</strong> by entering your MOMO PIN</li>
+                  <li>You will receive an <strong>SMS confirmation</strong></li>
+                  <li>Your card request will be <strong>automatically submitted to admin</strong></li>
                 </ol>
+
+                <div style={{ background: 'rgba(255, 184, 28, 0.1)', padding: '1rem', borderRadius: '8px', marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+                  <p style={{ margin: 0, color: '#856404', fontWeight: '600', fontSize: '0.95rem' }}>
+                    💡 <strong>Didn't receive the prompt?</strong>
+                  </p>
+                  <ul style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
+                    <li>Check if you have network signal</li>
+                    <li>Make sure your phone number is correct: {phoneNumber}</li>
+                    <li>Wait a few seconds and check again</li>
+                    <li>The prompt should appear automatically</li>
+                  </ul>
+                </div>
+
                 <div className="payment-reference">
                   <strong>Payment Reference:</strong>
                   <code>{paymentReference}</code>
                 </div>
+                
                 <p className="warning" style={{ marginTop: '1rem' }}>
-                  ⏰ The payment prompt will expire in 2 minutes. Please approve promptly.
+                  ⏰ <strong>Important:</strong> The payment prompt will expire in 2 minutes. Please approve promptly to avoid timeout.
                 </p>
               </div>
             )}
