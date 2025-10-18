@@ -1,292 +1,244 @@
-# 🎓 BYU Pathway Ghana Virtual Card Payment Platform
+# 🎓 BYU Pathway Ghana Virtual Card Payment System
 
-A full-stack educational demo platform that allows Ghanaian BYU students without Visa cards to request temporary virtual cards for school fee payments. Cards are assigned by administrators and automatically expire after 12 hours.
+A modern, full-stack web application designed to help BYU Pathway Ghanaian students pay their school fees using virtual cards. This platform provides a seamless payment experience with real-time currency conversion, live chat support, and an intuitive admin dashboard.
 
-## 📋 Features
+## 🌟 Features
 
-- **Student Registration** - Students register with name, BYU ID, email, and phone
-- **Card Request System** - Students request virtual cards for specific payment amounts
-- **Admin Dashboard** - Administrators can approve requests and assign virtual cards
-- **Email Notifications** - Automated emails for request confirmations and card assignments
-- **Auto-Expiry** - Cards automatically expire 12 hours after assignment
-- **Mock Card Generation** - System can generate mock card numbers for testing
+### For Students
+- **Student Registration** - Easy signup with BYU Pathway email validation
+- **Virtual Card Requests** - Request USD virtual cards for school fee payments
+- **Live Currency Conversion** - Real-time USD to GHS exchange rates with 5% chargeback fee
+- **Terms & Agreement** - Clear terms and conditions for card usage
+- **Student Dashboard** - Track card requests and status
+- **Live Chat Support** - Real-time assistance from administrators
+- **Mobile Responsive** - Works perfectly on all devices
+- **PWA Support** - Install as a mobile app
 
-## 🛠️ Tech Stack
+### For Administrators
+- **Admin Dashboard** - Manage student requests and assign virtual cards
+- **Live Chat Management** - Respond to student inquiries in real-time
+- **Email Notifications** - Automated email alerts for new requests
+- **Card Management** - Generate and assign virtual cards with 4-6 hour expiry
+- **Request Tracking** - Monitor all student requests and their status
 
-### Backend
-- **Node.js** + **Express** - REST API
-- **MongoDB** - Database
-- **Mongoose** - ODM
-- **Nodemailer** - Email notifications (Gmail)
-- **node-cron** - Scheduled tasks for card expiry
-- **dotenv** - Environment configuration
+## 🛠️ Technology Stack
 
 ### Frontend
-- **React 18** - UI framework
-- **Vite** - Build tool
-- **React Router** - Navigation
-- **Axios** - HTTP client
+- **React 18** - Modern UI framework
+- **Vite** - Fast build tool and dev server
+- **React Router** - Client-side routing
+- **Socket.IO Client** - Real-time communication
+- **Axios** - HTTP client for API calls
+- **CSS3** - Modern styling with animations
 
-## 📁 Project Structure
+### Backend
+- **Node.js** - JavaScript runtime
+- **Express.js** - Web framework
+- **MongoDB** - NoSQL database
+- **Socket.IO** - Real-time bidirectional communication
+- **Nodemailer** - Email service
+- **Cron Jobs** - Automated tasks
 
-```
-byu-virtual-card-system/
-├── backend/
-│   ├── models/           # MongoDB schemas
-│   ├── routes/           # API endpoints
-│   ├── utils/            # Email service & cron jobs
-│   ├── config/           # Database configuration
-│   ├── server.js         # Main server file
-│   ├── package.json      # Backend dependencies
-│   └── .env.example      # Environment template
-└── frontend/
-    ├── src/
-    │   ├── pages/        # React page components
-    │   ├── api/          # API service layer
-    │   ├── App.jsx       # Main app component
-    │   ├── App.css       # Styling
-    │   └── main.jsx      # Entry point
-    ├── package.json      # Frontend dependencies
-    ├── vite.config.js    # Vite configuration
-    └── index.html        # HTML template
-```
+### Additional Features
+- **PWA (Progressive Web App)** - Mobile app capabilities
+- **Live Exchange Rate API** - Real-time currency conversion
+- **Email Service** - Automated notifications
+- **Responsive Design** - Mobile-first approach
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-
-- **Node.js** (v16 or higher)
-- **MongoDB** (running locally or remote)
-- **Gmail Account** (for email notifications)
+- Node.js (v16 or higher)
+- MongoDB (local or cloud)
+- Git
 
 ### Installation
 
-1. **Clone or navigate to the project directory:**
-```bash
-cd "I:\Projects\BYU Payment System"
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd BYU-Payment-System
+   ```
+
+2. **Install backend dependencies**
+   ```bash
+   cd backend
+   npm install
+   ```
+
+3. **Install frontend dependencies**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+
+4. **Set up environment variables**
+   
+   Create `backend/.env` file:
+   ```env
+   PORT=3000
+   MONGODB_URI=mongodb://localhost:27017/byu-payment-system
+   JWT_SECRET=your-jwt-secret
+   ADMIN_KEY=byu-admin-2025-secret-key
+   ADMIN_EMAIL=iamknightrae@gmail.com
+   EMAIL_SERVICE=gmail
+   EMAIL_USER=your-email@gmail.com
+   EMAIL_PASS=your-app-password
+   ```
+
+5. **Start the development servers**
+   
+   Backend (Terminal 1):
+   ```bash
+   cd backend
+   npm start
+   ```
+   
+   Frontend (Terminal 2):
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+6. **Access the application**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:3000
+
+## 📱 Usage
+
+### For Students
+1. **Register** - Create an account with your BYU Pathway email
+2. **Request Card** - Enter the USD amount needed for school fees
+3. **View Conversion** - See the GHS equivalent with live exchange rates
+4. **Accept Terms** - Review and accept the terms and conditions
+5. **Submit Request** - Your request will be sent to administrators
+6. **Track Status** - Monitor your request in the dashboard
+7. **Receive Card** - Get email notification when card is assigned
+
+### For Administrators
+1. **Access Admin Panel** - Use the admin key to access the dashboard
+2. **View Requests** - See all pending student requests
+3. **Assign Cards** - Generate and assign virtual cards
+4. **Monitor Chat** - Respond to student inquiries via live chat
+5. **Manage System** - Track all activities and requests
+
+## 🔧 Configuration
+
+### Database Setup
+- MongoDB connection string in `backend/.env`
+- Collections are created automatically on first run
+
+### Email Configuration
+- Gmail SMTP settings in `backend/.env`
+- App password required for Gmail authentication
+
+### Exchange Rate API
+- Currently using Open Exchange Rate API
+- Free tier provides USD to GHS conversion
+- Rate updates every 5 minutes
+
+## 📁 Project Structure
+
+```
+BYU-Payment-System/
+├── backend/
+│   ├── config/
+│   │   └── database.js
+│   ├── models/
+│   │   ├── CardRequest.js
+│   │   ├── ChatMessage.js
+│   │   ├── ContactMessage.js
+│   │   └── Student.js
+│   ├── routes/
+│   │   ├── adminRoutes.js
+│   │   ├── contactRoutes.js
+│   │   └── studentRoutes.js
+│   ├── utils/
+│   │   ├── cronJobs.js
+│   │   └── emailService.js
+│   └── server.js
+├── frontend/
+│   ├── public/
+│   │   ├── icons/
+│   │   ├── manifest.json
+│   │   └── service-worker.js
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── HelpButton.jsx
+│   │   │   ├── InstallButton.jsx
+│   │   │   ├── LiveChat.jsx
+│   │   │   ├── OnboardingTour.jsx
+│   │   │   ├── ProgressTracker.jsx
+│   │   │   ├── Tooltip.jsx
+│   │   │   └── WelcomeModal.jsx
+│   │   ├── pages/
+│   │   │   ├── AdminDashboard.jsx
+│   │   │   ├── Contact.jsx
+│   │   │   ├── FAQ.jsx
+│   │   │   ├── Home.jsx
+│   │   │   ├── RequestPayment.jsx
+│   │   │   ├── StudentDashboard.jsx
+│   │   │   └── StudentRegister.jsx
+│   │   ├── api/
+│   │   │   └── api.js
+│   │   ├── App.jsx
+│   │   ├── App.css
+│   │   └── main.jsx
+│   └── vite.config.js
+├── README.md
+└── package.json
 ```
 
-2. **Install Backend Dependencies:**
-```bash
-cd backend
-npm install
-```
+## 🔒 Security Features
 
-3. **Install Frontend Dependencies:**
-```bash
-cd ../frontend
-npm install
-```
+- **Email Validation** - BYU Pathway email verification
+- **JWT Authentication** - Secure session management
+- **Input Validation** - Server-side validation for all inputs
+- **CORS Protection** - Cross-origin request security
+- **Rate Limiting** - API request throttling
+- **Environment Variables** - Sensitive data protection
 
-### Configuration
+## 🌐 Deployment
 
-1. **Set up Backend Environment Variables:**
+### Local Development
+- Use the provided batch files for easy startup
+- `start-backend.bat` - Starts the backend server
+- `start-frontend.bat` - Starts the frontend development server
 
-Create a `.env` file in the `backend/` directory:
+### Production Deployment
+- Deploy backend to Heroku, Railway, or similar
+- Deploy frontend to Vercel, Netlify, or similar
+- Configure environment variables for production
+- Set up MongoDB Atlas for cloud database
 
-```env
-# Server Configuration
-PORT=3000
+## 📞 Support
 
-# MongoDB Configuration
-MONGODB_URI=mongodb://localhost:27017/byu_virtual
+- **Email:** iamknightrae@gmail.com
+- **Phone:** +233 543692272
+- **WhatsApp:** +233 543692272
+- **Office Hours:** Monday - Friday, 9:00 AM - 5:00 PM GMT
 
-# Email Configuration (Gmail)
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-gmail-app-password
-ADMIN_EMAIL=admin@example.com
+## 📄 License
 
-# Admin Authentication
-ADMIN_KEY=your-secret-admin-key-here
-```
+This project is created for educational purposes and is not officially affiliated with BYU Pathway. It's a student project designed to help fellow students with payment processes.
 
-**Note:** For Gmail, you need to:
-1. Enable 2-factor authentication on your Google account
-2. Generate an "App Password" in Google Account settings
-3. Use the app password (not your regular Gmail password)
+## 🤝 Contributing
 
-### Running the Application
+This is a student project, but suggestions and improvements are welcome. Please feel free to:
+- Report bugs
+- Suggest new features
+- Submit pull requests
+- Share feedback
 
-1. **Start MongoDB** (if running locally):
-```bash
-# Windows
-mongod
+## 🎯 Future Enhancements
 
-# macOS/Linux
-sudo systemctl start mongodb
-```
-
-2. **Start Backend Server:**
-```bash
-cd backend
-npm run dev
-```
-
-Backend will run on: `http://localhost:3000`
-
-3. **Start Frontend (in a new terminal):**
-```bash
-cd frontend
-npm run dev
-```
-
-Frontend will run on: `http://localhost:5173`
-
-## 📖 API Documentation
-
-### Student Endpoints
-
-#### Register Student
-```http
-POST /api/student/register
-Content-Type: application/json
-
-{
-  "name": "John Doe",
-  "byuId": "BYU12345",
-  "email": "john@example.com",
-  "phone": "+233 XX XXX XXXX"
-}
-```
-
-#### Request Virtual Card
-```http
-POST /api/student/request-card
-Content-Type: application/json
-
-{
-  "byuId": "BYU12345",
-  "amount": 500
-}
-```
-
-#### Get Student Dashboard
-```http
-GET /api/student/dashboard/:byuId
-```
-
-#### Get Card Request Details
-```http
-GET /api/student/request/:requestToken
-```
-
-### Admin Endpoints
-
-All admin endpoints require the `x-admin-key` header.
-
-#### Get All Requests
-```http
-GET /api/admin/requests?status=pending
-Headers: x-admin-key: your-admin-key
-```
-
-#### Assign Mock Card
-```http
-POST /api/admin/assign/mock
-Headers: x-admin-key: your-admin-key
-Content-Type: application/json
-
-{
-  "requestId": "request-id-here"
-}
-```
-
-#### Mark Request Status
-```http
-POST /api/admin/action
-Headers: x-admin-key: your-admin-key
-Content-Type: application/json
-
-{
-  "requestId": "request-id-here",
-  "action": "paid"
-}
-```
-
-#### Get Statistics
-```http
-GET /api/admin/stats
-Headers: x-admin-key: your-admin-key
-```
-
-## 🎯 Usage Flow
-
-### Student Flow
-
-1. **Register** - Go to `/register` and fill in your details
-2. **Request Card** - Navigate to `/request` and submit a card request
-3. **Check Dashboard** - View your request status at `/dashboard`
-4. **Receive Email** - Get card details via email when approved
-5. **Make Payment** - Use the virtual card within 12 hours
-
-### Admin Flow
-
-1. **Login** - Access `/admin` with your admin key
-2. **View Requests** - See all pending card requests
-3. **Assign Card** - Click "Assign Mock Card" to generate and assign
-4. **Track Status** - Monitor assigned, paid, and expired cards
-5. **Manual Actions** - Mark requests as paid, expired, or declined
-
-## 🔐 Security Notes
-
-⚠️ **This is an educational demo platform:**
-
-- Mock card numbers are randomly generated (not real)
-- Not connected to actual payment processors
-- Use only for demonstration and learning purposes
-- Do not deploy with real financial data
-
-## 🕐 Automated Tasks
-
-### Card Expiry Cron Job
-
-The system automatically runs a cron job every 5 minutes to:
-- Check for cards that have passed their 12-hour validity
-- Update status to "expired"
-- Send expiry notification emails to students
-
-## 🎨 UI Pages
-
-1. **Home** (`/`) - Landing page with system overview
-2. **Register** (`/register`) - Student registration form
-3. **Request Card** (`/request`) - Card request submission
-4. **Student Dashboard** (`/dashboard`) - View all your requests
-5. **Admin Dashboard** (`/admin`) - Manage all card requests
-
-## 🐛 Troubleshooting
-
-### MongoDB Connection Issues
-```bash
-# Check if MongoDB is running
-mongosh
-
-# If not, start it:
-# Windows: Start MongoDB service
-# macOS/Linux: sudo systemctl start mongodb
-```
-
-### Email Not Sending
-- Verify Gmail credentials in `.env`
-- Ensure you're using an App Password (not regular password)
-- Check Gmail security settings
-
-### Port Already in Use
-```bash
-# Change PORT in backend/.env to another port (e.g., 3001)
-# Or kill the process using the port:
-# Windows: netstat -ano | findstr :3000
-# macOS/Linux: lsof -ti:3000 | xargs kill
-```
-
-## 📝 License
-
-This project is for educational purposes only.
-
-## 👥 Contributors
-
-Built for BYU Pathway Ghana students.
+- [ ] Payment gateway integration
+- [ ] SMS notifications
+- [ ] Advanced analytics dashboard
+- [ ] Multi-language support
+- [ ] Mobile app development
+- [ ] Advanced security features
 
 ---
 
-**Made with ❤️ for education**
-
+**Note:** This platform is not officially affiliated with BYU Pathway but is a project created by a student to help make payment easier for fellow students. Virtual cards expire automatically after 4-6 hours.
