@@ -2,7 +2,7 @@ import { useState } from 'react';
 import './HubtelPayment.css';
 
 function HubtelPayment({ paymentData, onSuccess, onCancel }) {
-  const [paymentMethod, setPaymentMethod] = useState('momo');
+  const [paymentMethod, setPaymentMethod] = useState('momo-hubtel');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -18,7 +18,7 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   } = paymentData;
 
   const initiatePayment = async () => {
-    if (paymentMethod === 'momo' && !phoneNumber) {
+    if (!phoneNumber) {
       setMessage({ type: 'error', text: 'Please enter your mobile money number' });
       return;
     }
@@ -41,9 +41,8 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   };
 
   const paymentMethods = [
-    { id: 'momo', name: 'Mobile Money', icon: '📱', description: 'MTN, Vodafone, AirtelTigo' },
-    { id: 'cash', name: 'Cash Payment', icon: '💵', description: 'Pay at office' },
-    { id: 'bank', name: 'Bank Transfer', icon: '🏦', description: 'Direct bank transfer' }
+    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Automated via Hubtel - MTN, Vodafone, AirtelTigo' },
+    { id: 'momo-direct', name: 'MTN Mobile Money Direct', icon: '💳', description: 'Direct transfer to our MTN MoMo number' }
   ];
 
   return (
@@ -108,20 +107,18 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
               ))}
             </div>
 
-            {paymentMethod === 'momo' && (
-              <div className="form-group" style={{ marginTop: '1rem' }}>
-                <label>Mobile Money Number *</label>
-                <input
-                  type="tel"
-                  placeholder="e.g., 0241234567"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  pattern="[0-9]{10}"
-                  required
-                />
-                <small>Enter your 10-digit mobile money number</small>
-              </div>
-            )}
+            <div className="form-group" style={{ marginTop: '1rem' }}>
+              <label>Mobile Money Number *</label>
+              <input
+                type="tel"
+                placeholder="e.g., 0241234567"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                pattern="[0-9]{10}"
+                required
+              />
+              <small>Enter your 10-digit mobile money number</small>
+            </div>
 
             <div className="payment-actions">
               <button
@@ -140,48 +137,62 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
           <div className="payment-instructions">
             <h3 style={{ color: '#002E5D', marginBottom: '1rem' }}>Payment Instructions</h3>
 
-            {paymentMethod === 'momo' && (
+            {paymentMethod === 'momo-hubtel' && (
               <div className="instruction-card">
-                <h4>📱 Mobile Money Payment</h4>
+                <h4>📱 Mobile Money (Hubtel)</h4>
+                <p style={{ marginBottom: '1rem', color: '#28a745', fontWeight: '600' }}>
+                  🚀 Automated payment via Hubtel - You will receive a prompt on your phone
+                </p>
                 <ol>
-                  <li>Dial <strong>*170#</strong> on your mobile phone ({phoneNumber})</li>
-                  <li>Select <strong>Option 6</strong> (My Wallet)</li>
-                  <li>Select <strong>Option 3</strong> (My Approvals)</li>
+                  <li>A payment request will be sent to <strong>{phoneNumber}</strong></li>
+                  <li>Check your phone for the MoMo prompt</li>
                   <li>You will see a pending payment of <strong>GHS {totalPaidGHS.toFixed(2)}</strong></li>
                   <li>Enter your MOMO PIN to approve the payment</li>
                   <li>You will receive a confirmation SMS</li>
+                  <li>Your card request will be automatically submitted to admin</li>
                 </ol>
                 <div className="payment-reference">
                   <strong>Payment Reference:</strong>
                   <code>{paymentReference}</code>
                 </div>
+                <p className="warning" style={{ marginTop: '1rem' }}>
+                  ⏰ The payment prompt will expire in 2 minutes. Please approve promptly.
+                </p>
               </div>
             )}
 
-            {paymentMethod === 'cash' && (
+            {paymentMethod === 'momo-direct' && (
               <div className="instruction-card">
-                <h4>💵 Cash Payment</h4>
-                <p>Please visit our office to complete your payment:</p>
+                <h4>💳 MTN Mobile Money Direct Transfer</h4>
+                <p style={{ marginBottom: '1rem', color: '#856404', fontWeight: '600' }}>
+                  📲 Send money directly to our MTN Mobile Money account
+                </p>
                 <div className="office-info">
-                  <p><strong>Location:</strong> BYU Pathway Office, Accra</p>
-                  <p><strong>Amount:</strong> GHS {totalPaidGHS.toFixed(2)}</p>
-                  <p><strong>Reference:</strong> {paymentReference}</p>
-                </div>
-                <p className="warning">⚠️ Please bring your BYU Student ID and mention this reference number</p>
-              </div>
-            )}
-
-            {paymentMethod === 'bank' && (
-              <div className="instruction-card">
-                <h4>🏦 Bank Transfer</h4>
-                <div className="bank-details">
-                  <p><strong>Bank Name:</strong> [Your Bank Name]</p>
+                  <p><strong>Network:</strong> MTN Mobile Money</p>
+                  <p><strong>MTN MoMo Number:</strong> <span style={{fontSize: '1.2rem', color: '#002E5D', fontWeight: 'bold'}}>0241234567</span></p>
                   <p><strong>Account Name:</strong> BYU Pathway Ghana</p>
-                  <p><strong>Account Number:</strong> [Account Number]</p>
-                  <p><strong>Amount:</strong> GHS {totalPaidGHS.toFixed(2)}</p>
-                  <p><strong>Reference:</strong> {paymentReference}</p>
+                  <p><strong>Amount to Send:</strong> <span style={{fontSize: '1.2rem', color: '#28a745', fontWeight: 'bold'}}>GHS {totalPaidGHS.toFixed(2)}</span></p>
                 </div>
-                <p className="warning">⚠️ Please use the payment reference as your transfer description</p>
+                
+                <h4 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>How to Pay via MTN:</h4>
+                <ol>
+                  <li>Dial <strong>*170#</strong> on your MTN phone</li>
+                  <li>Select <strong>Send Money</strong></li>
+                  <li>Enter recipient number: <strong>0241234567</strong></li>
+                  <li>Enter amount: <strong>GHS {totalPaidGHS.toFixed(2)}</strong></li>
+                  <li>Add reference: <strong>{paymentReference}</strong></li>
+                  <li>Enter your MTN MOMO PIN to confirm</li>
+                  <li>Save the transaction confirmation SMS</li>
+                </ol>
+
+                <div className="payment-reference">
+                  <strong>Payment Reference (IMPORTANT!):</strong>
+                  <code>{paymentReference}</code>
+                </div>
+                
+                <p className="warning" style={{ marginTop: '1rem' }}>
+                  ⚠️ <strong>IMPORTANT:</strong> Make sure to include the payment reference in your transaction. Admin will verify using this reference.
+                </p>
               </div>
             )}
 

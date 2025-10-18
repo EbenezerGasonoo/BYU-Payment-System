@@ -46,7 +46,7 @@ const cardRequestSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['momo', 'card', 'bank', 'cash', null],
+    enum: ['momo-hubtel', 'momo-direct', null],
     default: null
   },
   paymentVerifiedAt: {
