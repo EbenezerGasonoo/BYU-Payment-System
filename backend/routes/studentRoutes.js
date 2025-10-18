@@ -3,6 +3,7 @@ const router = express.Router();
 const Student = require('../models/Student');
 const CardRequest = require('../models/CardRequest');
 const { notifyAdminNewRequest } = require('../utils/emailService');
+const { initiatePayment, checkPaymentStatus } = require('../utils/hubtelService');
 const crypto = require('crypto');
 
 // Register new student
@@ -227,6 +228,112 @@ router.post('/payment-failed', async (req, res) => {
       message: 'Server error',
       error: error.message
     });
+  }
+});
+
+// Initiate Hubtel Payment
+router.post('/initiate-hubtel-payment', async (req, res) => {
+  try {
+    const { phoneNumber, amount, paymentReference, studentName } = req.body;
+
+    console.log('🎯 Initiating Hubtel payment request:', {
+      phoneNumber,
+      amount,
+      paymentReference,
+      studentName
+    });
+
+    // Initiate Hubtel payment
+    const result = await initiatePayment(
+      phoneNumber,
+      amount,
+      paymentReference,
+      `BYU Payment - ${studentName || 'Student'}`
+    );
+
+    if (result.success) {
+      // Update card request with Hubtel checkout ID
+      const cardRequest = await CardRequest.findOne({ paymentReference });
+      if (cardRequest) {
+        cardRequest.hubtelCheckoutId = result.data.checkoutId;
+        await cardRequest.save();
+      }
+
+      res.json({
+        success: true,
+        message: 'Payment initiated successfully',
+        data: {
+          checkoutId: result.data.checkoutId,
+          checkoutUrl: result.data.checkoutUrl,
+          checkoutDirectUrl: result.data.checkoutDirectUrl,
+          status: result.data.status
+        }
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Failed to initiate payment',
+        error: result.error,
+        details: result.details
+      });
+    }
+  } catch (error) {
+    console.error('Error initiating Hubtel payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Hubtel Payment Callback (webhook)
+router.post('/hubtel-callback', async (req, res) => {
+  try {
+    console.log('📥 Hubtel callback received:', req.body);
+
+    const { ResponseCode, Data } = req.body;
+
+    // ResponseCode "0000" means success
+    if (ResponseCode === '0000' && Data) {
+      const { ClientReference } = Data;
+
+      // Find and update card request
+      const cardRequest = await CardRequest.findOne({ 
+        paymentReference: ClientReference 
+      }).populate('student');
+
+      if (cardRequest) {
+        cardRequest.paymentStatus = 'paid';
+        cardRequest.paymentVerifiedAt = new Date();
+        await cardRequest.save();
+
+        console.log('✅ Payment verified for:', ClientReference);
+
+        // Notify admin of paid request
+        await notifyAdminNewRequest(cardRequest.student, cardRequest);
+      }
+    } else {
+      // Payment failed
+      const { ClientReference } = req.body.Data || {};
+      if (ClientReference) {
+        const cardRequest = await CardRequest.findOne({ 
+          paymentReference: ClientReference 
+        });
+
+        if (cardRequest) {
+          cardRequest.paymentStatus = 'failed';
+          cardRequest.status = 'declined';
+          await cardRequest.save();
+          console.log('❌ Payment failed for:', ClientReference);
+        }
+      }
+    }
+
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Hubtel callback error:', error);
+    res.status(500).send('Error');
   }
 });
 

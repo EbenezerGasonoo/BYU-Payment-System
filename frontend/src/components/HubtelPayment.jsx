@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { studentAPI } from '../api/api';
 import './HubtelPayment.css';
 
 function HubtelPayment({ paymentData, onSuccess, onCancel }) {
@@ -26,12 +27,50 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
     setProcessing(true);
     setMessage({ type: '', text: '' });
 
-    // Show payment instructions
-    setShowInstructions(true);
-    setMessage({
-      type: 'info',
-      text: `Payment initiated! Reference: ${paymentReference}`
-    });
+    if (paymentMethod === 'momo-hubtel') {
+      try {
+        setMessage({ type: 'info', text: 'Initiating payment with Hubtel...' });
+
+        // Call backend to initiate Hubtel payment
+        const response = await studentAPI.initiateHubtelPayment({
+          phoneNumber,
+          amount: totalPaidGHS,
+          paymentReference,
+          studentName: studentName || 'Student'
+        });
+
+        if (response.success) {
+          setMessage({
+            type: 'success',
+            text: 'Redirecting to Hubtel payment page...'
+          });
+
+          // Redirect to Hubtel checkout URL
+          setTimeout(() => {
+            window.location.href = response.data.checkoutUrl;
+          }, 1500);
+        } else {
+          setMessage({
+            type: 'error',
+            text: response.message || 'Failed to initiate payment'
+          });
+          setProcessing(false);
+        }
+      } catch (error) {
+        setMessage({
+          type: 'error',
+          text: error.response?.data?.message || 'Failed to initiate Hubtel payment'
+        });
+        setProcessing(false);
+      }
+    } else {
+      // For momo-direct, show manual payment instructions
+      setShowInstructions(true);
+      setMessage({
+        type: 'info',
+        text: `Payment initiated! Reference: ${paymentReference}`
+      });
+    }
   };
 
   const confirmPayment = () => {

@@ -25,6 +25,7 @@ function RequestPayment() {
   useEffect(() => {
     // Pre-fill BYU ID if user has registered
     const savedByuId = localStorage.getItem('userByuId');
+    const savedName = localStorage.getItem('userName');
     if (savedByuId) {
       setFormData(prev => ({ ...prev, byuId: savedByuId }));
     }
@@ -89,7 +90,8 @@ function RequestPayment() {
       amountInGHS,
       totalPaidGHS,
       exchangeRate,
-      byuId: formData.byuId
+      byuId: formData.byuId,
+      studentName: localStorage.getItem('userName') || 'Student'
     });
     setShowPayment(true);
   };

@@ -31,6 +31,11 @@ export const studentAPI = {
     return response.data;
   },
 
+  initiateHubtelPayment: async (data) => {
+    const response = await axios.post(`${API_BASE_URL}/student/initiate-hubtel-payment`, data);
+    return response.data;
+  },
+
   verifyPayment: async (data) => {
     const response = await axios.post(`${API_BASE_URL}/student/verify-payment`, data);
     return response.data;

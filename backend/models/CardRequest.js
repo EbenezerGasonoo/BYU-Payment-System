@@ -44,6 +44,10 @@ const cardRequestSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  hubtelCheckoutId: {
+    type: String,
+    default: null
+  },
   paymentMethod: {
     type: String,
     enum: ['momo-hubtel', 'momo-direct', null],
