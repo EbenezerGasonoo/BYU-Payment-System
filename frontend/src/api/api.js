@@ -36,6 +36,16 @@ export const studentAPI = {
     return response.data;
   },
 
+  initiateMtnPayment: async (data) => {
+    const response = await axios.post(`${API_BASE_URL}/student/initiate-mtn-payment`, data);
+    return response.data;
+  },
+
+  checkMtnPayment: async (data) => {
+    const response = await axios.post(`${API_BASE_URL}/student/check-mtn-payment`, data);
+    return response.data;
+  },
+
   verifyPayment: async (data) => {
     const response = await axios.post(`${API_BASE_URL}/student/verify-payment`, data);
     return response.data;

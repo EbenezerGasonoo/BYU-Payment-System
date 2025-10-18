@@ -4,6 +4,7 @@ const Student = require('../models/Student');
 const CardRequest = require('../models/CardRequest');
 const { notifyAdminNewRequest } = require('../utils/emailService');
 const { initiatePayment, checkPaymentStatus } = require('../utils/hubtelService');
+const mtnMomoService = require('../utils/mtnMomoService');
 const crypto = require('crypto');
 
 // Register new student
@@ -337,6 +338,108 @@ router.post('/hubtel-callback', async (req, res) => {
   } catch (error) {
     console.error('Hubtel callback error:', error);
     res.status(500).send('Error');
+  }
+});
+
+// Initiate MTN MoMo Payment (Request to Pay)
+router.post('/initiate-mtn-payment', async (req, res) => {
+  try {
+    const { phoneNumber, amount, paymentReference, description } = req.body;
+
+    console.log('🎯 Initiating MTN MoMo Request to Pay:', {
+      phoneNumber,
+      amount,
+      paymentReference
+    });
+
+    // Call MTN MoMo API to send payment prompt
+    const result = await mtnMomoService.requestToPay(
+      phoneNumber,
+      amount,
+      paymentReference,
+      description || 'BYU Virtual Card Payment'
+    );
+
+    if (result.success) {
+      // Update card request with MTN reference ID
+      const cardRequest = await CardRequest.findOne({ paymentReference });
+      if (cardRequest) {
+        cardRequest.mtnReferenceId = result.data.referenceId;
+        await cardRequest.save();
+      }
+
+      res.json({
+        success: true,
+        message: 'Payment prompt sent to customer phone',
+        data: {
+          referenceId: result.data.referenceId,
+          status: result.data.status,
+          message: result.data.message
+        }
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Failed to initiate MTN MoMo payment',
+        error: result.error,
+        details: result.details
+      });
+    }
+  } catch (error) {
+    console.error('Error initiating MTN MoMo payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Check MTN MoMo Payment Status
+router.post('/check-mtn-payment', async (req, res) => {
+  try {
+    const { referenceId, paymentReference } = req.body;
+
+    console.log('🔍 Checking MTN MoMo payment status:', referenceId);
+
+    const result = await mtnMomoService.checkPaymentStatus(referenceId);
+
+    if (result.success) {
+      // If payment is successful, update card request
+      if (result.data.status === 'SUCCESSFUL') {
+        const cardRequest = await CardRequest.findOne({ paymentReference }).populate('student');
+        
+        if (cardRequest) {
+          cardRequest.paymentStatus = 'paid';
+          cardRequest.paymentVerifiedAt = new Date();
+          cardRequest.mtnTransactionId = result.data.financialTransactionId;
+          await cardRequest.save();
+
+          console.log('✅ MTN Payment verified for:', paymentReference);
+
+          // Notify admin
+          await notifyAdminNewRequest(cardRequest.student, cardRequest);
+        }
+      }
+
+      res.json({
+        success: true,
+        data: result.data
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Failed to check payment status',
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error checking MTN payment status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
   }
 });
 
