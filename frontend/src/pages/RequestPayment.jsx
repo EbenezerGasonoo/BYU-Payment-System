@@ -363,7 +363,7 @@ function RequestPayment() {
             {loading ? 'Processing...' : 'Proceed to Payment'}
           </button>
           <p className="small-text" style={{ marginTop: '0.5rem', textAlign: 'center', color: '#666' }}>
-            💳 You will be redirected to Hubtel to complete payment
+            💳 You will be redirected to complete payment
           </p>
         </form>
       </div>
