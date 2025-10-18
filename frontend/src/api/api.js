@@ -1,10 +1,23 @@
 import axios from 'axios';
 
 // Use Railway backend in production, proxy in development
+// Detect production by checking if we're on vercel.app domain
+const isProduction = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('vercel.app') || 
+   import.meta.env.MODE === 'production');
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'production' 
+  (isProduction
     ? 'https://byupay.up.railway.app/api' 
     : '/api');
+
+// Debug log (remove after confirming it works)
+console.log('🔧 API Configuration:', {
+  hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+  mode: import.meta.env.MODE,
+  apiUrl: API_BASE_URL,
+  isProduction
+});
 
 // Student API calls
 export const studentAPI = {
