@@ -3,7 +3,7 @@ import { studentAPI } from '../api/api';
 import './HubtelPayment.css';
 
 function HubtelPayment({ paymentData, onSuccess, onCancel }) {
-  const [paymentMethod, setPaymentMethod] = useState('momo-direct');
+  const [paymentMethod, setPaymentMethod] = useState('momo-hubtel');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -160,8 +160,8 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   };
 
   const paymentMethods = [
-    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Automated via Hubtel - MTN, Vodafone, AirtelTigo' },
-    { id: 'momo-direct', name: 'MTN Mobile Money Direct', icon: '💳', description: 'Direct transfer to our MTN MoMo number' }
+    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: false },
+    { id: 'momo-direct', name: 'MTN Mobile Money Direct', icon: '💳', description: 'Coming Soon - Under Development', disabled: true }
   ];
 
   return (
@@ -207,19 +207,40 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
               {paymentMethods.map(method => (
                 <div
                   key={method.id}
-                  className={`payment-method-card ${paymentMethod === method.id ? 'active' : ''}`}
-                  onClick={() => setPaymentMethod(method.id)}
+                  className={`payment-method-card ${paymentMethod === method.id ? 'active' : ''} ${method.disabled ? 'disabled' : ''}`}
+                  onClick={() => !method.disabled && setPaymentMethod(method.id)}
+                  style={{
+                    opacity: method.disabled ? 0.5 : 1,
+                    cursor: method.disabled ? 'not-allowed' : 'pointer',
+                    position: 'relative'
+                  }}
                 >
                   <div className="method-icon">{method.icon}</div>
                   <div className="method-info">
-                    <h4>{method.name}</h4>
+                    <h4>
+                      {method.name}
+                      {method.disabled && (
+                        <span style={{
+                          marginLeft: '0.5rem',
+                          fontSize: '0.75rem',
+                          background: 'rgba(108, 117, 125, 0.2)',
+                          color: '#6c757d',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          fontWeight: '600'
+                        }}>
+                          COMING SOON
+                        </span>
+                      )}
+                    </h4>
                     <p>{method.description}</p>
                   </div>
                   <div className="method-radio">
                     <input
                       type="radio"
-                      checked={paymentMethod === method.id}
-                      onChange={() => setPaymentMethod(method.id)}
+                      checked={paymentMethod === method.id && !method.disabled}
+                      onChange={() => !method.disabled && setPaymentMethod(method.id)}
+                      disabled={method.disabled}
                     />
                   </div>
                 </div>
