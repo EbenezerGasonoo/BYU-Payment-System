@@ -160,8 +160,9 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   };
 
   const paymentMethods = [
-    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: false },
-    { id: 'momo-direct', name: 'MTN Mobile Money Direct', icon: '💳', description: 'Coming Soon - Under Development', disabled: true }
+    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: false }
+    // MTN Mobile Money Direct - Temporarily hidden (code kept for future implementation)
+    // { id: 'momo-direct', name: 'MTN Mobile Money Direct', icon: '💳', description: 'Direct MTN prompt to phone', disabled: false }
   ];
 
   return (
@@ -202,9 +203,10 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
 
         {!showInstructions ? (
           <>
-            <div className="payment-methods">
-              <h3 style={{ marginBottom: '1rem', color: '#002E5D' }}>Select Payment Method</h3>
-              {paymentMethods.map(method => (
+            {paymentMethods.length > 1 && (
+              <div className="payment-methods">
+                <h3 style={{ marginBottom: '1rem', color: '#002E5D' }}>Select Payment Method</h3>
+                {paymentMethods.map(method => (
                 <div
                   key={method.id}
                   className={`payment-method-card ${paymentMethod === method.id ? 'active' : ''} ${method.disabled ? 'disabled' : ''}`}
@@ -244,8 +246,9 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
                     />
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <div className="form-group" style={{ marginTop: '1rem' }}>
               <label>Mobile Money Number *</label>
