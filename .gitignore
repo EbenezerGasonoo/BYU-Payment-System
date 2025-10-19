@@ -3,10 +3,16 @@ node_modules/
 package-lock.json
 yarn.lock
 
-# Environment variables
+# Environment variables (IMPORTANT: Never commit these!)
 .env
 .env.local
 .env.*.local
+backend/.env
+frontend/.env.local
+
+# API Keys and Secrets (backup protection)
+**/config/secrets.js
+**/config/credentials.json
 
 # Logs
 logs/
@@ -38,4 +44,14 @@ tmp/
 
 # MongoDB
 data/
+
+# Test files (local testing only)
+backend/test-*.js
+!backend/test-api.js
+!backend/test-connection.js
+
+# Temporary/Personal files
+TODO.md
+NOTES.md
+.DS_Store
 
