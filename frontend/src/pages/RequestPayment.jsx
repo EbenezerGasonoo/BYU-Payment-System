@@ -79,22 +79,46 @@ function RequestPayment() {
       return;
     }
 
-    // Calculate payment details
-    const amount = parseFloat(formData.amount);
-    const amountInGHS = amount * exchangeRate;
-    const totalPaidGHS = amountInGHS * (1 + CHARGE_FEE_PERCENT / 100);
+    setLoading(true);
+    setMessage({ type: '', text: '' });
 
-    // Show payment modal
-    setPaymentData({
-      amount,
-      amountInGHS,
-      totalPaidGHS,
-      exchangeRate,
-      byuId: formData.byuId,
-      studentName: localStorage.getItem('userName') || 'Student',
-      studentEmail: localStorage.getItem('userEmail') || ''
-    });
-    setShowPayment(true);
+    try {
+      // Calculate payment details
+      const amount = parseFloat(formData.amount);
+      const amountInGHS = amount * exchangeRate;
+      const totalPaidGHS = amountInGHS * (1 + CHARGE_FEE_PERCENT / 100);
+
+      // First create the card request to get payment reference
+      const requestResponse = await studentAPI.requestCard({
+        byuId: formData.byuId,
+        amount,
+        amountInGHS,
+        exchangeRate,
+        totalPaidGHS,
+        paymentMethod: 'pending' // Will be updated when payment method is selected
+      });
+
+      // Now show payment modal with the payment reference
+      setPaymentData({
+        amount,
+        amountInGHS,
+        totalPaidGHS,
+        exchangeRate,
+        byuId: formData.byuId,
+        paymentReference: requestResponse.data.paymentReference,
+        requestToken: requestResponse.data.requestToken,
+        studentName: localStorage.getItem('userName') || 'Student',
+        studentEmail: localStorage.getItem('userEmail') || ''
+      });
+      setShowPayment(true);
+      setLoading(false);
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Failed to create payment request'
+      });
+      setLoading(false);
+    }
   };
 
   const handlePaymentSuccess = async (paymentReference, paymentMethod) => {
@@ -103,23 +127,9 @@ function RequestPayment() {
     setMessage({ type: '', text: '' });
 
     try {
-      // First create the card request with payment pending
-      const amount = parseFloat(formData.amount);
-      const amountInGHS = amount * exchangeRate;
-      const totalPaidGHS = amountInGHS * (1 + CHARGE_FEE_PERCENT / 100);
-
-      const requestResponse = await studentAPI.requestCard({
-        byuId: formData.byuId,
-        amount,
-        amountInGHS,
-        exchangeRate,
-        totalPaidGHS,
-        paymentMethod
-      });
-
-      // Then verify the payment
+      // Verify the payment (card request already created in handleSubmit)
       const verifyResponse = await studentAPI.verifyPayment({
-        paymentReference: requestResponse.data.paymentReference,
+        paymentReference: paymentReference,
         hubtelReference: paymentReference // This would be from Hubtel callback in production
       });
 

@@ -69,11 +69,11 @@ router.post('/request-card', async (req, res) => {
   try {
     const { byuId, amount, amountInGHS, exchangeRate, totalPaidGHS, paymentMethod } = req.body;
 
-    // Validate required fields
-    if (!byuId || !amount || !amountInGHS || !exchangeRate || !totalPaidGHS || !paymentMethod) {
+    // Validate required fields (paymentMethod is optional at this stage)
+    if (!byuId || !amount) {
       return res.status(400).json({
         success: false,
-        message: 'All payment details are required'
+        message: 'BYU ID and amount are required'
       });
     }
 

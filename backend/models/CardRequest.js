@@ -12,11 +12,13 @@ const cardRequestSchema = new mongoose.Schema({
   },
   amountInGHS: {
     type: Number,
-    required: true
+    required: false,
+    default: null
   },
   exchangeRate: {
     type: Number,
-    required: true
+    required: false,
+    default: null
   },
   chargebackFee: {
     type: Number,
@@ -24,7 +26,8 @@ const cardRequestSchema = new mongoose.Schema({
   },
   totalPaidGHS: {
     type: Number,
-    required: true
+    required: false,
+    default: null
   },
   purpose: {
     type: String,
@@ -58,7 +61,7 @@ const cardRequestSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['momo-hubtel', 'momo-direct', null],
+    enum: ['momo-hubtel', 'momo-direct', 'pending', null],
     default: null
   },
   paymentVerifiedAt: {
