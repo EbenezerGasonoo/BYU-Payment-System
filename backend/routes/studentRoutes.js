@@ -256,21 +256,36 @@ router.post('/initiate-hubtel-payment', async (req, res) => {
     );
 
     if (result.success) {
-      // Update card request with Hubtel checkout ID
+      // Update card request with Hubtel transaction ID
       const cardRequest = await CardRequest.findOne({ paymentReference });
       if (cardRequest) {
-        cardRequest.hubtelCheckoutId = result.data.checkoutId;
-        await cardRequest.save();
+        cardRequest.hubtelCheckoutId = result.data.transactionId;
+        
+        // If payment is already successful (ResponseCode "0000")
+        if (result.data.status === 'paid') {
+          cardRequest.paymentStatus = 'paid';
+          cardRequest.paymentVerifiedAt = new Date();
+          await cardRequest.save();
+          
+          // Notify admin immediately
+          const student = await Student.findOne({ byuId: req.body.byuId });
+          if (student) {
+            await notifyAdminNewRequest(student, cardRequest);
+          }
+        } else {
+          await cardRequest.save();
+        }
       }
 
       res.json({
         success: true,
-        message: 'Payment checkout ready',
+        message: result.data.message || 'Payment initiated successfully',
         data: {
-          checkoutId: result.data.checkoutId,
-          checkoutUrl: result.data.checkoutUrl,
-          checkoutDirectUrl: result.data.checkoutDirectUrl,
-          status: result.data.status
+          transactionId: result.data.transactionId,
+          status: result.data.status,
+          message: result.data.message,
+          amount: result.data.amount,
+          charges: result.data.charges
         }
       });
     } else {

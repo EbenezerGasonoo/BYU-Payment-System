@@ -43,15 +43,25 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
         });
 
         if (response.success) {
-          setMessage({
-            type: 'success',
-            text: 'Redirecting to Hubtel payment page...'
-          });
-
-          // Redirect to Hubtel checkout URL
-          setTimeout(() => {
-            window.location.href = response.data.checkoutUrl;
-          }, 1500);
+          // Direct Debit returns status immediately or pending
+          if (response.data.status === 'paid') {
+            // Payment already successful!
+            setMessage({
+              type: 'success',
+              text: 'Payment successful! Submitting your card request...'
+            });
+            setTimeout(() => {
+              onSuccess(paymentReference, paymentMethod);
+            }, 1500);
+          } else {
+            // Payment pending - show instructions
+            setShowInstructions(true);
+            setMessage({
+              type: 'success',
+              text: `Payment request sent! Transaction ID: ${response.data.transactionId}`
+            });
+            setProcessing(false);
+          }
         } else {
           setMessage({
             type: 'error',
@@ -282,35 +292,33 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
 
             {paymentMethod === 'momo-hubtel' && (
               <div className="instruction-card">
-                <h4>📱 Mobile Money Payment Prompt Sent!</h4>
+                <h4>📱 Payment Request Sent!</h4>
                 <div style={{ background: 'rgba(40, 167, 69, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>
                   <p style={{ marginBottom: '0.5rem', color: '#28a745', fontWeight: '700', fontSize: '1.2rem' }}>
-                    ✅ Payment prompt sent to {phoneNumber}
+                    ✅ Payment initiated for {phoneNumber}
                   </p>
                   <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
-                    Check your phone NOW!
+                    Payment processing...
                   </p>
                 </div>
                 
-                <h4 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>What to do now:</h4>
-                <ol>
-                  <li><strong>Check your phone ({phoneNumber})</strong> for a payment notification</li>
-                  <li>You should receive a <strong>MoMo prompt</strong> asking you to approve GHS {totalPaidGHS.toFixed(2)}</li>
-                  <li><strong>Approve the payment</strong> by entering your MOMO PIN</li>
-                  <li>You will receive an <strong>SMS confirmation</strong></li>
-                  <li>Your card request will be <strong>automatically submitted to admin</strong></li>
-                </ol>
+                <div style={{ background: 'rgba(0, 123, 255, 0.1)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                  <h4 style={{ margin: '0 0 0.75rem 0', color: '#007bff' }}>⏳ What happens next:</h4>
+                  <ol style={{ margin: 0, paddingLeft: '1.5rem', lineHeight: '1.8' }}>
+                    <li>Hubtel is processing your payment request</li>
+                    <li>You may receive an SMS notification</li>
+                    <li>The payment will be automatically verified</li>
+                    <li>You'll be notified when complete</li>
+                  </ol>
+                </div>
 
-                <div style={{ background: 'rgba(255, 184, 28, 0.1)', padding: '1rem', borderRadius: '8px', marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ background: 'rgba(255, 184, 28, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
                   <p style={{ margin: 0, color: '#856404', fontWeight: '600', fontSize: '0.95rem' }}>
-                    💡 <strong>Didn't receive the prompt?</strong>
+                    💡 <strong>Payment Status:</strong>
                   </p>
-                  <ul style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
-                    <li>Check if you have network signal</li>
-                    <li>Make sure your phone number is correct: {phoneNumber}</li>
-                    <li>Wait a few seconds and check again</li>
-                    <li>The prompt should appear automatically</li>
-                  </ul>
+                  <p style={{ marginTop: '0.5rem', marginBottom: 0, color: '#666' }}>
+                    Hubtel will send a callback when the payment is complete. If you've completed the payment, click the button below to verify.
+                  </p>
                 </div>
 
                 <div className="payment-reference">
@@ -319,7 +327,7 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
                 </div>
                 
                 <p className="warning" style={{ marginTop: '1rem' }}>
-                  ⏰ <strong>Important:</strong> The payment prompt will expire in 2 minutes. Please approve promptly to avoid timeout.
+                  ⏰ <strong>Note:</strong> Payment processing typically takes less than 30 seconds. You'll receive confirmation automatically.
                 </p>
               </div>
             )}

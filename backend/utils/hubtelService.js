@@ -1,13 +1,14 @@
 const axios = require('axios');
 
-// Hubtel Online Checkout API Configuration
-// Using Online Checkout because Direct Debit endpoints return 520 error
-const HUBTEL_CHECKOUT_URL = process.env.HUBTEL_CHECKOUT_URL || 'https://payproxyapi.hubtel.com/items/initiate';
+// Hubtel Direct Debit API Configuration
+const HUBTEL_POS_SALES_ID = process.env.HUBTEL_POS_SALES_ID || '2030303';
+const HUBTEL_CHARGE_URL = process.env.HUBTEL_CHARGE_URL || 'https://rmp.hubtel.com/merchantaccount';
+const HUBTEL_PREAPPROVAL_URL = process.env.HUBTEL_PREAPPROVAL_URL || 'https://preapproval.hubtel.com/api/v2';
 const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_API_KEY; // API Key is the Client Secret
 const HUBTEL_CLIENT_ID = process.env.HUBTEL_API_ID; // API ID is the Client ID
 
 /**
- * Initialize Mobile Money Payment via Hubtel Direct Debit (Send Prompt to Phone)
+ * Initiate Hubtel Direct Debit Charge (Direct debit from customer wallet)
  * @param {string} phoneNumber - Customer phone number (e.g., 0241234567)
  * @param {number} amount - Amount to charge
  * @param {string} paymentReference - Unique payment reference
@@ -18,12 +19,13 @@ const HUBTEL_CLIENT_ID = process.env.HUBTEL_API_ID; // API ID is the Client ID
  */
 const initiatePayment = async (phoneNumber, amount, paymentReference, description, customerName = 'Student', customerEmail = '') => {
   try {
-    console.log('🚀 Initiating Hubtel Direct Debit (Phone Prompt):', {
+    console.log('🚀 Initiating Hubtel Direct Debit Charge:', {
       phoneNumber,
       amount,
       paymentReference,
       description,
-      customerName
+      customerName,
+      posId: HUBTEL_POS_SALES_ID
     });
 
     // Hubtel API expects Basic Auth with CLIENT_ID:CLIENT_SECRET
@@ -36,40 +38,30 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
         ? phoneNumber 
         : '233' + phoneNumber;
 
-    // Hubtel Direct Debit API payload format
-    const payload = {
-      amount: amount,
-      title: 'BYU Virtual Card Payment',
-      description: description || `Payment for ${customerName}`,
-      clientReference: paymentReference,
-      callbackUrl: `${process.env.API_URL || 'https://byupay.up.railway.app'}/api/student/hubtel-callback`,
-      cancellationUrl: `${process.env.FRONTEND_URL || 'https://byupay.vercel.app'}/request`,
-      returnUrl: `${process.env.FRONTEND_URL || 'https://byupay.vercel.app'}/dashboard`
-    };
+    // Detect channel based on phone number
+    const channel = formattedPhone.startsWith('23324') || formattedPhone.startsWith('23325') || formattedPhone.startsWith('23354') || formattedPhone.startsWith('23355')
+      ? 'mtn-gh-direct-debit'
+      : 'vodafone-gh-direct-debit';
 
-    console.log('📤 Hubtel Direct Debit payload:', payload);
-    console.log('📱 Sending payment prompt to:', formattedPhone);
-
-    // Hubtel Online Checkout request body format
+    // Hubtel Direct Debit Charge API payload
     const requestBody = {
-      totalAmount: amount,
-      description: description || 'BYU Virtual Card Payment',
-      callbackUrl: `${process.env.API_URL || 'https://byupay.up.railway.app'}/api/student/hubtel-callback`,
-      returnUrl: `${process.env.FRONTEND_URL || 'https://byupay.vercel.app'}/dashboard`,
-      cancellationUrl: `${process.env.FRONTEND_URL || 'https://byupay.vercel.app'}/request`,
-      merchantAccountNumber: HUBTEL_CLIENT_ID,
-      clientReference: paymentReference,
-      // Customer details
-      payeeName: customerName,
-      payeeMobileNumber: formattedPhone,
-      payeeEmail: customerEmail || ''
+      CustomerName: customerName,
+      CustomerMsisdn: formattedPhone,
+      CustomerEmail: customerEmail || '',
+      Channel: channel,
+      Amount: parseFloat(amount),
+      PrimaryCallbackUrl: `${process.env.API_URL || 'https://byupay.up.railway.app'}/api/student/hubtel-callback`,
+      Description: description || 'BYU Virtual Card Payment',
+      ClientReference: paymentReference
     };
 
-    console.log('📡 Using Hubtel Online Checkout (tested working endpoint)');
+    console.log('📡 Using Hubtel Direct Debit Charge API');
     console.log('📦 Request body:', requestBody);
+    console.log('📱 Sending to:', formattedPhone, 'via channel:', channel);
 
+    // Hubtel Direct Debit Charge endpoint
     const response = await axios.post(
-      HUBTEL_CHECKOUT_URL,
+      `${HUBTEL_CHARGE_URL}/merchants/${HUBTEL_POS_SALES_ID}/receive/mobilemoney`,
       requestBody,
       {
         headers: {
@@ -82,23 +74,23 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
 
     console.log('✅ Hubtel Direct Debit response:', response.data);
 
-    // Hubtel Online Checkout response structure
-    if (response.data && response.data.responseCode === '0000') {
+    // Hubtel Direct Debit response: ResponseCode "0000" = success, "0001" = pending
+    if (response.data && (response.data.ResponseCode === '0000' || response.data.ResponseCode === '0001')) {
       return {
         success: true,
         data: {
-          checkoutId: response.data.data?.checkoutId,
-          checkoutUrl: response.data.data?.checkoutUrl,
-          checkoutDirectUrl: response.data.data?.checkoutDirectUrl,
-          status: 'pending',
-          message: 'Redirect customer to checkout URL'
+          transactionId: response.data.Data?.TransactionId,
+          status: response.data.ResponseCode === '0000' ? 'paid' : 'pending',
+          message: response.data.Message,
+          amount: response.data.Data?.Amount,
+          charges: response.data.Data?.Charges
         }
       };
     } else {
-      console.error('❌ Hubtel returned non-success code:', response.data);
+      console.error('❌ Hubtel returned error code:', response.data);
       return {
         success: false,
-        error: response.data.Message || response.data.message || 'Payment initiation failed',
+        error: response.data.Message || 'Payment initiation failed',
         details: response.data
       };
     }
