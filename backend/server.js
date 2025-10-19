@@ -37,6 +37,41 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Get server's public IP address (for Hubtel whitelisting)
+app.get('/api/my-ip', async (req, res) => {
+  try {
+    const axios = require('axios');
+    
+    // Get public IP from external service
+    const ipResponse = await axios.get('https://api.ipify.org?format=json', { timeout: 5000 });
+    
+    res.json({
+      success: true,
+      publicIP: ipResponse.data.ip,
+      requestIP: req.ip,
+      forwardedFor: req.headers['x-forwarded-for'],
+      userAgent: req.headers['user-agent'],
+      timestamp: new Date().toISOString(),
+      message: 'Use this IP for Hubtel whitelisting',
+      instructions: {
+        step1: 'Copy the publicIP value below',
+        step2: 'Email it to support@hubtel.com',
+        step3: 'Request whitelisting for POS Sales ID: 2030303',
+        step4: 'Wait 1-2 business days',
+        step5: 'Test Hubtel payment again'
+      }
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      requestIP: req.ip,
+      forwardedFor: req.headers['x-forwarded-for'],
+      error: 'Could not fetch public IP',
+      message: 'Use requestIP or forwardedFor for whitelisting'
+    });
+  }
+});
+
 // Connect to database
 connectDB();
 
