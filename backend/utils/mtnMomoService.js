@@ -1,5 +1,10 @@
 const axios = require('axios');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+
+// Generate UUID v4 using Node.js crypto module (no external dependency)
+const uuidv4 = () => {
+  return crypto.randomUUID();
+};
 
 // MTN MoMo API Configuration
 const MTN_MOMO_BASE_URL = process.env.MTN_MOMO_BASE_URL || 'https://sandbox.momodeveloper.mtn.com';
