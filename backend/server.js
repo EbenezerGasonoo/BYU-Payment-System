@@ -72,6 +72,42 @@ app.get('/api/my-ip', async (req, res) => {
   }
 });
 
+// Test Hubtel Direct Debit API from Railway server
+app.get('/api/test-hubtel', async (req, res) => {
+  try {
+    const { initiatePayment } = require('./utils/hubtelService');
+    
+    console.log('🧪 Testing Hubtel from Railway server...');
+    
+    // Test with dummy phone number
+    const result = await initiatePayment(
+      '233241234567',
+      1.00,
+      'TEST-' + Date.now(),
+      'BYU Virtual Card Test Payment',
+      'Test Student',
+      'test@example.com'
+    );
+    
+    res.json({
+      success: result.success,
+      message: result.success 
+        ? '✅ Hubtel API is working! IP whitelisting successful!' 
+        : '❌ Hubtel API failed',
+      result: result,
+      serverIP: req.headers['x-forwarded-for'] || req.ip,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      serverIP: req.headers['x-forwarded-for'] || req.ip,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Connect to database
 connectDB();
 
