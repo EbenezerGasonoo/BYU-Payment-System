@@ -75,9 +75,20 @@ app.get('/api/my-ip', async (req, res) => {
 // Test Hubtel Direct Debit API from Railway server
 app.get('/api/test-hubtel', async (req, res) => {
   try {
+    const axios = require('axios');
     const { initiatePayment } = require('./utils/hubtelService');
     
     console.log('🧪 Testing Hubtel from Railway server...');
+    
+    // First, get Railway's outbound IP
+    let railwayOutboundIP = 'unknown';
+    try {
+      const ipCheck = await axios.get('https://api.ipify.org?format=json', { timeout: 5000 });
+      railwayOutboundIP = ipCheck.data.ip;
+      console.log('🌐 Railway outbound IP:', railwayOutboundIP);
+    } catch (ipError) {
+      console.error('Failed to get outbound IP:', ipError.message);
+    }
     
     // Test with dummy phone number
     const result = await initiatePayment(
@@ -93,16 +104,23 @@ app.get('/api/test-hubtel', async (req, res) => {
       success: result.success,
       message: result.success 
         ? '✅ Hubtel API is working! IP whitelisting successful!' 
-        : '❌ Hubtel API failed',
+        : '❌ Hubtel API failed - Check if IP is whitelisted for preapproval.hubtel.com',
       result: result,
-      serverIP: req.headers['x-forwarded-for'] || req.ip,
+      railwayOutboundIP: railwayOutboundIP,
+      clientIP: req.headers['x-forwarded-for'] || req.ip,
+      instructions: !result.success ? {
+        step1: `Confirm with Hubtel that IP ${railwayOutboundIP} is whitelisted`,
+        step2: 'Ensure it\'s whitelisted for preapproval.hubtel.com (not rmp.hubtel.com)',
+        step3: 'Ask them to enable "Direct Debit PreApproval" scope',
+        step4: 'Wait 30-60 minutes for propagation'
+      } : null,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       error: error.message,
-      serverIP: req.headers['x-forwarded-for'] || req.ip,
+      clientIP: req.headers['x-forwarded-for'] || req.ip,
       timestamp: new Date().toISOString()
     });
   }
