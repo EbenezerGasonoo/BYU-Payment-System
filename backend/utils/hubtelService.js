@@ -8,7 +8,7 @@ const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_API_KEY; // API Key is the Clien
 const HUBTEL_CLIENT_ID = process.env.HUBTEL_API_ID; // API ID is the Client ID
 
 /**
- * Initiate Hubtel Direct Debit Charge (Direct debit from customer wallet)
+ * Initiate Hubtel Direct Debit PreApproval (Step 1: Customer approval via USSD/OTP)
  * @param {string} phoneNumber - Customer phone number (e.g., 0241234567)
  * @param {number} amount - Amount to charge
  * @param {string} paymentReference - Unique payment reference
@@ -19,7 +19,7 @@ const HUBTEL_CLIENT_ID = process.env.HUBTEL_API_ID; // API ID is the Client ID
  */
 const initiatePayment = async (phoneNumber, amount, paymentReference, description, customerName = 'Student', customerEmail = '') => {
   try {
-    console.log('🚀 Initiating Hubtel Direct Debit Charge:', {
+    console.log('🚀 Initiating Hubtel Direct Debit PreApproval:', {
       phoneNumber,
       amount,
       paymentReference,
@@ -43,54 +43,55 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
       ? 'mtn-gh-direct-debit'
       : 'vodafone-gh-direct-debit';
 
-    // Hubtel Direct Debit Charge API payload
+    // Hubtel Direct Debit PreApproval API payload (CORRECT FORMAT from documentation)
     const requestBody = {
-      CustomerName: customerName,
-      CustomerMsisdn: formattedPhone,
-      CustomerEmail: customerEmail || '',
-      Channel: channel,
-      Amount: parseFloat(amount),
-      PrimaryCallbackUrl: `${process.env.API_URL || 'https://byupay.up.railway.app'}/api/student/hubtel-callback`,
-      Description: description || 'BYU Virtual Card Payment',
-      ClientReference: paymentReference
+      clientReferenceId: paymentReference,
+      customerMsisdn: formattedPhone,
+      channel: channel,
+      callbackUrl: `${process.env.API_URL || 'https://byupay.up.railway.app'}/api/student/hubtel-callback`
     };
 
-    console.log('📡 Using Hubtel Direct Debit Charge API');
+    console.log('📡 Using Hubtel Direct Debit PreApproval API (CORRECT ENDPOINT)');
     console.log('📦 Request body:', requestBody);
     console.log('📱 Sending to:', formattedPhone, 'via channel:', channel);
 
-    // Hubtel Direct Debit Charge endpoint
+    // CORRECT Hubtel Direct Debit PreApproval endpoint
     const response = await axios.post(
-      `${HUBTEL_CHARGE_URL}/merchants/${HUBTEL_POS_SALES_ID}/receive/mobilemoney`,
+      `${HUBTEL_PREAPPROVAL_URL}/merchant/${HUBTEL_POS_SALES_ID}/preapproval/initiate`,
       requestBody,
       {
         headers: {
           'Authorization': `Basic ${authToken}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
-        }
+        },
+        timeout: 30000
       }
     );
 
-    console.log('✅ Hubtel Direct Debit response:', response.data);
+    console.log('✅ Hubtel Direct Debit PreApproval response:', response.data);
 
-    // Hubtel Direct Debit response: ResponseCode "0000" = success, "0001" = pending
-    if (response.data && (response.data.ResponseCode === '0000' || response.data.ResponseCode === '0001')) {
+    // Hubtel PreApproval response format
+    if (response.data && response.data.responseCode) {
+      const { responseCode, message, data } = response.data;
+      
       return {
-        success: true,
+        success: responseCode === '0000' || responseCode === '0001',
         data: {
-          transactionId: response.data.Data?.TransactionId,
-          status: response.data.ResponseCode === '0000' ? 'paid' : 'pending',
-          message: response.data.Message,
-          amount: response.data.Data?.Amount,
-          charges: response.data.Data?.Charges
+          hubtelPreApprovalId: data?.hubtelPreApprovalId,
+          clientReferenceId: data?.clientReferenceId,
+          verificationType: data?.verificationType, // USSD or OTP
+          otpPrefix: data?.otpPrefix,
+          preapprovalStatus: data?.preapprovalStatus, // PENDING, APPROVED, REJECTED
+          status: data?.preapprovalStatus === 'APPROVED' ? 'approved' : 'pending',
+          message: message
         }
       };
     } else {
-      console.error('❌ Hubtel returned error code:', response.data);
+      console.error('❌ Hubtel returned unexpected response:', response.data);
       return {
         success: false,
-        error: response.data.Message || 'Payment initiation failed',
+        error: response.data.message || 'Payment initiation failed',
         details: response.data
       };
     }
@@ -98,7 +99,7 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
     console.error('❌ Hubtel Direct Debit error:', error.response?.data || error.message);
     return {
       success: false,
-      error: error.response?.data?.Message || error.response?.data?.message || error.message,
+      error: error.response?.data?.message || error.response?.data?.Message || error.message,
       details: error.response?.data
     };
   }

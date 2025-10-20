@@ -17,29 +17,25 @@ const authToken = Buffer.from(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`).toS
 
 async function testDirectDebit() {
   try {
-    console.log('📡 Testing Direct Debit Charge Endpoint...');
-    console.log(`   URL: https://rmp.hubtel.com/merchantaccount/merchants/${HUBTEL_POS_SALES_ID}/receive/mobilemoney`);
+    console.log('📡 Testing Direct Debit PreApproval Endpoint (CORRECT API)...');
+    console.log(`   URL: https://preapproval.hubtel.com/api/v2/merchant/${HUBTEL_POS_SALES_ID}/preapproval/initiate`);
     console.log('');
 
-    // Test payload (small amount)
+    // Test payload (CORRECT FORMAT from documentation)
     const testPayload = {
-      CustomerName: 'Test Customer',
-      CustomerMsisdn: '233241234567',
-      CustomerEmail: 'test@example.com',
-      Channel: 'mtn-gh-direct-debit',
-      Amount: 0.50, // Small test amount
-      PrimaryCallbackUrl: 'https://byupay.up.railway.app/api/student/hubtel-callback',
-      Description: 'BYU Payment Test',
-      ClientReference: 'TEST-' + Date.now()
+      clientReferenceId: 'TEST-' + Date.now(),
+      customerMsisdn: '233241234567',
+      channel: 'mtn-gh-direct-debit',
+      callbackUrl: 'https://byupay.up.railway.app/api/student/hubtel-callback'
     };
 
     console.log('📤 Sending test request...');
-    console.log('   Test Amount: GHS 0.50');
     console.log('   Test Phone: 233241234567');
+    console.log('   Channel: mtn-gh-direct-debit');
     console.log('');
 
     const response = await axios.post(
-      `https://rmp.hubtel.com/merchantaccount/merchants/${HUBTEL_POS_SALES_ID}/receive/mobilemoney`,
+      `https://preapproval.hubtel.com/api/v2/merchant/${HUBTEL_POS_SALES_ID}/preapproval/initiate`,
       testPayload,
       {
         headers: {
@@ -47,16 +43,27 @@ async function testDirectDebit() {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        timeout: 15000
+        timeout: 30000
       }
     );
 
     console.log('═'.repeat(60));
-    console.log('✅ SUCCESS! Hubtel Direct Debit is working!');
+    console.log('✅ SUCCESS! Hubtel Direct Debit PreApproval is working!');
     console.log('═'.repeat(60));
     console.log('');
-    console.log('Response Code:', response.data.ResponseCode);
-    console.log('Message:', response.data.Message);
+    console.log('Response Code:', response.data.responseCode);
+    console.log('Message:', response.data.message);
+    console.log('');
+    console.log('PreApproval Details:');
+    if (response.data.data) {
+      console.log('  PreApproval ID:', response.data.data.hubtelPreApprovalId);
+      console.log('  Client Reference:', response.data.data.clientReferenceId);
+      console.log('  Verification Type:', response.data.data.verificationType);
+      console.log('  PreApproval Status:', response.data.data.preapprovalStatus);
+      if (response.data.data.otpPrefix) {
+        console.log('  OTP Prefix:', response.data.data.otpPrefix);
+      }
+    }
     console.log('');
     console.log('Full Response:');
     console.log(JSON.stringify(response.data, null, 2));
@@ -69,11 +76,12 @@ async function testDirectDebit() {
     console.log('✅ IP is whitelisted');
     console.log('✅ Direct Debit scope is enabled');
     console.log('✅ API is accessible');
+    console.log('✅ Using CORRECT endpoint (preapproval API)');
     console.log('');
     console.log('Next Steps:');
-    console.log('1. Add environment variables to Railway');
-    console.log('2. Test with real payments');
-    console.log('3. Go live!');
+    console.log('1. Test with real phone number');
+    console.log('2. Customer will receive USSD/OTP for approval');
+    console.log('3. After approval, callback will confirm payment');
     console.log('');
 
   } catch (error) {
