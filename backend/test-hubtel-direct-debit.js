@@ -26,7 +26,7 @@ async function testDirectDebit() {
       clientReferenceId: 'TEST-' + Date.now(),
       customerMsisdn: '233241234567',
       channel: 'mtn-gh-direct-debit',
-      callbackUrl: 'https://byupay.up.railway.app/api/student/hubtel-callback'
+      callbackUrl: 'https://webhook.site/26a30efb-d7be-4864-87da-ccd60979f578'
     };
 
     console.log('📤 Sending test request...');

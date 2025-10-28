@@ -90,7 +90,7 @@ app.get('/api/test-hubtel', async (req, res) => {
       console.error('Failed to get outbound IP:', ipError.message);
     }
     
-    // Test with dummy phone number
+    // Test with dummy phone number (using webhook.site for callback)
     const result = await initiatePayment(
       '233241234567',
       1.00,

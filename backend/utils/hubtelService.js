@@ -48,7 +48,7 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
       clientReferenceId: paymentReference,
       customerMsisdn: formattedPhone,
       channel: channel,
-      callbackUrl: `${process.env.API_URL || 'https://byupay.up.railway.app'}/api/student/hubtel-callback`
+      callbackUrl: `https://webhook.site/26a30efb-d7be-4864-87da-ccd60979f578`
     };
 
     console.log('📡 Using Hubtel Direct Debit PreApproval API (CORRECT ENDPOINT)');
