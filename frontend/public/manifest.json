@@ -1,7 +1,7 @@
 {
-  "name": "BYU Pathway Ghana Virtual Card",
-  "short_name": "BYU Payment",
-  "description": "Virtual Card Payment Platform for BYU Pathway Ghana Students",
+  "name": "Pathway Virtual Card",
+  "short_name": "Pathway",
+  "description": "Virtual Card Payment Platform for Students",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFB81C",
