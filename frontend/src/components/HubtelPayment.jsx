@@ -170,7 +170,8 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   };
 
   const paymentMethods = [
-    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: false }
+    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: false },
+    { id: 'momo-manual', name: 'Manual Mobile Money', icon: '💰', description: 'Pay directly to our account', disabled: false }
     // MTN Mobile Money Direct - Temporarily hidden (code kept for future implementation)
     // { id: 'momo-direct', name: 'MTN Mobile Money Direct', icon: '💳', description: 'Direct MTN prompt to phone', disabled: false }
   ];
@@ -260,31 +261,107 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
               </div>
             )}
 
-            <div className="form-group" style={{ marginTop: '1rem' }}>
-              <label>Mobile Money Number *</label>
-              <input
-                type="tel"
-                placeholder="e.g., 0241234567"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                pattern="[0-9]{10}"
-                required
-              />
-              <small>Enter your 10-digit mobile money number</small>
-            </div>
+            {paymentMethod === 'momo-manual' ? (
+              <div className="payment-instructions" style={{ marginTop: '1.5rem' }}>
+                <div style={{ 
+                  background: 'linear-gradient(135deg, rgba(255, 184, 28, 0.1), rgba(255, 200, 68, 0.1))', 
+                  padding: '1.5rem', 
+                  borderRadius: '12px', 
+                  border: '2px solid rgba(255, 184, 28, 0.3)',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h3 style={{ color: '#002E5D', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '1.5rem' }}>💰</span>
+                    Manual Payment Instructions
+                  </h3>
+                  
+                  <div style={{ background: 'white', padding: '1.25rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                    <p style={{ margin: '0 0 1rem 0', color: '#666', fontSize: '0.95rem' }}>
+                      Send <strong style={{ color: '#002E5D', fontSize: '1.1rem' }}>GHS {totalPaidGHS.toFixed(2)}</strong> via Mobile Money to:
+                    </p>
+                    
+                    <div style={{ display: 'grid', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(0, 46, 93, 0.05)', borderRadius: '6px' }}>
+                        <span style={{ color: '#666', fontWeight: '500' }}>Mobile Number:</span>
+                        <strong style={{ color: '#002E5D', fontSize: '1.1rem', fontFamily: 'monospace' }}>0594767131</strong>
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(0, 46, 93, 0.05)', borderRadius: '6px' }}>
+                        <span style={{ color: '#666', fontWeight: '500' }}>Account Name:</span>
+                        <strong style={{ color: '#002E5D', fontSize: '0.95rem' }}>ENCRYPTION NONCE TECHNOLOGY</strong>
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(255, 184, 28, 0.15)', borderRadius: '6px', border: '2px solid rgba(255, 184, 28, 0.3)' }}>
+                        <span style={{ color: '#856404', fontWeight: '600' }}>Reference/Description:</span>
+                        <strong style={{ color: '#856404', fontSize: '1.05rem', fontFamily: 'monospace' }}>{paymentData.byuId}</strong>
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="payment-actions">
-              <button
-                className="btn btn-primary"
-                onClick={initiatePayment}
-                disabled={processing}
-              >
-                {processing ? 'Processing...' : 'Proceed to Pay'}
-              </button>
-              <button className="btn btn-secondary" onClick={onCancel}>
-                Cancel
-              </button>
-            </div>
+                  <div style={{ background: 'rgba(0, 123, 255, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                    <p style={{ margin: '0 0 0.75rem 0', color: '#007bff', fontWeight: '600' }}>
+                      📝 Important Steps:
+                    </p>
+                    <ol style={{ margin: 0, paddingLeft: '1.5rem', lineHeight: '1.8', color: '#333' }}>
+                      <li>Open your Mobile Money app or dial your network's MoMo code</li>
+                      <li>Select "Send Money" or "Transfer"</li>
+                      <li>Enter the number: <strong>0594767131</strong></li>
+                      <li>Enter the amount: <strong>GHS {totalPaidGHS.toFixed(2)}</strong></li>
+                      <li>In the reference/description field, enter your Student ID: <strong>{paymentData.byuId}</strong></li>
+                      <li>Verify the recipient name shows: <strong>ENCRYPTION NONCE TECHNOLOGY</strong></li>
+                      <li>Complete the transaction</li>
+                      <li>Click the button below after payment</li>
+                    </ol>
+                  </div>
+
+                  <div style={{ background: 'rgba(220, 53, 69, 0.1)', padding: '1rem', borderRadius: '8px' }}>
+                    <p style={{ margin: 0, color: '#dc3545', fontWeight: '600', fontSize: '0.9rem' }}>
+                      ⚠️ <strong>IMPORTANT:</strong> You MUST include your Student ID ({paymentData.byuId}) in the reference field for us to verify your payment!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="payment-actions">
+                  <button 
+                    className="btn btn-success" 
+                    onClick={confirmPayment}
+                  >
+                    ✓ I've Completed the Payment
+                  </button>
+                  <button className="btn btn-secondary" onClick={onCancel}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                  <label>Mobile Money Number *</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g., 0241234567"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    pattern="[0-9]{10}"
+                    required
+                  />
+                  <small>Enter your 10-digit mobile money number</small>
+                </div>
+
+                <div className="payment-actions">
+                  <button
+                    className="btn btn-primary"
+                    onClick={initiatePayment}
+                    disabled={processing}
+                  >
+                    {processing ? 'Processing...' : 'Proceed to Pay'}
+                  </button>
+                  <button className="btn btn-secondary" onClick={onCancel}>
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </>
         ) : (
           <div className="payment-instructions">
