@@ -144,33 +144,74 @@ function AdminDashboard() {
       ) : (
         <>
           {stats && (
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-value">{stats.totalRequests}</div>
-            <div className="stat-label">Total Requests</div>
+        <div className="dashboard-top-row">
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-label">Total Requests</div>
+              <div className="stat-value">{stats.totalRequests}</div>
+            </div>
+            <div className="stat-card stat-warning">
+              <div className="stat-label">Pending</div>
+              <div className="stat-value">{stats.pendingRequests}</div>
+            </div>
+            <div className="stat-card stat-success">
+              <div className="stat-label">Assigned</div>
+              <div className="stat-value">{stats.assignedRequests}</div>
+            </div>
+            <div className="stat-card stat-info">
+              <div className="stat-label">Paid</div>
+              <div className="stat-value">{stats.paidRequests}</div>
+            </div>
+            <div className="stat-card stat-danger">
+              <div className="stat-label">Expired</div>
+              <div className="stat-value">{stats.expiredRequests}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Total Students</div>
+              <div className="stat-value">{stats.totalStudents}</div>
+            </div>
           </div>
-          <div className="stat-card stat-warning">
-            <div className="stat-value">{stats.pendingRequests}</div>
-            <div className="stat-label">Pending</div>
-          </div>
-          <div className="stat-card stat-success">
-            <div className="stat-value">{stats.assignedRequests}</div>
-            <div className="stat-label">Assigned</div>
-          </div>
-          <div className="stat-card stat-info">
-            <div className="stat-value">{stats.paidRequests}</div>
-            <div className="stat-label">Paid</div>
-          </div>
-          <div className="stat-card stat-danger">
-            <div className="stat-value">{stats.expiredRequests}</div>
-            <div className="stat-label">Expired</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">{stats.totalStudents}</div>
-            <div className="stat-label">Total Students</div>
+          
+          <div className="performance-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Card Performance</h3>
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>vs last month</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981', marginBottom: '0.5rem' }}>
+                  {Math.round((stats.assignedRequests / stats.totalRequests) * 100)}%
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Success Rate</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#f59e0b', marginBottom: '0.5rem' }}>
+                  {Math.round((stats.pendingRequests / stats.totalRequests) * 100)}%
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pending Rate</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
+      <div className="dashboard-charts-row">
+        <div className="chart-card">
+          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Request Analytics</h3>
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#9ca3af' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📊</div>
+            <div>Chart visualization area</div>
+          </div>
+        </div>
+        
+        <div className="chart-card">
+          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Revenue Profile</h3>
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#9ca3af' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📈</div>
+            <div>Revenue chart area</div>
+          </div>
+        </div>
+      </div>
 
       <div className="filter-section">
         <label>Filter by Status:</label>
