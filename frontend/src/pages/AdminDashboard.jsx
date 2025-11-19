@@ -395,8 +395,13 @@ function AdminDashboard() {
                     </div>
                   )}
                   {request.paymentStatus && (
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                      {request.paymentStatus}
+                    <div style={{ 
+                      fontSize: '0.75rem', 
+                      color: request.paymentStatus === 'paid' ? '#10b981' : request.paymentStatus === 'failed' ? '#ef4444' : '#9ca3af', 
+                      marginTop: '0.25rem',
+                      fontWeight: request.paymentStatus === 'paid' ? '600' : '400'
+                    }}>
+                      {request.paymentStatus === 'paid' ? '✓ Paid' : request.paymentStatus}
                     </div>
                   )}
                 </td>

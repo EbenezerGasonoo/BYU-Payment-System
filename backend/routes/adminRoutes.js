@@ -238,6 +238,7 @@ router.post('/action', async (req, res) => {
     cardRequest.status = action;
     if (action === 'paid') {
       cardRequest.paidAt = new Date();
+      cardRequest.paymentStatus = 'paid'; // Update payment status too
     }
 
     await cardRequest.save();
