@@ -200,7 +200,6 @@ function AdminDashboard() {
             </div>
           </div>
         </div>
-      )}
 
       <div className="dashboard-charts-row">
         <div className="chart-card">
@@ -209,25 +208,25 @@ function AdminDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
               <div>
                 <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#10b981', marginBottom: '0.5rem' }}>
-                  {stats.assignedRequests}
+                  {stats?.assignedRequests || 0}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Assigned</div>
               </div>
               <div>
                 <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#f59e0b', marginBottom: '0.5rem' }}>
-                  {stats.pendingRequests}
+                  {stats?.pendingRequests || 0}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pending</div>
               </div>
               <div>
                 <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#3b82f6', marginBottom: '0.5rem' }}>
-                  {stats.paidRequests}
+                  {stats?.paidRequests || 0}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Paid</div>
               </div>
               <div>
                 <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#ef4444', marginBottom: '0.5rem' }}>
-                  {stats.expiredRequests}
+                  {stats?.expiredRequests || 0}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Expired</div>
               </div>
@@ -239,7 +238,7 @@ function AdminDashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Revenue Profile</h3>
             <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '600' }}>
-              ↑ {Math.round((stats.paidRequests / stats.totalRequests) * 100)}% Completion Rate
+              ↑ {Math.round(((stats?.paidRequests || 0) / (stats?.totalRequests || 1)) * 100)}% Completion Rate
             </span>
           </div>
           <div style={{ padding: '1.5rem 0' }}>
@@ -247,13 +246,13 @@ function AdminDashboard() {
               <div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>Total Revenue (Estimated)</div>
                 <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1f2937' }}>
-                  ${(stats.paidRequests * 100).toLocaleString()}
+                  ${((stats?.paidRequests || 0) * 100).toLocaleString()}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>Active Requests</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981' }}>
-                  {stats.assignedRequests + stats.pendingRequests}
+                  {(stats?.assignedRequests || 0) + (stats?.pendingRequests || 0)}
                 </div>
               </div>
             </div>
@@ -266,7 +265,7 @@ function AdminDashboard() {
             }}>
               <div style={{ 
                 height: '100%', 
-                width: `${(stats.paidRequests / stats.totalRequests) * 100}%`,
+                width: `${((stats?.paidRequests || 0) / (stats?.totalRequests || 1)) * 100}%`,
                 background: 'linear-gradient(90deg, #10b981 0%, #3b82f6 100%)',
                 transition: 'width 0.5s ease'
               }}></div>
@@ -279,11 +278,12 @@ function AdminDashboard() {
               color: '#9ca3af'
             }}>
               <span>0</span>
-              <span>{stats.totalRequests} requests</span>
+              <span>{stats?.totalRequests || 0} requests</span>
             </div>
           </div>
         </div>
       </div>
+      )}
 
       <div className="filter-section">
         <label>Filter by Status:</label>
