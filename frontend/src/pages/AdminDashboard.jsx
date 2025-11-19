@@ -188,116 +188,68 @@ function AdminDashboard() {
       </div>
 
       <div className="requests-section">
-        <h2>Card Requests</h2>
+        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: '600', color: '#1f2937' }}>Card Requests</h2>
         {requests.length === 0 ? (
           <div className="alert alert-info">No requests found.</div>
         ) : (
-          <div className="admin-requests-grid">
+          <div className="admin-table-container">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Amount</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
             {requests.map((request) => (
-              <div key={request._id} className="admin-request-card">
-                <div className="request-header">
+              <tr key={request._id}>
+                <td>
+                  <div className="table-student-name">{request.student.name}</div>
+                  <div className="table-student-id">{request.student.byuId} • {request.requestToken}</div>
+                </td>
+                <td>
+                  <div style={{ fontWeight: '600', color: '#1f2937' }}>${request.amount}</div>
+                  {request.amountInGHS && (
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                      GHS {request.totalPaidGHS.toFixed(2)}
+                    </div>
+                  )}
+                </td>
+                <td>
+                  {request.paymentMethod && (
+                    <div>
+                      <span style={{
+                        fontSize: '0.813rem',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        background: request.paymentMethod === 'momo-manual' ? '#fef3e2' : '#ecfdf5',
+                        color: request.paymentMethod === 'momo-manual' ? '#92400e' : '#065f46',
+                        fontWeight: '500'
+                      }}>
+                        {request.paymentMethod === 'momo-manual' ? 'Manual' : 'Automated'}
+                      </span>
+                    </div>
+                  )}
+                  {request.paymentStatus && (
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                      {request.paymentStatus}
+                    </div>
+                  )}
+                </td>
+                <td>
                   <span className={`badge ${getStatusBadge(request.status)}`}>
                     {request.status.toUpperCase()}
                   </span>
-                  <span className="request-token">{request.requestToken}</span>
-                </div>
-
-                <div className="request-body">
-                  <h3>{request.student.name}</h3>
-                  <p><strong>BYU ID:</strong> {request.student.byuId}</p>
-                  <p><strong>Email:</strong> {request.student.email}</p>
-                  <p><strong>Phone:</strong> {request.student.phone}</p>
-                  <p><strong>Amount (USD):</strong> ${request.amount}</p>
-                  {request.amountInGHS && (
-                    <>
-                      <p><strong>Amount (GHS):</strong> GHS {request.amountInGHS.toFixed(2)}</p>
-                      <p><strong>Total Paid:</strong> GHS {request.totalPaidGHS.toFixed(2)} <small>(incl. {request.chargebackFee}% fee)</small></p>
-                      <p><strong>Exchange Rate:</strong> 1 USD = {request.exchangeRate.toFixed(2)} GHS</p>
-                    </>
-                  )}
-                  
-                  {/* Payment Method - Prominent Display */}
-                  {request.paymentMethod && (
-                    <p>
-                      <strong>Payment Method:</strong>{' '}
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '0.35rem 0.75rem',
-                        borderRadius: '8px',
-                        fontSize: '0.85rem',
-                        fontWeight: '600',
-                        background: request.paymentMethod === 'momo-manual' 
-                          ? 'linear-gradient(135deg, rgba(255, 184, 28, 0.2), rgba(255, 200, 68, 0.15))'
-                          : 'linear-gradient(135deg, rgba(40, 167, 69, 0.2), rgba(40, 167, 69, 0.15))',
-                        border: request.paymentMethod === 'momo-manual'
-                          ? '1px solid rgba(255, 184, 28, 0.4)'
-                          : '1px solid rgba(40, 167, 69, 0.4)',
-                        color: request.paymentMethod === 'momo-manual' ? '#856404' : '#155724'
-                      }}>
-                        {request.paymentMethod === 'momo-manual' ? '💰 Manual MoMo Transfer' : 
-                         request.paymentMethod === 'momo-hubtel' ? '📱 Hubtel Automated' : 
-                         request.paymentMethod === 'momo-direct' ? '💳 MTN Direct' :
-                         request.paymentMethod.toUpperCase()}
-                      </span>
-                      {request.paymentMethod === 'momo-manual' && (
-                        <span style={{
-                          display: 'inline-block',
-                          marginLeft: '0.5rem',
-                          fontSize: '0.8rem',
-                          color: '#dc3545',
-                          fontWeight: '600'
-                        }}>
-                          ⚠️ Verify manually
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  
-                  {request.paymentStatus && (
-                    <p>
-                      <strong>Payment Status:</strong>{' '}
-                      <span className={`badge ${
-                        request.paymentStatus === 'paid' ? 'badge-success' :
-                        request.paymentStatus === 'pending' ? 'badge-warning' :
-                        request.paymentStatus === 'failed' ? 'badge-danger' :
-                        'badge-secondary'
-                      }`}>
-                        {request.paymentStatus.toUpperCase()}
-                      </span>
-                    </p>
-                  )}
-                  {request.paymentReference && (
-                    <p>
-                      <strong>Payment Ref:</strong>{' '}
-                      <code style={{fontSize: '0.85rem', background: 'rgba(255,184,28,0.1)', padding: '0.25rem 0.5rem', borderRadius: '4px'}}>
-                        {request.paymentReference}
-                      </code>
-                      {request.paymentMethod === 'momo-manual' && (
-                        <span style={{
-                          display: 'block',
-                          fontSize: '0.8rem',
-                          color: '#856404',
-                          marginTop: '0.25rem',
-                          fontStyle: 'italic'
-                        }}>
-                          💡 Student should have used BYU ID ({request.student.byuId}) as reference
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  <p><strong>Requested:</strong> {formatDate(request.createdAt)}</p>
-
-                  {request.status === 'assigned' && (
-                    <div className="card-details">
-                      <h4>Assigned Card</h4>
-                      <p><strong>Card:</strong> {request.virtualCardNumber}</p>
-                      <p><strong>Expiry:</strong> {request.cardExpiryDate}</p>
-                      <p><strong>CVV:</strong> {request.cardCVV}</p>
-                      <p><strong>Expires:</strong> {formatDate(request.expiresAt)}</p>
-                    </div>
-                  )}
-
-                  <div className="action-buttons">
+                </td>
+                <td style={{ fontSize: '0.813rem', color: '#6b7280' }}>
+                  {new Date(request.createdAt).toLocaleDateString()}
+                </td>
+                <td>
+                  <div className="table-actions">
                     {request.status === 'pending' && (
                       <>
                         <button
@@ -332,9 +284,11 @@ function AdminDashboard() {
                       </>
                     )}
                   </div>
-                </div>
-              </div>
+                </td>
+              </tr>
             ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
