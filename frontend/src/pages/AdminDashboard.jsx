@@ -284,26 +284,23 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
-      </>
-      )}
 
-      {stats && (
-          <div className="filter-section">
-            <label>Filter by Status:</label>
-            <select value={filter} onChange={(e) => setFilter(e.target.value)} className="filter-select">
-              <option value="">All Requests</option>
-              <option value="pending">Pending</option>
-              <option value="assigned">Assigned</option>
-              <option value="paid">Paid</option>
-              <option value="expired">Expired</option>
-              <option value="declined">Declined</option>
-            </select>
-            <button onClick={loadDashboard} className="btn btn-primary" disabled={loading}>
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
+      <div className="filter-section">
+        <label>Filter by Status:</label>
+        <select value={filter} onChange={(e) => setFilter(e.target.value)} className="filter-select">
+          <option value="">All Requests</option>
+          <option value="pending">Pending</option>
+          <option value="assigned">Assigned</option>
+          <option value="paid">Paid</option>
+          <option value="expired">Expired</option>
+          <option value="declined">Declined</option>
+        </select>
+        <button onClick={loadDashboard} className="btn btn-primary" disabled={loading}>
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
 
-          <div className="requests-section">
+      <div className="requests-section">
             <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: '600', color: '#1f2937' }}>Card Requests</h2>
             {requests.length === 0 ? (
               <div className="alert alert-info">No requests found.</div>
@@ -408,7 +405,7 @@ function AdminDashboard() {
           </div>
             )}
           </div>
-        </>
+      </>
       )}
         </>
       )}
