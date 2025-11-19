@@ -73,11 +73,8 @@ function StudentDashboard() {
         </div>
       )}
 
-      <div style={{ 
-        background: 'white', 
+      <div className="white-glass-card" style={{ 
         padding: '2rem', 
-        borderRadius: '12px', 
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         marginBottom: '2rem'
       }}>
         <h1 style={{ 
@@ -117,11 +114,8 @@ function StudentDashboard() {
 
       {dashboardData && (
         <div className="dashboard">
-          <div style={{ 
-            background: 'white', 
+          <div className="white-glass-card" style={{ 
             padding: '1.5rem', 
-            borderRadius: '12px', 
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             marginBottom: '2rem'
           }}>
             <h2 style={{ 
@@ -149,11 +143,8 @@ function StudentDashboard() {
             Card Requests History
           </h2>
           {dashboardData.cardRequests.length === 0 ? (
-            <div style={{
-              background: 'white',
+            <div className="white-glass-card" style={{
               padding: '2rem',
-              borderRadius: '12px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               textAlign: 'center',
               color: '#666'
             }}>
@@ -162,11 +153,8 @@ function StudentDashboard() {
           ) : (
             <div className="requests-grid">
               {dashboardData.cardRequests.map((request) => (
-                <div key={request._id} style={{
-                  background: 'white',
+                <div key={request._id} className="white-glass-card" style={{
                   padding: '1.5rem',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                   marginBottom: '1rem'
                 }}>
                   <div className="request-header">
