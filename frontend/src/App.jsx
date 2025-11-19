@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import StudentRegister from './pages/StudentRegister';
 import RequestPayment from './pages/RequestPayment';
@@ -15,8 +15,10 @@ import ProgressTracker from './components/ProgressTracker';
 import LiveChat from './components/LiveChat';
 import './App.css';
 
-function App() {
+function AppContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const isAdminPage = location.pathname === '/admin';
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -27,13 +29,16 @@ function App() {
   };
 
   return (
-    <Router>
       <div className="app">
-        <OnboardingTour />
-        <WelcomeModal />
-        <HelpButton />
-        <ProgressTracker />
-        <LiveChat />
+        {!isAdminPage && (
+          <>
+            <OnboardingTour />
+            <WelcomeModal />
+            <HelpButton />
+            <ProgressTracker />
+            <LiveChat />
+          </>
+        )}
         
         <nav className="navbar">
           <div className="container">
@@ -91,6 +96,13 @@ function App() {
           </div>
         </footer>
       </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
