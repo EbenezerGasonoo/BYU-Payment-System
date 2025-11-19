@@ -139,6 +139,13 @@ function AdminDashboard() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      {loading && !stats && (
+        <div style={{ textAlign: 'center', padding: '4rem 0' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+          <div style={{ fontSize: '1.25rem', color: '#6b7280' }}>Loading dashboard...</div>
+        </div>
+      )}
+
       {activeTab === 'chat' ? (
         <AdminChat adminKey={adminKey} />
       ) : (
@@ -396,9 +403,19 @@ function AdminDashboard() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+          )}
+        </div>
         </>
+      )}
+
+      {!loading && !stats && !error && authenticated && activeTab !== 'chat' && (
+        <div style={{ textAlign: 'center', padding: '4rem 0' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
+          <div style={{ fontSize: '1.25rem', color: '#6b7280', marginBottom: '1rem' }}>No data available</div>
+          <button onClick={loadDashboard} className="btn btn-primary">
+            Load Dashboard
+          </button>
+        </div>
       )}
     </div>
   );
