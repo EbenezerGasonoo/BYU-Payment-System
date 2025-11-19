@@ -191,9 +191,47 @@ function AdminDashboard() {
                       <p><strong>Exchange Rate:</strong> 1 USD = {request.exchangeRate.toFixed(2)} GHS</p>
                     </>
                   )}
+                  
+                  {/* Payment Method - Prominent Display */}
+                  {request.paymentMethod && (
+                    <p>
+                      <strong>Payment Method:</strong>{' '}
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '8px',
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        background: request.paymentMethod === 'momo-manual' 
+                          ? 'linear-gradient(135deg, rgba(255, 184, 28, 0.2), rgba(255, 200, 68, 0.15))'
+                          : 'linear-gradient(135deg, rgba(40, 167, 69, 0.2), rgba(40, 167, 69, 0.15))',
+                        border: request.paymentMethod === 'momo-manual'
+                          ? '1px solid rgba(255, 184, 28, 0.4)'
+                          : '1px solid rgba(40, 167, 69, 0.4)',
+                        color: request.paymentMethod === 'momo-manual' ? '#856404' : '#155724'
+                      }}>
+                        {request.paymentMethod === 'momo-manual' ? '💰 Manual MoMo Transfer' : 
+                         request.paymentMethod === 'momo-hubtel' ? '📱 Hubtel Automated' : 
+                         request.paymentMethod === 'momo-direct' ? '💳 MTN Direct' :
+                         request.paymentMethod.toUpperCase()}
+                      </span>
+                      {request.paymentMethod === 'momo-manual' && (
+                        <span style={{
+                          display: 'inline-block',
+                          marginLeft: '0.5rem',
+                          fontSize: '0.8rem',
+                          color: '#dc3545',
+                          fontWeight: '600'
+                        }}>
+                          ⚠️ Verify manually
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  
                   {request.paymentStatus && (
                     <p>
-                      <strong>Payment:</strong>{' '}
+                      <strong>Payment Status:</strong>{' '}
                       <span className={`badge ${
                         request.paymentStatus === 'paid' ? 'badge-success' :
                         request.paymentStatus === 'pending' ? 'badge-warning' :
@@ -202,11 +240,26 @@ function AdminDashboard() {
                       }`}>
                         {request.paymentStatus.toUpperCase()}
                       </span>
-                      {request.paymentMethod && ` via ${request.paymentMethod.toUpperCase()}`}
                     </p>
                   )}
                   {request.paymentReference && (
-                    <p><strong>Payment Ref:</strong> <code style={{fontSize: '0.85rem', background: 'rgba(255,184,28,0.1)', padding: '0.25rem 0.5rem', borderRadius: '4px'}}>{request.paymentReference}</code></p>
+                    <p>
+                      <strong>Payment Ref:</strong>{' '}
+                      <code style={{fontSize: '0.85rem', background: 'rgba(255,184,28,0.1)', padding: '0.25rem 0.5rem', borderRadius: '4px'}}>
+                        {request.paymentReference}
+                      </code>
+                      {request.paymentMethod === 'momo-manual' && (
+                        <span style={{
+                          display: 'block',
+                          fontSize: '0.8rem',
+                          color: '#856404',
+                          marginTop: '0.25rem',
+                          fontStyle: 'italic'
+                        }}>
+                          💡 Student should have used BYU ID ({request.student.byuId}) as reference
+                        </span>
+                      )}
+                    </p>
                   )}
                   <p><strong>Requested:</strong> {formatDate(request.createdAt)}</p>
 
