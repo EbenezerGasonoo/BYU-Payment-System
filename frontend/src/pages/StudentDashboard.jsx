@@ -73,10 +73,30 @@ function StudentDashboard() {
         </div>
       )}
 
-      <h1>Student Dashboard</h1>
-      <p className="subtitle">View your card requests and status</p>
+      <div style={{ 
+        background: 'white', 
+        padding: '2rem', 
+        borderRadius: '12px', 
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        marginBottom: '2rem'
+      }}>
+        <h1 style={{ 
+          color: '#002E5D', 
+          marginBottom: '0.5rem',
+          fontSize: '2rem',
+          fontWeight: '700'
+        }}>
+          Student Dashboard
+        </h1>
+        <p style={{ 
+          color: '#666', 
+          fontSize: '1rem',
+          margin: '0 0 1.5rem 0'
+        }}>
+          View your card requests and status
+        </p>
 
-      <form onSubmit={handleSearch} className="search-form">
+        <form onSubmit={handleSearch} className="search-form">
         <input
           type="text"
           value={byuId}
@@ -91,13 +111,27 @@ function StudentDashboard() {
           {loading ? 'Loading...' : 'Load Dashboard'}
         </button>
       </form>
+      </div>
 
       {error && <div className="alert alert-error">{error}</div>}
 
       {dashboardData && (
         <div className="dashboard">
-          <div className="student-info-card">
-            <h2>Student Information</h2>
+          <div style={{ 
+            background: 'white', 
+            padding: '1.5rem', 
+            borderRadius: '12px', 
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            marginBottom: '2rem'
+          }}>
+            <h2 style={{ 
+              color: '#002E5D', 
+              marginBottom: '1rem',
+              fontSize: '1.5rem',
+              fontWeight: '600'
+            }}>
+              Student Information
+            </h2>
             <div className="info-grid">
               <div><strong>Name:</strong> {dashboardData.student.name}</div>
               <div><strong>BYU ID:</strong> {dashboardData.student.byuId}</div>
@@ -106,13 +140,35 @@ function StudentDashboard() {
             </div>
           </div>
 
-          <h2>Card Requests History</h2>
+          <h2 style={{ 
+            color: '#002E5D', 
+            marginBottom: '1rem',
+            fontSize: '1.5rem',
+            fontWeight: '600'
+          }}>
+            Card Requests History
+          </h2>
           {dashboardData.cardRequests.length === 0 ? (
-            <div className="alert alert-info">No card requests found.</div>
+            <div style={{
+              background: 'white',
+              padding: '2rem',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              textAlign: 'center',
+              color: '#666'
+            }}>
+              No card requests found.
+            </div>
           ) : (
             <div className="requests-grid">
               {dashboardData.cardRequests.map((request) => (
-                <div key={request._id} className="request-card">
+                <div key={request._id} style={{
+                  background: 'white',
+                  padding: '1.5rem',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  marginBottom: '1rem'
+                }}>
                   <div className="request-header">
                     <span className={`badge ${getStatusBadge(request.status)}`}>
                       {request.status.toUpperCase()}
