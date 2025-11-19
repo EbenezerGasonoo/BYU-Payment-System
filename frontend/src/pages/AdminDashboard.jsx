@@ -151,6 +151,7 @@ function AdminDashboard() {
       ) : (
         <>
           {stats && (
+        <>
         <div className="dashboard-top-row">
           <div className="stats-grid">
             <div className="stat-card">
@@ -201,7 +202,7 @@ function AdminDashboard() {
           </div>
         </div>
 
-      <div className="dashboard-charts-row">
+        <div className="dashboard-charts-row">
         <div className="chart-card">
           <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Request Analytics</h3>
           <div style={{ padding: '2rem 0' }}>
@@ -283,10 +284,10 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
+      </>
       )}
 
       {stats && (
-        <>
           <div className="filter-section">
             <label>Filter by Status:</label>
             <select value={filter} onChange={(e) => setFilter(e.target.value)} className="filter-select">
