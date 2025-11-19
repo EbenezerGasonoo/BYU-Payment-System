@@ -127,25 +127,45 @@ function RequestPayment() {
     setMessage({ type: '', text: '' });
 
     try {
-      // Verify the payment (card request already created in handleSubmit)
-      const verifyResponse = await studentAPI.verifyPayment({
-        paymentReference: paymentReference,
-        hubtelReference: paymentReference // This would be from Hubtel callback in production
-      });
+      // For manual payments, skip automatic verification (admin will verify manually)
+      if (paymentMethod === 'momo-manual') {
+        setMessage({ 
+          type: 'success', 
+          text: 'Payment confirmation received! Your request has been submitted. Admin will verify your payment and assign your card within 24 hours. Please check your dashboard for updates.' 
+        });
+        setRequestToken(paymentData.requestToken);
+        localStorage.setItem('hasRequestedCard', 'true');
+        
+        // Guide to next step
+        setTimeout(() => {
+          if (confirm('Request submitted successfully! Your payment will be verified manually. Would you like to check your dashboard?')) {
+            navigate('/dashboard');
+          }
+        }, 3000);
+        
+        setFormData({ byuId: formData.byuId, amount: '' });
+        setTermsAccepted(false);
+      } else {
+        // For Hubtel/automated payments, verify as before
+        const verifyResponse = await studentAPI.verifyPayment({
+          paymentReference: paymentReference,
+          hubtelReference: paymentReference // This would be from Hubtel callback in production
+        });
 
-      setMessage({ type: 'success', text: verifyResponse.message });
-      setRequestToken(verifyResponse.data.requestToken);
-      localStorage.setItem('hasRequestedCard', 'true');
-      
-      // Guide to next step
-      setTimeout(() => {
-        if (confirm('Payment verified! Your card request has been submitted. Would you like to check your dashboard?')) {
-          navigate('/dashboard');
-        }
-      }, 3000);
-      
-      setFormData({ byuId: formData.byuId, amount: '' });
-      setTermsAccepted(false);
+        setMessage({ type: 'success', text: verifyResponse.message });
+        setRequestToken(verifyResponse.data.requestToken);
+        localStorage.setItem('hasRequestedCard', 'true');
+        
+        // Guide to next step
+        setTimeout(() => {
+          if (confirm('Payment verified! Your card request has been submitted. Would you like to check your dashboard?')) {
+            navigate('/dashboard');
+          }
+        }, 3000);
+        
+        setFormData({ byuId: formData.byuId, amount: '' });
+        setTermsAccepted(false);
+      }
     } catch (error) {
       setMessage({
         type: 'error',
