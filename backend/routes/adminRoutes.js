@@ -163,6 +163,51 @@ router.post('/assign/mock', async (req, res) => {
   }
 });
 
+// Update cardholder name for an existing assigned card
+router.post('/update-cardholder', async (req, res) => {
+  try {
+    const { requestId, cardholderName } = req.body;
+
+    if (!requestId || !cardholderName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Request ID and cardholder name are required'
+      });
+    }
+
+    const cardRequest = await CardRequest.findById(requestId);
+    if (!cardRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Card request not found'
+      });
+    }
+
+    if (cardRequest.status !== 'assigned') {
+      return res.status(400).json({
+        success: false,
+        message: 'Card must be in assigned status'
+      });
+    }
+
+    cardRequest.cardholderName = cardholderName;
+    await cardRequest.save();
+
+    res.json({
+      success: true,
+      message: 'Cardholder name updated successfully',
+      data: cardRequest
+    });
+  } catch (error) {
+    console.error('Error updating cardholder name:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
 // Mark card request as paid, expired, or declined
 router.post('/action', async (req, res) => {
   try {

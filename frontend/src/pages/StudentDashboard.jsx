@@ -168,23 +168,27 @@ function StudentDashboard() {
                     <p><strong>Amount:</strong> GHS {request.amount}</p>
                     <p><strong>Requested:</strong> {formatDate(request.createdAt)}</p>
 
-                    {request.status === 'assigned' && (
+                    {request.status === 'assigned' && request.virtualCardNumber && (
                       <div className="card-details">
                         <h4>💳 Virtual Card Details</h4>
                         <div className="virtual-card-display">
                           <div className="card-number-display">
-                            <span className="card-label">Card Number</span>
+                            <span className="card-label">CARD NUMBER</span>
                             <span className="card-value">{request.virtualCardNumber}</span>
                           </div>
-                          <div className="card-name-display">
-                            <span className="card-label">Cardholder Name</span>
-                            <span className="card-value" style={{ textTransform: 'uppercase', fontSize: '1.1rem', fontWeight: '700' }}>
-                              {request.cardholderName || 'N/A'}
-                            </span>
-                          </div>
+                          
+                          {request.cardholderName && (
+                            <div className="card-name-display">
+                              <span className="card-label">CARDHOLDER NAME</span>
+                              <span className="card-value" style={{ textTransform: 'uppercase', fontSize: '1.1rem', fontWeight: '700', color: '#002E5D' }}>
+                                {request.cardholderName}
+                              </span>
+                            </div>
+                          )}
+                          
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
                             <div>
-                              <span className="card-label">Expiry Date</span>
+                              <span className="card-label">EXPIRY DATE</span>
                               <span className="card-value">{request.cardExpiryDate}</span>
                             </div>
                             <div>
@@ -192,7 +196,7 @@ function StudentDashboard() {
                               <span className="card-value">{request.cardCVV}</span>
                             </div>
                           </div>
-                          <p className="expiry-warning" style={{ marginTop: '1rem', padding: '0.75rem', background: '#fef3e2', borderRadius: '8px', fontSize: '0.875rem' }}>
+                          <p className="expiry-warning" style={{ marginTop: '1rem', padding: '0.75rem', background: '#fef3e2', borderRadius: '8px', fontSize: '0.875rem', border: '1px solid #f59e0b' }}>
                             <strong>⏰ Card Expires:</strong> {formatDate(request.expiresAt)}
                           </p>
                         </div>
