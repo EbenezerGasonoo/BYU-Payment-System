@@ -1,6 +1,6 @@
-# 🎓 BYU Pathway Ghana - Virtual Card Payment System
+# 🎓 Pathway - Virtual Card Payment System
 
-Modern, secure payment platform for BYU Pathway Ghana students to request and receive virtual cards for school fee payments.
+Modern, secure payment platform for Pathway students to request and receive virtual cards for school fee payments.
 
 ---
 

@@ -15,7 +15,7 @@ const notifyAdminNewRequest = async (student, cardRequest) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: process.env.ADMIN_EMAIL,
-      subject: '🔔 New Virtual Card Request - BYU Pathway Ghana',
+      subject: '🔔 New Virtual Card Request - Pathway',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #002E5D;">New Virtual Card Request</h2>
@@ -34,7 +34,7 @@ const notifyAdminNewRequest = async (student, cardRequest) => {
           <p>Please log in to the admin dashboard to assign a virtual card.</p>
           
           <p style="color: #666; font-size: 12px; margin-top: 30px;">
-            BYU Pathway Ghana Virtual Card System<br>
+            Pathway Virtual Card System<br>
             This is an automated notification.
           </p>
         </div>
@@ -54,7 +54,7 @@ const notifyStudentCardAssigned = async (student, cardRequest) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: student.email,
-      subject: '✅ Virtual Card Assigned - BYU Pathway Ghana',
+      subject: '✅ Virtual Card Assigned - Pathway',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #002E5D;">Your Virtual Card is Ready!</h2>
@@ -80,7 +80,7 @@ const notifyStudentCardAssigned = async (student, cardRequest) => {
           </ol>
           
           <p style="color: #666; font-size: 12px; margin-top: 30px;">
-            BYU Pathway Ghana Virtual Card System<br>
+            Pathway Virtual Card System<br>
             This is an automated notification.
           </p>
         </div>
@@ -100,7 +100,7 @@ const notifyStudentCardExpired = async (student, cardRequest) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: student.email,
-      subject: '⏰ Virtual Card Expired - BYU Pathway Ghana',
+      subject: '⏰ Virtual Card Expired - Pathway',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #d9534f;">Virtual Card Expired</h2>
@@ -116,7 +116,7 @@ const notifyStudentCardExpired = async (student, cardRequest) => {
           <p>If you still need to make a payment, please submit a new card request through the student portal.</p>
           
           <p style="color: #666; font-size: 12px; margin-top: 30px;">
-            BYU Pathway Ghana Virtual Card System<br>
+            Pathway Virtual Card System<br>
             This is an automated notification.
           </p>
         </div>

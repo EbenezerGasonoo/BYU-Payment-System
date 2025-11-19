@@ -27,7 +27,7 @@ function App() {
         <nav className="navbar">
           <div className="container">
             <div className="nav-brand">
-              <h2>🎓 BYU Pathway Ghana</h2>
+              <h2>🎓 Pathway</h2>
               <p>Virtual Card Payment System</p>
             </div>
             <ul className="nav-links">
@@ -65,7 +65,7 @@ function App() {
                 <span className="footer-divider">•</span>
                 <Link to="/admin">Admin</Link>
               </div>
-              <p>&copy; 2025 BYU Pathway Ghana. Payment Platform.</p>
+              <p>&copy; 2025 Pathway. Payment Platform.</p>
             </div>
           </div>
         </footer>

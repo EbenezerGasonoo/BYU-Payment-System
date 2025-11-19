@@ -4,9 +4,9 @@ function Home() {
   return (
     <div className="container">
       <div className="hero">
-        <h1>Welcome to BYU Pathway Ghanaian Students School Fees Virtual Card Payment System</h1>
+        <h1>Welcome to Pathway</h1>
         <p className="subtitle">
-          A secure platform for Ghanaian students to access virtual payment cards for school fees
+          A secure platform for students to access virtual payment cards for school fees
         </p>
 
         <div className="features">

@@ -112,7 +112,7 @@ function StudentRegister() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">BYU Pathway Email *</label>
+            <label htmlFor="email">Pathway Email *</label>
             <input
               type="email"
               id="email"
@@ -122,7 +122,7 @@ function StudentRegister() {
               required
               placeholder="your.name@byupathway.edu"
               pattern="[a-zA-Z0-9._%+-]+@byupathway\.edu"
-              title="Please use your BYU Pathway email (@byupathway.edu)"
+              title="Please use your Pathway email (@byupathway.edu)"
             />
             <small className="field-hint">Must be your @byupathway.edu email address</small>
           </div>

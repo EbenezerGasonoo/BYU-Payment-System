@@ -25,11 +25,11 @@ router.post('/submit', async (req, res) => {
       });
     }
 
-    // Validate BYU Pathway email
+    // Validate Pathway email
     if (!email.toLowerCase().endsWith('@byupathway.edu')) {
       return res.status(400).json({
         success: false,
-        message: 'Please use your BYU Pathway email address (@byupathway.edu)'
+        message: 'Please use your Pathway email address (@byupathway.edu)'
       });
     }
 
@@ -85,7 +85,7 @@ router.post('/submit', async (req, res) => {
               </div>
               
               <p style="color: #666; font-size: 12px; margin-top: 30px;">
-                BYU Pathway Ghana Virtual Card System<br>
+                Pathway Virtual Card System<br>
                 Support Request ID: ${contactMessage._id}
               </p>
             </div>
@@ -96,7 +96,7 @@ router.post('/submit', async (req, res) => {
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
           to: email,
-          subject: '✅ We received your message - BYU Pathway Ghana',
+          subject: '✅ We received your message - Pathway',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #002E5D;">Thank You for Contacting Us!</h2>
@@ -115,7 +115,7 @@ router.post('/submit', async (req, res) => {
               </ul>
               
               <p style="color: #666; font-size: 12px; margin-top: 30px;">
-                BYU Pathway Ghana Virtual Card System<br>
+                Pathway Virtual Card System<br>
                 This is an automated confirmation.
               </p>
             </div>

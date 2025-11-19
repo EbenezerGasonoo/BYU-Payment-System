@@ -28,11 +28,11 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Validate BYU Pathway email
+    // Validate Pathway email
     if (!email.toLowerCase().endsWith('@byupathway.edu')) {
       return res.status(400).json({
         success: false,
-        message: 'Please use your BYU Pathway email address (@byupathway.edu)'
+        message: 'Please use your Pathway email address (@byupathway.edu)'
       });
     }
 

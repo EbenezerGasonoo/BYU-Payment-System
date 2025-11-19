@@ -150,7 +150,7 @@ startCardExpiryJob();
 // Routes
 app.get('/', (req, res) => {
   res.json({
-    message: 'BYU Pathway Ghana Virtual Card Payment Platform API',
+    message: 'Pathway Virtual Card Payment Platform API',
     version: '2.0.0',
     endpoints: {
       student: {
