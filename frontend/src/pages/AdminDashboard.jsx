@@ -283,7 +283,6 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
-      )}
 
       <div className="filter-section">
         <label>Filter by Status:</label>
@@ -403,8 +402,9 @@ function AdminDashboard() {
               </tbody>
             </table>
           </div>
-          )}
+        )}
         </div>
+      )}
         </>
       )}
 
