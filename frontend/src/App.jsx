@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { useState } from 'react';
 import StudentRegister from './pages/StudentRegister';
 import RequestPayment from './pages/RequestPayment';
 import StudentDashboard from './pages/StudentDashboard';
@@ -15,6 +16,16 @@ import LiveChat from './components/LiveChat';
 import './App.css';
 
 function App() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
     <Router>
       <div className="app">
@@ -30,13 +41,26 @@ function App() {
               <h2>🎓 Pathway</h2>
               <p>Virtual Card Payment System</p>
             </div>
-            <ul className="nav-links">
-              <li><Link to="/" className="home-link">Home</Link></li>
-              <li><Link to="/register" className="register-link">Register</Link></li>
-              <li><Link to="/request" className="request-link">Request Card</Link></li>
-              <li><Link to="/dashboard" className="dashboard-link">Dashboard</Link></li>
-              <li><Link to="/faq" className="faq-link">FAQ</Link></li>
-              <li><Link to="/contact" className="contact-link">Contact</Link></li>
+            
+            {/* Hamburger Menu Button */}
+            <button 
+              className={`hamburger ${mobileMenuOpen ? 'active' : ''}`}
+              onClick={toggleMobileMenu}
+              aria-label="Toggle menu"
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+
+            {/* Navigation Links */}
+            <ul className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+              <li><Link to="/" className="home-link" onClick={closeMobileMenu}>Home</Link></li>
+              <li><Link to="/register" className="register-link" onClick={closeMobileMenu}>Register</Link></li>
+              <li><Link to="/request" className="request-link" onClick={closeMobileMenu}>Request Card</Link></li>
+              <li><Link to="/dashboard" className="dashboard-link" onClick={closeMobileMenu}>Dashboard</Link></li>
+              <li><Link to="/faq" className="faq-link" onClick={closeMobileMenu}>FAQ</Link></li>
+              <li><Link to="/contact" className="contact-link" onClick={closeMobileMenu}>Contact</Link></li>
               <li><InstallButton /></li>
             </ul>
           </div>
