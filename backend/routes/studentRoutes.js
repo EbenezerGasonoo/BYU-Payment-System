@@ -309,7 +309,7 @@ router.post('/initiate-hubtel-payment', async (req, res) => {
 // Hubtel Payment Callback (webhook)
 router.post('/hubtel-callback', async (req, res) => {
   try {
-    console.log('📥 Hubtel callback received:', req.body);
+    console.log('📥 Hubtel callback received (POST):', req.body);
 
     const { ResponseCode, Data } = req.body;
 
@@ -354,6 +354,12 @@ router.post('/hubtel-callback', async (req, res) => {
     console.error('Hubtel callback error:', error);
     res.status(500).send('Error');
   }
+});
+
+// Handle GET requests for webhook verification (Hubtel may ping with GET)
+router.get('/hubtel-callback', (req, res) => {
+  console.log('📥 Hubtel callback received (GET - verification):', req.query);
+  res.status(200).send('OK');
 });
 
 // Initiate MTN MoMo Payment (Request to Pay)

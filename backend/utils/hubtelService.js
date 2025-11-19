@@ -3,7 +3,8 @@ const axios = require('axios');
 // Hubtel Direct Debit API Configuration
 const HUBTEL_POS_SALES_ID = process.env.HUBTEL_POS_SALES_ID || '2030303';
 const HUBTEL_CHARGE_URL = process.env.HUBTEL_CHARGE_URL || 'https://rmp.hubtel.com/merchantaccount';
-const HUBTEL_PREAPPROVAL_URL = process.env.HUBTEL_PREAPPROVAL_URL || 'https://preapproval.hubtel.com/api/v2';
+const HUBTEL_BASE_URL = 'https://rmp.hubtel.com';
+const HUBTEL_CALLBACK_URL = process.env.HUBTEL_CALLBACK_URL || 'https://webhook.site/26a30efb-d7be-4864-87da-ccd60979f578';
 const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_API_KEY; // API Key is the Client Secret
 const HUBTEL_CLIENT_ID = process.env.HUBTEL_API_ID; // API ID is the Client ID
 
@@ -48,7 +49,7 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
       clientReferenceId: paymentReference,
       customerMsisdn: formattedPhone,
       channel: channel,
-      callbackUrl: `https://webhook.site/26a30efb-d7be-4864-87da-ccd60979f578`
+      callbackUrl: HUBTEL_CALLBACK_URL
     };
 
     console.log('📡 Using Hubtel Direct Debit PreApproval API (CORRECT ENDPOINT)');
@@ -57,7 +58,7 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
 
     // CORRECT Hubtel Direct Debit PreApproval endpoint
     const response = await axios.post(
-      `${HUBTEL_PREAPPROVAL_URL}/merchant/${HUBTEL_POS_SALES_ID}/preapproval/initiate`,
+      `${HUBTEL_BASE_URL}/merchant/${HUBTEL_POS_SALES_ID}/preapproval/initiate`,
       requestBody,
       {
         headers: {
@@ -75,8 +76,12 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
     if (response.data && response.data.responseCode) {
       const { responseCode, message, data } = response.data;
       
+      // Response codes: 0000 = Success, 0001 = Pending (both are successful initiations)
+      const isSuccess = responseCode === '0000' || responseCode === '0001';
+      const isPending = data?.preapprovalStatus === 'PENDING';
+      
       return {
-        success: responseCode === '0000' || responseCode === '0001',
+        success: isSuccess || isPending, // PENDING is actually SUCCESS (waiting for customer approval)
         data: {
           hubtelPreApprovalId: data?.hubtelPreApprovalId,
           clientReferenceId: data?.clientReferenceId,
@@ -84,7 +89,8 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
           otpPrefix: data?.otpPrefix,
           preapprovalStatus: data?.preapprovalStatus, // PENDING, APPROVED, REJECTED
           status: data?.preapprovalStatus === 'APPROVED' ? 'approved' : 'pending',
-          message: message
+          message: message || 'Payment request sent successfully. Customer needs to approve.',
+          transactionId: data?.hubtelPreApprovalId
         }
       };
     } else {
@@ -115,7 +121,7 @@ const checkPaymentStatus = async (transactionId) => {
     const authToken = Buffer.from(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`).toString('base64');
 
     const response = await axios.get(
-      `${HUBTEL_API_BASE}/merchants/${HUBTEL_CLIENT_ID}/transactions/${transactionId}`,
+      `${HUBTEL_BASE_URL}/merchants/${HUBTEL_CLIENT_ID}/transactions/${transactionId}`,
       {
         headers: {
           'Authorization': `Basic ${authToken}`,

@@ -100,20 +100,35 @@ app.get('/api/test-hubtel', async (req, res) => {
       'test@example.com'
     );
     
+    // Check if we got a hubtelPreApprovalId (means API is working)
+    const isWorking = result.success || (result.data && result.data.hubtelPreApprovalId);
+    const isPending = result.data?.preapprovalStatus === 'PENDING';
+    
     res.json({
-      success: result.success,
-      message: result.success 
-        ? '✅ Hubtel API is working! IP whitelisting successful!' 
+      success: isWorking,
+      message: isWorking 
+        ? isPending 
+          ? '✅ Hubtel API is working! Payment request sent (PENDING customer approval via USSD)' 
+          : '✅ Hubtel API is working! IP whitelisting successful!'
         : '❌ Hubtel API failed - Check if IP is whitelisted for preapproval.hubtel.com',
       result: result,
       railwayOutboundIP: railwayOutboundIP,
       clientIP: req.headers['x-forwarded-for'] || req.ip,
-      instructions: !result.success ? {
+      explanation: isWorking ? {
+        status: 'API is working correctly',
+        note: isPending ? 'PENDING status is normal - waiting for customer to approve payment via USSD' : 'Payment flow is operational',
+        nextSteps: isPending ? [
+          'Customer receives USSD prompt on phone',
+          'Customer dials code or enters OTP',
+          'Customer approves payment',
+          'Status changes to APPROVED'
+        ] : null
+      } : {
         step1: `Confirm with Hubtel that IP ${railwayOutboundIP} is whitelisted`,
         step2: 'Ensure it\'s whitelisted for preapproval.hubtel.com (not rmp.hubtel.com)',
         step3: 'Ask them to enable "Direct Debit PreApproval" scope',
         step4: 'Wait 30-60 minutes for propagation'
-      } : null,
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
