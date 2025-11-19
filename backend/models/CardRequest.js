@@ -77,6 +77,10 @@ const cardRequestSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  cardholderName: {
+    type: String,
+    default: null
+  },
   cardExpiryDate: {
     type: String,
     default: null

@@ -11,6 +11,16 @@ function AdminDashboard() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
   const [activeTab, setActiveTab] = useState('requests'); // 'requests' or 'chat'
+  
+  // Manual card assignment state
+  const [showCardForm, setShowCardForm] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState(null);
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: '',
+    cardholderName: '',
+    expiryDate: '',
+    cvv: ''
+  });
 
   const handleAuth = () => {
     if (adminKey.trim()) {
@@ -51,6 +61,43 @@ function AdminDashboard() {
     try {
       await adminAPI.assignMockCard(adminKey, requestId);
       alert('Mock card assigned successfully!');
+      loadDashboard();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign card');
+    }
+  };
+
+  const openCardForm = (requestId) => {
+    setSelectedRequestId(requestId);
+    setShowCardForm(true);
+  };
+
+  const closeCardForm = () => {
+    setShowCardForm(false);
+    setSelectedRequestId(null);
+    setCardDetails({
+      cardNumber: '',
+      cardholderName: '',
+      expiryDate: '',
+      cvv: ''
+    });
+  };
+
+  const handleManualAssign = async (e) => {
+    e.preventDefault();
+    
+    if (!cardDetails.cardNumber || !cardDetails.cardholderName || !cardDetails.expiryDate || !cardDetails.cvv) {
+      alert('All card details are required');
+      return;
+    }
+
+    try {
+      await adminAPI.assignCard(adminKey, {
+        requestId: selectedRequestId,
+        ...cardDetails
+      });
+      alert('Card assigned successfully!');
+      closeCardForm();
       loadDashboard();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to assign card');
@@ -366,10 +413,10 @@ function AdminDashboard() {
                     {request.status === 'pending' && (
                       <>
                         <button
-                          onClick={() => handleAssignMock(request._id)}
+                          onClick={() => openCardForm(request._id)}
                           className="btn btn-success btn-sm"
                         >
-                          Assign Mock Card
+                          Assign Card
                         </button>
                         <button
                           onClick={() => handleAction(request._id, 'declined')}
@@ -417,6 +464,81 @@ function AdminDashboard() {
           <button onClick={loadDashboard} className="btn btn-primary">
             Load Dashboard
           </button>
+        </div>
+      )}
+
+      {/* Manual Card Assignment Modal */}
+      {showCardForm && (
+        <div className="modal-overlay" onClick={closeCardForm}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Assign Card Details</h2>
+              <button className="modal-close" onClick={closeCardForm}>&times;</button>
+            </div>
+            <form onSubmit={handleManualAssign} className="modal-body">
+              <div className="form-group">
+                <label htmlFor="cardNumber">Card Number *</label>
+                <input
+                  type="text"
+                  id="cardNumber"
+                  value={cardDetails.cardNumber}
+                  onChange={(e) => setCardDetails({...cardDetails, cardNumber: e.target.value})}
+                  placeholder="1234 5678 9012 3456"
+                  maxLength="19"
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="cardholderName">Cardholder Name *</label>
+                <input
+                  type="text"
+                  id="cardholderName"
+                  value={cardDetails.cardholderName}
+                  onChange={(e) => setCardDetails({...cardDetails, cardholderName: e.target.value.toUpperCase()})}
+                  placeholder="JOHN DOE"
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label htmlFor="expiryDate">Expiry Date *</label>
+                  <input
+                    type="text"
+                    id="expiryDate"
+                    value={cardDetails.expiryDate}
+                    onChange={(e) => setCardDetails({...cardDetails, expiryDate: e.target.value})}
+                    placeholder="MM/YY"
+                    maxLength="5"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="cvv">CVV *</label>
+                  <input
+                    type="text"
+                    id="cvv"
+                    value={cardDetails.cvv}
+                    onChange={(e) => setCardDetails({...cardDetails, cvv: e.target.value})}
+                    placeholder="123"
+                    maxLength="4"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={closeCardForm} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Assign Card
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

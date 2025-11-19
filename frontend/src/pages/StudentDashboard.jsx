@@ -173,10 +173,11 @@ function StudentDashboard() {
                         <h4>Virtual Card Details</h4>
                         <div className="card-info">
                           <p><strong>Card Number:</strong> {request.virtualCardNumber}</p>
-                          <p><strong>Expiry:</strong> {request.cardExpiryDate}</p>
+                          <p><strong>Cardholder Name:</strong> {request.cardholderName}</p>
+                          <p><strong>Expiry Date:</strong> {request.cardExpiryDate}</p>
                           <p><strong>CVV:</strong> {request.cardCVV}</p>
                           <p className="expiry-warning">
-                            <strong>Expires At:</strong> {formatDate(request.expiresAt)}
+                            <strong>Card Expires At:</strong> {formatDate(request.expiresAt)}
                           </p>
                         </div>
                       </div>

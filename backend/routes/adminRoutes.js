@@ -48,12 +48,12 @@ router.get('/requests', async (req, res) => {
 // Manually assign card to request
 router.post('/assign', async (req, res) => {
   try {
-    const { requestId, cardNumber, expiryDate, cvv } = req.body;
+    const { requestId, cardNumber, cardholderName, expiryDate, cvv } = req.body;
 
-    if (!requestId || !cardNumber || !expiryDate || !cvv) {
+    if (!requestId || !cardNumber || !cardholderName || !expiryDate || !cvv) {
       return res.status(400).json({
         success: false,
-        message: 'All card details are required'
+        message: 'All card details are required (Card Number, Cardholder Name, Expiry Date, CVV)'
       });
     }
 
@@ -74,6 +74,7 @@ router.post('/assign', async (req, res) => {
 
     // Update card request with manual card details
     cardRequest.virtualCardNumber = cardNumber;
+    cardRequest.cardholderName = cardholderName;
     cardRequest.cardExpiryDate = expiryDate;
     cardRequest.cardCVV = cvv;
     cardRequest.status = 'assigned';
