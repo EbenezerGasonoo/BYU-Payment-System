@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminAPI } from '../api/api';
+import AdminChat from '../components/AdminChat';
 
 function AdminDashboard() {
   const [adminKey, setAdminKey] = useState('');
@@ -9,6 +10,7 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
+  const [activeTab, setActiveTab] = useState('requests'); // 'requests' or 'chat'
 
   const handleAuth = () => {
     if (adminKey.trim()) {
@@ -112,14 +114,36 @@ function AdminDashboard() {
     <div className="container">
       <div className="admin-header">
         <h1>Admin Dashboard</h1>
-        <button onClick={() => setAuthenticated(false)} className="btn btn-secondary">
-          Logout
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button 
+              onClick={() => setActiveTab('requests')} 
+              className={`btn ${activeTab === 'requests' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '0.9rem', padding: '0.6rem 1.25rem' }}
+            >
+              📋 Card Requests
+            </button>
+            <button 
+              onClick={() => setActiveTab('chat')} 
+              className={`btn ${activeTab === 'chat' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '0.9rem', padding: '0.6rem 1.25rem' }}
+            >
+              💬 Live Chat
+            </button>
+          </div>
+          <button onClick={() => setAuthenticated(false)} className="btn btn-secondary">
+            Logout
+          </button>
+        </div>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {stats && (
+      {activeTab === 'chat' ? (
+        <AdminChat adminKey={adminKey} />
+      ) : (
+        <>
+          {stats && (
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-value">{stats.totalRequests}</div>
@@ -314,6 +338,8 @@ function AdminDashboard() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
