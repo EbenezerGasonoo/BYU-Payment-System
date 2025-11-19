@@ -49,12 +49,15 @@
 .nav-brand h2 {
   margin: 0;
   font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .nav-brand p {
   margin: 0;
   font-size: 0.9rem;
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .nav-links {
