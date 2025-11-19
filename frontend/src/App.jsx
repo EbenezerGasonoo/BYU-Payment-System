@@ -37,7 +37,6 @@ function App() {
               <li><Link to="/dashboard" className="dashboard-link">Dashboard</Link></li>
               <li><Link to="/faq" className="faq-link">FAQ</Link></li>
               <li><Link to="/contact" className="contact-link">Contact</Link></li>
-              <li><Link to="/admin" className="admin-link">Admin</Link></li>
               <li><InstallButton /></li>
             </ul>
           </div>
@@ -62,8 +61,6 @@ function App() {
                 <Link to="/faq">FAQ</Link>
                 <span className="footer-divider">•</span>
                 <Link to="/contact">Contact</Link>
-                <span className="footer-divider">•</span>
-                <Link to="/admin">Admin</Link>
               </div>
               <p>&copy; 2025 Pathway. Payment Platform.</p>
             </div>
