@@ -910,6 +910,37 @@ p {
   font-weight: 700;
 }
 
+.virtual-card-display {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-number-display,
+.card-name-display {
+  margin-bottom: 1rem;
+}
+
+.card-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.card-value {
+  display: block;
+  font-size: 1.25rem;
+  color: #1f2937;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
 .card-info p {
   margin-bottom: 0.75rem;
   font-family: 'Fira Code', monospace;
