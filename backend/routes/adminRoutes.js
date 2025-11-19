@@ -267,6 +267,10 @@ router.get('/stats', async (req, res) => {
     const expiredRequests = await CardRequest.countDocuments({ status: 'expired' });
     const totalStudents = await Student.countDocuments();
 
+    // Calculate total revenue from paid requests
+    const paidRequestsData = await CardRequest.find({ status: 'paid' });
+    const totalRevenue = paidRequestsData.reduce((sum, request) => sum + (request.amount || 0), 0);
+
     res.json({
       success: true,
       data: {
@@ -275,7 +279,8 @@ router.get('/stats', async (req, res) => {
         assignedRequests,
         paidRequests,
         expiredRequests,
-        totalStudents
+        totalStudents,
+        totalRevenue
       }
     });
   } catch (error) {

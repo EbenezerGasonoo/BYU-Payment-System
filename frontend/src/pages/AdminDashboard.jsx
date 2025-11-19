@@ -292,9 +292,9 @@ function AdminDashboard() {
           <div style={{ padding: '1.5rem 0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>Total Revenue (Estimated)</div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>Total Revenue</div>
                 <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1f2937' }}>
-                  ${((stats?.paidRequests || 0) * 100).toLocaleString()}
+                  ${(stats?.totalRevenue || 0).toLocaleString()}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
