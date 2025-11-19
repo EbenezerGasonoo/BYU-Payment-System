@@ -198,17 +198,82 @@ function AdminDashboard() {
       <div className="dashboard-charts-row">
         <div className="chart-card">
           <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Request Analytics</h3>
-          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#9ca3af' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📊</div>
-            <div>Chart visualization area</div>
+          <div style={{ padding: '2rem 0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
+              <div>
+                <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#10b981', marginBottom: '0.5rem' }}>
+                  {stats.assignedRequests}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Assigned</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#f59e0b', marginBottom: '0.5rem' }}>
+                  {stats.pendingRequests}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pending</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#3b82f6', marginBottom: '0.5rem' }}>
+                  {stats.paidRequests}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Paid</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#ef4444', marginBottom: '0.5rem' }}>
+                  {stats.expiredRequests}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Expired</div>
+              </div>
+            </div>
           </div>
         </div>
         
         <div className="chart-card">
-          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Revenue Profile</h3>
-          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#9ca3af' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📈</div>
-            <div>Revenue chart area</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Revenue Profile</h3>
+            <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '600' }}>
+              ↑ {Math.round((stats.paidRequests / stats.totalRequests) * 100)}% Completion Rate
+            </span>
+          </div>
+          <div style={{ padding: '1.5rem 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>Total Revenue (Estimated)</div>
+                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1f2937' }}>
+                  ${(stats.paidRequests * 100).toLocaleString()}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>Active Requests</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981' }}>
+                  {stats.assignedRequests + stats.pendingRequests}
+                </div>
+              </div>
+            </div>
+            <div style={{ 
+              height: '4px', 
+              background: '#f3f4f6', 
+              borderRadius: '4px', 
+              overflow: 'hidden',
+              marginTop: '1.5rem'
+            }}>
+              <div style={{ 
+                height: '100%', 
+                width: `${(stats.paidRequests / stats.totalRequests) * 100}%`,
+                background: 'linear-gradient(90deg, #10b981 0%, #3b82f6 100%)',
+                transition: 'width 0.5s ease'
+              }}></div>
+            </div>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              marginTop: '0.5rem',
+              fontSize: '0.75rem',
+              color: '#9ca3af'
+            }}>
+              <span>0</span>
+              <span>{stats.totalRequests} requests</span>
+            </div>
           </div>
         </div>
       </div>
