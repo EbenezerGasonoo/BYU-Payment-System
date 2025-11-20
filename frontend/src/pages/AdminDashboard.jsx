@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminAPI } from '../api/api';
 import AdminChat from '../components/AdminChat';
+import './AdminDashboard.css';
 
 function AdminDashboard() {
   const [adminKey, setAdminKey] = useState('');
@@ -10,7 +11,7 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
-  const [activeTab, setActiveTab] = useState('requests'); // 'requests' or 'chat'
+  const [activeTab, setActiveTab] = useState('requests');
   
   // Manual card assignment state
   const [showCardForm, setShowCardForm] = useState(false);
@@ -22,29 +23,40 @@ function AdminDashboard() {
     cvv: ''
   });
 
-  const handleAuth = () => {
-    if (adminKey.trim()) {
-      setAuthenticated(true);
-      loadDashboard();
+  const handleAuth = async () => {
+    if (!adminKey.trim()) {
+      setError('Please enter an admin key');
+      return;
     }
+    
+    setError('');
+    setAuthenticated(true);
+    // Load dashboard immediately with the admin key
+    await loadDashboard();
   };
 
   const loadDashboard = async () => {
+    const keyToUse = adminKey || '';
+    if (!keyToUse) return;
+    
     setLoading(true);
     setError('');
 
     try {
       const [requestsData, statsData] = await Promise.all([
-        adminAPI.getRequests(adminKey, filter),
-        adminAPI.getStats(adminKey)
+        adminAPI.getRequests(keyToUse, filter),
+        adminAPI.getStats(keyToUse)
       ]);
 
-      setRequests(requestsData.data);
-      setStats(statsData.data);
+      setRequests(requestsData.data || []);
+      setStats(statsData.data || null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load admin dashboard');
+      const errorMessage = err.response?.data?.message || 'Failed to load admin dashboard';
+      setError(errorMessage);
+      
       if (err.response?.status === 403) {
         setAuthenticated(false);
+        setAdminKey('');
       }
     } finally {
       setLoading(false);
@@ -52,16 +64,19 @@ function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (authenticated) {
+    if (authenticated && adminKey) {
       loadDashboard();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, authenticated]);
 
   const handleAssignMock = async (requestId) => {
+    if (!window.confirm('Assign a mock card to this request?')) return;
+    
     try {
       await adminAPI.assignMockCard(adminKey, requestId);
       alert('Mock card assigned successfully!');
-      loadDashboard();
+      await loadDashboard();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to assign card');
     }
@@ -98,20 +113,31 @@ function AdminDashboard() {
       });
       alert('Card assigned successfully!');
       closeCardForm();
-      loadDashboard();
+      await loadDashboard();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to assign card');
     }
   };
 
   const handleAction = async (requestId, action) => {
+    if (!window.confirm(`Mark this request as ${action}?`)) return;
+    
     try {
       await adminAPI.updateAction(adminKey, { requestId, action });
       alert(`Request marked as ${action}!`);
-      loadDashboard();
+      await loadDashboard();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update status');
     }
+  };
+
+  const handleLogout = () => {
+    setAuthenticated(false);
+    setAdminKey('');
+    setRequests([]);
+    setStats(null);
+    setError('');
+    setFilter('');
   };
 
   const getStatusBadge = (status) => {
@@ -129,14 +155,25 @@ function AdminDashboard() {
     return new Date(date).toLocaleString();
   };
 
+  // Authentication Screen
   if (!authenticated) {
     return (
-      <div className="container">
-        <div className="form-container">
-          <h1>Admin Dashboard</h1>
-          <p className="subtitle">Enter admin key to access</p>
+      <div className="admin-auth-container">
+        <div className="admin-auth-card">
+          <div className="admin-auth-header">
+            <h1>🔐 Admin Dashboard</h1>
+            <p className="admin-auth-subtitle">Enter your admin key to access the dashboard</p>
+          </div>
 
-          <div className="form">
+          {error && <div className="alert alert-error">{error}</div>}
+
+          <form 
+            className="admin-auth-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAuth();
+            }}
+          >
             <div className="form-group">
               <label htmlFor="adminKey">Admin Key</label>
               <input
@@ -145,40 +182,44 @@ function AdminDashboard() {
                 value={adminKey}
                 onChange={(e) => setAdminKey(e.target.value)}
                 placeholder="Enter your admin key"
-                onKeyPress={(e) => e.key === 'Enter' && handleAuth()}
+                autoFocus
+                required
               />
             </div>
-            <button onClick={handleAuth} className="btn btn-primary">
+            <button type="submit" className="btn btn-primary btn-block">
               Access Dashboard
             </button>
-          </div>
+          </form>
         </div>
       </div>
     );
   }
 
+  // Main Dashboard
   return (
-    <div className="container">
+    <div className="admin-dashboard-container">
+      {/* Header */}
       <div className="admin-header">
-        <h1>Admin Dashboard</h1>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div>
+          <h1>Admin Dashboard</h1>
+          <p className="admin-subtitle">Manage card requests and student payments</p>
+        </div>
+        <div className="admin-header-actions">
+          <div className="admin-tabs">
             <button 
               onClick={() => setActiveTab('requests')} 
-              className={`btn ${activeTab === 'requests' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: '0.9rem', padding: '0.6rem 1.25rem' }}
+              className={`admin-tab ${activeTab === 'requests' ? 'active' : ''}`}
             >
               📋 Card Requests
             </button>
             <button 
               onClick={() => setActiveTab('chat')} 
-              className={`btn ${activeTab === 'chat' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: '0.9rem', padding: '0.6rem 1.25rem' }}
+              className={`admin-tab ${activeTab === 'chat' ? 'active' : ''}`}
             >
               💬 Live Chat
             </button>
           </div>
-          <button onClick={() => setAuthenticated(false)} className="btn btn-secondary">
+          <button onClick={handleLogout} className="btn btn-secondary">
             Logout
           </button>
         </div>
@@ -186,290 +227,275 @@ function AdminDashboard() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {loading && !stats && (
-        <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
-          <div style={{ fontSize: '1.25rem', color: '#6b7280' }}>Loading dashboard...</div>
-        </div>
-      )}
-
+      {/* Chat Tab */}
       {activeTab === 'chat' ? (
         <AdminChat adminKey={adminKey} />
       ) : (
         <>
+          {/* Loading State */}
+          {loading && !stats && (
+            <div className="admin-loading">
+              <div className="loading-spinner">⏳</div>
+              <p>Loading dashboard...</p>
+            </div>
+          )}
+
+          {/* Stats Section */}
           {stats && (
-        <>
-        <div className="dashboard-top-row">
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-label">Total Requests</div>
-              <div className="stat-value">{stats.totalRequests}</div>
-            </div>
-            <div className="stat-card stat-warning">
-              <div className="stat-label">Pending</div>
-              <div className="stat-value">{stats.pendingRequests}</div>
-            </div>
-            <div className="stat-card stat-success">
-              <div className="stat-label">Assigned</div>
-              <div className="stat-value">{stats.assignedRequests}</div>
-            </div>
-            <div className="stat-card stat-info">
-              <div className="stat-label">Paid</div>
-              <div className="stat-value">{stats.paidRequests}</div>
-            </div>
-            <div className="stat-card stat-danger">
-              <div className="stat-label">Expired</div>
-              <div className="stat-value">{stats.expiredRequests}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Total Students</div>
-              <div className="stat-value">{stats.totalStudents}</div>
-            </div>
-          </div>
-          
-          <div className="performance-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Card Performance</h3>
-              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>vs last month</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981', marginBottom: '0.5rem' }}>
-                  {Math.round((stats.assignedRequests / stats.totalRequests) * 100)}%
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Success Rate</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#f59e0b', marginBottom: '0.5rem' }}>
-                  {Math.round((stats.pendingRequests / stats.totalRequests) * 100)}%
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pending Rate</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="dashboard-charts-row">
-        <div className="chart-card">
-          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Request Analytics</h3>
-          <div style={{ padding: '2rem 0' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
-              <div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#10b981', marginBottom: '0.5rem' }}>
-                  {stats?.assignedRequests || 0}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Assigned</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#f59e0b', marginBottom: '0.5rem' }}>
-                  {stats?.pendingRequests || 0}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Pending</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#3b82f6', marginBottom: '0.5rem' }}>
-                  {stats?.paidRequests || 0}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Paid</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#ef4444', marginBottom: '0.5rem' }}>
-                  {stats?.expiredRequests || 0}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Expired</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="chart-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>Revenue Profile</h3>
-            <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '600' }}>
-              ↑ {Math.round(((stats?.paidRequests || 0) / (stats?.totalRequests || 1)) * 100)}% Completion Rate
-            </span>
-          </div>
-          <div style={{ padding: '1.5rem 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>Total Revenue</div>
-                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1f2937' }}>
-                  ${(stats?.totalRevenue || 0).toLocaleString()}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>Active Requests</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981' }}>
-                  {(stats?.assignedRequests || 0) + (stats?.pendingRequests || 0)}
-                </div>
-              </div>
-            </div>
-            <div style={{ 
-              height: '4px', 
-              background: '#f3f4f6', 
-              borderRadius: '4px', 
-              overflow: 'hidden',
-              marginTop: '1.5rem'
-            }}>
-              <div style={{ 
-                height: '100%', 
-                width: `${((stats?.paidRequests || 0) / (stats?.totalRequests || 1)) * 100}%`,
-                background: 'linear-gradient(90deg, #10b981 0%, #3b82f6 100%)',
-                transition: 'width 0.5s ease'
-              }}></div>
-            </div>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              marginTop: '0.5rem',
-              fontSize: '0.75rem',
-              color: '#9ca3af'
-            }}>
-              <span>0</span>
-              <span>{stats?.totalRequests || 0} requests</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="filter-section">
-        <label>Filter by Status:</label>
-        <select value={filter} onChange={(e) => setFilter(e.target.value)} className="filter-select">
-          <option value="">All Requests</option>
-          <option value="pending">Pending</option>
-          <option value="assigned">Assigned</option>
-          <option value="paid">Paid</option>
-          <option value="expired">Expired</option>
-          <option value="declined">Declined</option>
-        </select>
-        <button onClick={loadDashboard} className="btn btn-primary" disabled={loading}>
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
-
-      <div className="requests-section">
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: '600', color: '#1f2937' }}>Card Requests</h2>
-            {requests.length === 0 ? (
-              <div className="alert alert-info">No requests found.</div>
-            ) : (
-          <div className="admin-table-container">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Amount</th>
-                  <th>Payment</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-            {requests.map((request) => (
-              <tr key={request._id}>
-                <td>
-                  <div className="table-student-name">{request.student.name}</div>
-                  <div className="table-student-id">{request.student.byuId} • {request.requestToken}</div>
-                </td>
-                <td>
-                  <div style={{ fontWeight: '600', color: '#1f2937' }}>${request.amount}</div>
-                  {request.amountInGHS && (
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                      GHS {request.totalPaidGHS.toFixed(2)}
-                    </div>
-                  )}
-                </td>
-                <td>
-                  {request.paymentMethod && (
-                    <div>
-                      <span style={{
-                        fontSize: '0.813rem',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        background: request.paymentMethod === 'momo-manual' ? '#fef3e2' : '#ecfdf5',
-                        color: request.paymentMethod === 'momo-manual' ? '#92400e' : '#065f46',
-                        fontWeight: '500'
-                      }}>
-                        {request.paymentMethod === 'momo-manual' ? 'Manual' : 'Automated'}
-                      </span>
-                    </div>
-                  )}
-                  {request.paymentStatus && (
-                    <div style={{ 
-                      fontSize: '0.75rem', 
-                      color: request.paymentStatus === 'paid' ? '#10b981' : request.paymentStatus === 'failed' ? '#ef4444' : '#9ca3af', 
-                      marginTop: '0.25rem',
-                      fontWeight: request.paymentStatus === 'paid' ? '600' : '400'
-                    }}>
-                      {request.paymentStatus === 'paid' ? '✓ Paid' : request.paymentStatus}
-                    </div>
-                  )}
-                </td>
-                <td>
-                  <span className={`badge ${getStatusBadge(request.status)}`}>
-                    {request.status.toUpperCase()}
-                  </span>
-                </td>
-                <td style={{ fontSize: '0.813rem', color: '#6b7280' }}>
-                  {new Date(request.createdAt).toLocaleDateString()}
-                </td>
-                <td>
-                  <div className="table-actions">
-                    {request.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => openCardForm(request._id)}
-                          className="btn btn-success btn-sm"
-                        >
-                          Assign Card
-                        </button>
-                        <button
-                          onClick={() => handleAction(request._id, 'declined')}
-                          className="btn btn-danger btn-sm"
-                        >
-                          Decline
-                        </button>
-                      </>
-                    )}
-
-                    {request.status === 'assigned' && (
-                      <>
-                        <button
-                          onClick={() => handleAction(request._id, 'paid')}
-                          className="btn btn-success btn-sm"
-                        >
-                          Mark as Paid
-                        </button>
-                        <button
-                          onClick={() => handleAction(request._id, 'expired')}
-                          className="btn btn-warning btn-sm"
-                        >
-                          Mark as Expired
-                        </button>
-                      </>
-                    )}
+            <div className="admin-stats-section">
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-icon">📊</div>
+                  <div className="stat-content">
+                    <div className="stat-label">Total Requests</div>
+                    <div className="stat-value">{stats.totalRequests || 0}</div>
                   </div>
-                </td>
-              </tr>
-            ))}
-              </tbody>
-            </table>
+                </div>
+                <div className="stat-card stat-warning">
+                  <div className="stat-icon">⏳</div>
+                  <div className="stat-content">
+                    <div className="stat-label">Pending</div>
+                    <div className="stat-value">{stats.pendingRequests || 0}</div>
+                  </div>
+                </div>
+                <div className="stat-card stat-success">
+                  <div className="stat-icon">✅</div>
+                  <div className="stat-content">
+                    <div className="stat-label">Assigned</div>
+                    <div className="stat-value">{stats.assignedRequests || 0}</div>
+                  </div>
+                </div>
+                <div className="stat-card stat-info">
+                  <div className="stat-icon">💰</div>
+                  <div className="stat-content">
+                    <div className="stat-label">Paid</div>
+                    <div className="stat-value">{stats.paidRequests || 0}</div>
+                  </div>
+                </div>
+                <div className="stat-card stat-danger">
+                  <div className="stat-icon">⏰</div>
+                  <div className="stat-content">
+                    <div className="stat-label">Expired</div>
+                    <div className="stat-value">{stats.expiredRequests || 0}</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">👥</div>
+                  <div className="stat-content">
+                    <div className="stat-label">Total Students</div>
+                    <div className="stat-value">{stats.totalStudents || 0}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Performance Metrics */}
+              <div className="performance-metrics">
+                <div className="metric-card">
+                  <h3>Success Rate</h3>
+                  <div className="metric-value success">
+                    {stats.totalRequests > 0 
+                      ? Math.round((stats.assignedRequests / stats.totalRequests) * 100) 
+                      : 0}%
+                  </div>
+                  <div className="metric-description">
+                    Cards successfully assigned
+                  </div>
+                </div>
+                <div className="metric-card">
+                  <h3>Total Revenue</h3>
+                  <div className="metric-value revenue">
+                    ${(stats.totalRevenue || 0).toLocaleString()}
+                  </div>
+                  <div className="metric-description">
+                    From completed payments
+                  </div>
+                </div>
+                <div className="metric-card">
+                  <h3>Completion Rate</h3>
+                  <div className="metric-value info">
+                    {stats.totalRequests > 0 
+                      ? Math.round((stats.paidRequests / stats.totalRequests) * 100) 
+                      : 0}%
+                  </div>
+                  <div className="metric-description">
+                    Requests fully completed
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Filter Section */}
+          <div className="filter-section">
+            <div className="filter-controls">
+              <label htmlFor="statusFilter">Filter by Status:</label>
+              <select 
+                id="statusFilter"
+                value={filter} 
+                onChange={(e) => setFilter(e.target.value)} 
+                className="filter-select"
+              >
+                <option value="">All Requests</option>
+                <option value="pending">Pending</option>
+                <option value="assigned">Assigned</option>
+                <option value="paid">Paid</option>
+                <option value="expired">Expired</option>
+                <option value="declined">Declined</option>
+              </select>
+            </div>
+            <button 
+              onClick={loadDashboard} 
+              className="btn btn-primary" 
+              disabled={loading}
+            >
+              {loading ? 'Refreshing...' : '🔄 Refresh'}
+            </button>
           </div>
+
+          {/* Requests Table */}
+          <div className="requests-section">
+            <h2>Card Requests</h2>
+            
+            {loading && requests.length === 0 ? (
+              <div className="admin-loading">
+                <div className="loading-spinner">⏳</div>
+                <p>Loading requests...</p>
+              </div>
+            ) : requests.length === 0 ? (
+              <div className="alert alert-info">
+                <p>No requests found.</p>
+                {filter && (
+                  <button 
+                    onClick={() => setFilter('')} 
+                    className="btn btn-secondary btn-sm"
+                    style={{ marginTop: '1rem' }}
+                  >
+                    Clear Filter
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="admin-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Amount</th>
+                      <th>Payment</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {requests.map((request) => (
+                      <tr key={request._id}>
+                        <td>
+                          <div className="table-student-name">
+                            {request.student?.name || 'Unknown'}
+                          </div>
+                          <div className="table-student-id">
+                            {request.student?.byuId || 'N/A'} • {request.requestToken}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="table-amount">
+                            ${request.amount || 0}
+                          </div>
+                          {request.amountInGHS && (
+                            <div className="table-amount-ghs">
+                              GHS {request.totalPaidGHS?.toFixed(2) || '0.00'}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {request.paymentMethod && (
+                            <span className={`payment-badge ${request.paymentMethod === 'momo-manual' ? 'manual' : 'auto'}`}>
+                              {request.paymentMethod === 'momo-manual' ? 'Manual' : 'Automated'}
+                            </span>
+                          )}
+                          {request.paymentStatus && (
+                            <div className={`payment-status ${request.paymentStatus}`}>
+                              {request.paymentStatus === 'paid' ? '✓ Paid' : request.paymentStatus}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`badge ${getStatusBadge(request.status)}`}>
+                            {request.status?.toUpperCase() || 'UNKNOWN'}
+                          </span>
+                        </td>
+                        <td className="table-date">
+                          {request.createdAt ? formatDate(request.createdAt) : 'N/A'}
+                        </td>
+                        <td>
+                          <div className="table-actions">
+                            {request.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => openCardForm(request._id)}
+                                  className="btn btn-success btn-sm"
+                                  title="Assign Card Manually"
+                                >
+                                  Assign Card
+                                </button>
+                                <button
+                                  onClick={() => handleAssignMock(request._id)}
+                                  className="btn btn-info btn-sm"
+                                  title="Assign Mock Card"
+                                >
+                                  Mock Card
+                                </button>
+                                <button
+                                  onClick={() => handleAction(request._id, 'declined')}
+                                  className="btn btn-danger btn-sm"
+                                  title="Decline Request"
+                                >
+                                  Decline
+                                </button>
+                              </>
+                            )}
+
+                            {request.status === 'assigned' && (
+                              <>
+                                <button
+                                  onClick={() => handleAction(request._id, 'paid')}
+                                  className="btn btn-success btn-sm"
+                                  title="Mark as Paid"
+                                >
+                                  Mark Paid
+                                </button>
+                                <button
+                                  onClick={() => handleAction(request._id, 'expired')}
+                                  className="btn btn-warning btn-sm"
+                                  title="Mark as Expired"
+                                >
+                                  Mark Expired
+                                </button>
+                              </>
+                            )}
+
+                            {request.status === 'paid' && (
+                              <span className="status-complete">✓ Completed</span>
+                            )}
+
+                            {request.status === 'expired' && (
+                              <span className="status-expired">⏰ Expired</span>
+                            )}
+
+                            {request.status === 'declined' && (
+                              <span className="status-declined">✗ Declined</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-      </>
-      )}
         </>
-      )}
-
-      {!loading && !stats && !error && authenticated && activeTab !== 'chat' && (
-        <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
-          <div style={{ fontSize: '1.25rem', color: '#6b7280', marginBottom: '1rem' }}>No data available</div>
-          <button onClick={loadDashboard} className="btn btn-primary">
-            Load Dashboard
-          </button>
-        </div>
       )}
 
       {/* Manual Card Assignment Modal */}
@@ -487,7 +513,11 @@ function AdminDashboard() {
                   type="text"
                   id="cardNumber"
                   value={cardDetails.cardNumber}
-                  onChange={(e) => setCardDetails({...cardDetails, cardNumber: e.target.value})}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
+                    const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
+                    setCardDetails({...cardDetails, cardNumber: formatted});
+                  }}
                   placeholder="1234 5678 9012 3456"
                   maxLength="19"
                   required
@@ -506,14 +536,21 @@ function AdminDashboard() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="expiryDate">Expiry Date *</label>
                   <input
                     type="text"
                     id="expiryDate"
                     value={cardDetails.expiryDate}
-                    onChange={(e) => setCardDetails({...cardDetails, expiryDate: e.target.value})}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      let formatted = value;
+                      if (value.length >= 2) {
+                        formatted = value.slice(0, 2) + '/' + value.slice(2, 4);
+                      }
+                      setCardDetails({...cardDetails, expiryDate: formatted});
+                    }}
                     placeholder="MM/YY"
                     maxLength="5"
                     required
@@ -526,7 +563,10 @@ function AdminDashboard() {
                     type="text"
                     id="cvv"
                     value={cardDetails.cvv}
-                    onChange={(e) => setCardDetails({...cardDetails, cvv: e.target.value})}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setCardDetails({...cardDetails, cvv: value});
+                    }}
                     placeholder="123"
                     maxLength="4"
                     required
@@ -551,4 +591,3 @@ function AdminDashboard() {
 }
 
 export default AdminDashboard;
-
