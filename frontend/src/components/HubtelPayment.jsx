@@ -3,7 +3,7 @@ import { studentAPI } from '../api/api';
 import './HubtelPayment.css';
 
 function HubtelPayment({ paymentData, onSuccess, onCancel }) {
-  const [paymentMethod, setPaymentMethod] = useState('momo-hubtel');
+  const [paymentMethod, setPaymentMethod] = useState('momo-manual'); // Default to manual since Hubtel is coming soon
   const [phoneNumber, setPhoneNumber] = useState('');
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -170,8 +170,8 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   };
 
   const paymentMethods = [
-    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: false },
-    { id: 'momo-manual', name: 'Manual Mobile Money', icon: '💰', description: 'Pay directly to our account', disabled: false }
+    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: true, comingSoon: true },
+    { id: 'momo-manual', name: 'Manual Mobile Money', icon: '💰', description: 'Pay directly to our account', disabled: false, comingSoon: false }
     // MTN Mobile Money Direct - Temporarily hidden (code kept for future implementation)
     // { id: 'momo-direct', name: 'MTN Mobile Money Direct', icon: '💳', description: 'Direct MTN prompt to phone', disabled: false }
   ];
@@ -232,7 +232,24 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
                   <div className="method-info">
                     <h4>
                       {method.name}
-                      {method.disabled && (
+                      {method.comingSoon && (
+                        <span style={{
+                          marginLeft: '0.75rem',
+                          fontSize: '0.7rem',
+                          background: 'linear-gradient(135deg, #FFB81C 0%, #FFC844 100%)',
+                          color: '#002E5D',
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '12px',
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          boxShadow: '0 2px 8px rgba(255, 184, 28, 0.3)',
+                          border: '1px solid rgba(0, 46, 93, 0.2)'
+                        }}>
+                          🚀 Coming Soon
+                        </span>
+                      )}
+                      {method.disabled && !method.comingSoon && (
                         <span style={{
                           marginLeft: '0.5rem',
                           fontSize: '0.75rem',
@@ -261,7 +278,67 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
               </div>
             )}
 
-            {paymentMethod === 'momo-manual' ? (
+            {paymentMethod === 'momo-hubtel' ? (
+              <div style={{ 
+                background: 'linear-gradient(135deg, rgba(255, 184, 28, 0.1), rgba(255, 200, 68, 0.05))', 
+                padding: '2rem', 
+                borderRadius: '16px', 
+                border: '2px solid rgba(255, 184, 28, 0.3)',
+                marginTop: '1.5rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🚀</div>
+                <h3 style={{ color: '#002E5D', marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '700' }}>
+                  Hubtel Payment Coming Soon!
+                </h3>
+                <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '1rem', lineHeight: '1.6' }}>
+                  We're working hard to bring you secure Hubtel payment integration. 
+                  This feature will allow you to pay directly through MTN, Vodafone, and AirtelTigo Mobile Money.
+                </p>
+                <div style={{ 
+                  background: 'white', 
+                  padding: '1.25rem', 
+                  borderRadius: '12px', 
+                  marginBottom: '1.5rem',
+                  border: '1px solid rgba(0, 46, 93, 0.1)'
+                }}>
+                  <p style={{ margin: '0 0 0.75rem 0', color: '#002E5D', fontWeight: '600' }}>
+                    ✨ What to expect:
+                  </p>
+                  <ul style={{ 
+                    margin: 0, 
+                    paddingLeft: '1.5rem', 
+                    textAlign: 'left',
+                    color: '#666',
+                    lineHeight: '1.8'
+                  }}>
+                    <li>Instant payment processing</li>
+                    <li>Automatic verification</li>
+                    <li>Support for all major networks</li>
+                    <li>Secure and encrypted transactions</li>
+                  </ul>
+                </div>
+                <p style={{ 
+                  color: '#002E5D', 
+                  fontWeight: '600', 
+                  fontSize: '0.95rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  💡 In the meantime, please use <strong>Manual Mobile Money</strong> to complete your payment.
+                </p>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => setPaymentMethod('momo-manual')}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #002E5D 0%, #003D82 100%)',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  Switch to Manual Payment
+                </button>
+              </div>
+            ) : paymentMethod === 'momo-manual' ? (
               <div className="payment-instructions" style={{ marginTop: '1.5rem' }}>
                 <div style={{ 
                   background: 'linear-gradient(135deg, rgba(255, 184, 28, 0.1), rgba(255, 200, 68, 0.1))', 
