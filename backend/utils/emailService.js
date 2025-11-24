@@ -1,8 +1,11 @@
 const nodemailer = require('nodemailer');
 
 // Create reusable transporter
+// Create reusable transporter
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.EMAIL_HOST || 'mail.entechnologygh.com',
+  port: process.env.EMAIL_PORT || 465,
+  secure: true, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
@@ -130,9 +133,47 @@ const notifyStudentCardExpired = async (student, cardRequest) => {
   }
 };
 
+// Send verification email to student
+const sendVerificationEmail = async (student, token) => {
+  try {
+    const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: student.email,
+      subject: '📧 Verify Your Email - Pathway',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #002E5D;">Verify Your Email Address</h2>
+          <p>Hello ${student.name},</p>
+          <p>Thank you for registering with the Pathway Virtual Card System. Please verify your email address to activate your account and request cards.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${verificationLink}" style="background-color: #002E5D; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email</a>
+          </div>
+          
+          <p>If the button above doesn't work, copy and paste this link into your browser:</p>
+          <p style="background-color: #f5f5f5; padding: 10px; word-break: break-all; font-size: 12px;">${verificationLink}</p>
+          
+          <p style="color: #666; font-size: 12px; margin-top: 30px;">
+            Pathway Virtual Card System<br>
+            This is an automated notification.
+          </p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Verification email sent');
+  } catch (error) {
+    console.error('❌ Error sending verification email:', error);
+  }
+};
+
 module.exports = {
   notifyAdminNewRequest,
   notifyStudentCardAssigned,
-  notifyStudentCardExpired
+  notifyStudentCardExpired,
+  sendVerificationEmail
 };
 

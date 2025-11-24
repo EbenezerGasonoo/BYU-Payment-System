@@ -2,13 +2,13 @@ import axios from 'axios';
 
 // Use Railway backend in production, proxy in development
 // Detect production by checking if we're on vercel.app domain
-const isProduction = typeof window !== 'undefined' && 
-  (window.location.hostname.includes('vercel.app') || 
-   import.meta.env.MODE === 'production');
+const isProduction = typeof window !== 'undefined' &&
+  (window.location.hostname.includes('vercel.app') ||
+    import.meta.env.MODE === 'production');
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
   (isProduction
-    ? 'https://byupay.up.railway.app/api' 
+    ? 'https://byupay.up.railway.app/api'
     : '/api');
 
 // Debug log (remove after confirming it works)
@@ -48,6 +48,11 @@ export const studentAPI = {
 
   verifyPayment: async (data) => {
     const response = await axios.post(`${API_BASE_URL}/student/verify-payment`, data);
+    return response.data;
+  },
+
+  checkPaymentStatus: async (paymentReference) => {
+    const response = await axios.get(`${API_BASE_URL}/student/check-payment-status/${paymentReference}`);
     return response.data;
   },
 
@@ -114,8 +119,8 @@ export const adminAPI = {
   },
 
   updateMessageStatus: async (adminKey, messageId, status) => {
-    const response = await axios.patch(`${API_BASE_URL}/contact/messages/${messageId}`, 
-      { status }, 
+    const response = await axios.patch(`${API_BASE_URL}/contact/messages/${messageId}`,
+      { status },
       { headers: { 'x-admin-key': adminKey } }
     );
     return response.data;

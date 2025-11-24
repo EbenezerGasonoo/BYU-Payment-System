@@ -46,7 +46,7 @@ function RequestPayment() {
       // Using Open Exchange Rate API (free, no API key required)
       const response = await fetch('https://open.exchangerate-api.com/v6/latest/USD');
       const data = await response.json();
-      
+
       if (data && data.rates && data.rates.GHS) {
         setExchangeRate(data.rates.GHS);
         setRateLastUpdated(new Date());
@@ -71,7 +71,7 @@ function RequestPayment() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Check if terms are accepted
     if (!termsAccepted) {
       setMessage({ type: 'error', text: 'Please read and accept the Terms and Agreement before submitting.' });
@@ -129,42 +129,68 @@ function RequestPayment() {
     try {
       // For manual payments, skip automatic verification (admin will verify manually)
       if (paymentMethod === 'momo-manual') {
-        setMessage({ 
-          type: 'success', 
-          text: 'Payment confirmation received! Your request has been submitted. Admin will verify your payment and assign your card within 24 hours. Please check your dashboard for updates.' 
+        setMessage({
+          type: 'success',
+          text: 'Payment confirmation received! Your request has been submitted. Admin will verify your payment and assign your card within 24 hours. Please check your dashboard for updates.'
         });
         setRequestToken(paymentData.requestToken);
         localStorage.setItem('hasRequestedCard', 'true');
-        
+
         // Guide to next step
         setTimeout(() => {
           if (confirm('Request submitted successfully! Your payment will be verified manually. Would you like to check your dashboard?')) {
             navigate('/dashboard');
           }
         }, 3000);
-        
+
         setFormData({ byuId: formData.byuId, amount: '' });
         setTermsAccepted(false);
       } else {
         // For Hubtel/automated payments, verify as before
-        const verifyResponse = await studentAPI.verifyPayment({
-          paymentReference: paymentReference,
-          hubtelReference: paymentReference // This would be from Hubtel callback in production
+        // Start polling for payment status
+        setMessage({
+          type: 'info',
+          text: 'Payment initiated! Waiting for confirmation... Please check your phone to approve the transaction.'
         });
 
-        setMessage({ type: 'success', text: verifyResponse.message });
-        setRequestToken(verifyResponse.data.requestToken);
-        localStorage.setItem('hasRequestedCard', 'true');
-        
-        // Guide to next step
-        setTimeout(() => {
-          if (confirm('Payment verified! Your card request has been submitted. Would you like to check your dashboard?')) {
-            navigate('/dashboard');
+        // Poll every 5 seconds
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await studentAPI.checkPaymentStatus(paymentReference);
+
+            if (statusResponse.success && statusResponse.status === 'paid') {
+              clearInterval(pollInterval);
+
+              setMessage({ type: 'success', text: 'Payment verified successfully!' });
+              setRequestToken(statusResponse.data.requestToken);
+              localStorage.setItem('hasRequestedCard', 'true');
+
+              // Guide to next step
+              setTimeout(() => {
+                if (confirm('Payment verified! Your card request has been submitted. Would you like to check your dashboard?')) {
+                  navigate('/dashboard');
+                }
+              }, 1000);
+
+              setFormData({ byuId: formData.byuId, amount: '' });
+              setTermsAccepted(false);
+            }
+          } catch (error) {
+            console.error('Polling error:', error);
           }
-        }, 3000);
-        
-        setFormData({ byuId: formData.byuId, amount: '' });
-        setTermsAccepted(false);
+        }, 5000);
+
+        // Stop polling after 2 minutes (120000 ms)
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          if (loading) { // If still loading (not successful yet)
+            setMessage({
+              type: 'warning',
+              text: 'Payment verification timed out. If you have paid, please contact support or check your dashboard later.'
+            });
+            setLoading(false);
+          }
+        }, 120000);
       }
     } catch (error) {
       setMessage({
@@ -254,7 +280,7 @@ function RequestPayment() {
                 <span style={{ fontSize: '1.5rem' }}>💱</span>
                 <h3 style={{ margin: 0, color: '#002E5D', fontSize: '1.1rem' }}>Exchange Rate Calculator</h3>
               </div>
-              
+
               <div style={{ display: 'grid', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: '#666', fontWeight: '500' }}>Amount in USD:</span>
@@ -262,7 +288,7 @@ function RequestPayment() {
                     ${parseFloat(formData.amount).toFixed(2)} USD
                   </span>
                 </div>
-                
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <span style={{ color: '#666', fontWeight: '500' }}>Exchange Rate:</span>
@@ -297,7 +323,7 @@ function RequestPayment() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div style={{
                   borderTop: '2px dashed rgba(255, 184, 28, 0.3)',
                   paddingTop: '0.75rem',
@@ -338,7 +364,7 @@ function RequestPayment() {
                   </div>
                 </div>
               </div>
-              
+
               <p style={{
                 margin: '1rem 0 0 0',
                 fontSize: '0.85rem',
@@ -406,7 +432,7 @@ function RequestPayment() {
         <div className="welcome-overlay" onClick={() => setShowTerms(false)}>
           <div className="welcome-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
             <button className="welcome-close" onClick={() => setShowTerms(false)}>✕</button>
-            
+
             <div className="welcome-header">
               <div className="welcome-icon">📋</div>
               <h1>Terms and Agreement</h1>
@@ -469,9 +495,9 @@ function RequestPayment() {
                   </p>
                 </div>
 
-                <div style={{ 
-                  background: 'rgba(255, 184, 28, 0.1)', 
-                  padding: '1rem', 
+                <div style={{
+                  background: 'rgba(255, 184, 28, 0.1)',
+                  padding: '1rem',
                   borderRadius: '12px',
                   border: '2px solid rgba(255, 184, 28, 0.3)',
                   marginTop: '1rem'
@@ -484,8 +510,8 @@ function RequestPayment() {
             </div>
 
             <div className="welcome-footer">
-              <button 
-                className="welcome-btn-primary" 
+              <button
+                className="welcome-btn-primary"
                 onClick={() => {
                   setTermsAccepted(true);
                   setShowTerms(false);
@@ -493,8 +519,8 @@ function RequestPayment() {
               >
                 I Accept the Terms
               </button>
-              <button 
-                className="welcome-btn-text" 
+              <button
+                className="welcome-btn-text"
                 onClick={() => setShowTerms(false)}
               >
                 Close

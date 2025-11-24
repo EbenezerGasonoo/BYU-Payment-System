@@ -42,14 +42,14 @@ function StudentRegister() {
       localStorage.setItem('userByuId', formData.byuId);
       localStorage.setItem('userName', formData.name);
       localStorage.setItem('userEmail', formData.email);
-      
+
       // Show success and guide to next step
+      // Show success and guide to verification
       setTimeout(() => {
-        if (confirm('Registration successful! Would you like to request a virtual card now?')) {
-          navigate('/request');
-        }
+        alert('Registration successful! Please check your email to verify your account before requesting a card.');
+        navigate('/');
       }, 2000);
-      
+
       setFormData({ name: '', byuId: '', email: '', phone: '' });
     } catch (error) {
       setMessage({

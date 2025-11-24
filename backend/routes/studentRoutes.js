@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Student = require('../models/Student');
 const CardRequest = require('../models/CardRequest');
-const { notifyAdminNewRequest } = require('../utils/emailService');
+const { notifyAdminNewRequest, sendVerificationEmail } = require('../utils/emailService');
 const { initiatePayment, checkPaymentStatus } = require('../utils/hubtelService');
 const mtnMomoService = require('../utils/mtnMomoService');
 const crypto = require('crypto');
@@ -46,16 +46,59 @@ router.post('/register', async (req, res) => {
     }
 
     // Create new student
-    const student = new Student({ name, byuId, email, phone });
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const student = new Student({
+      name,
+      byuId,
+      email,
+      phone,
+      verificationToken,
+      isVerified: false
+    });
     await student.save();
+
+    // Send verification email
+    await sendVerificationEmail(student, verificationToken);
 
     res.status(201).json({
       success: true,
-      message: 'Student registered successfully',
+      success: true,
+      message: 'Student registered successfully. Please check your email to verify your account.',
       data: student
     });
   } catch (error) {
     console.error('Error registering student:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Verify email endpoint
+router.get('/verify-email/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const student = await Student.findOne({ verificationToken: token });
+    if (!student) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired verification token'
+      });
+    }
+
+    student.isVerified = true;
+    student.verificationToken = undefined;
+    await student.save();
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+  } catch (error) {
+    console.error('Error verifying email:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -91,6 +134,14 @@ router.post('/request-card', async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Student not found. Please register first.'
+      });
+    }
+
+    // Check if student is verified
+    if (!student.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your email address before requesting a card. Check your email for the verification link.'
       });
     }
 
@@ -206,6 +257,67 @@ router.post('/verify-payment', async (req, res) => {
   }
 });
 
+// Check Payment Status (Polling Endpoint)
+router.get('/check-payment-status/:paymentReference', async (req, res) => {
+  try {
+    const { paymentReference } = req.params;
+
+    // Find the card request
+    const cardRequest = await CardRequest.findOne({ paymentReference }).populate('student');
+    if (!cardRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment reference not found'
+      });
+    }
+
+    // If already paid, return success immediately
+    if (cardRequest.paymentStatus === 'paid') {
+      return res.json({
+        success: true,
+        status: 'paid',
+        data: cardRequest
+      });
+    }
+
+    // If we have a Hubtel Checkout ID, check with Hubtel
+    if (cardRequest.hubtelCheckoutId) {
+      const hubtelResult = await checkPaymentStatus(cardRequest.hubtelCheckoutId);
+
+      if (hubtelResult.success && hubtelResult.data.status === 'paid') {
+        // Update status to paid
+        cardRequest.paymentStatus = 'paid';
+        cardRequest.paymentVerifiedAt = new Date();
+        await cardRequest.save();
+
+        // Notify admin
+        await notifyAdminNewRequest(cardRequest.student, cardRequest);
+
+        return res.json({
+          success: true,
+          status: 'paid',
+          data: cardRequest
+        });
+      }
+    }
+
+    // Still pending
+    res.json({
+      success: true,
+      status: cardRequest.paymentStatus,
+      message: 'Payment is still pending'
+    });
+
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
 // Mark payment as failed
 router.post('/payment-failed', async (req, res) => {
   try {
@@ -260,13 +372,13 @@ router.post('/initiate-hubtel-payment', async (req, res) => {
       const cardRequest = await CardRequest.findOne({ paymentReference });
       if (cardRequest) {
         cardRequest.hubtelCheckoutId = result.data.transactionId;
-        
+
         // If payment is already successful (ResponseCode "0000")
         if (result.data.status === 'paid') {
           cardRequest.paymentStatus = 'paid';
           cardRequest.paymentVerifiedAt = new Date();
           await cardRequest.save();
-          
+
           // Notify admin immediately
           const student = await Student.findOne({ byuId: req.body.byuId });
           if (student) {
@@ -318,8 +430,8 @@ router.post('/hubtel-callback', async (req, res) => {
       const { ClientReference } = Data;
 
       // Find and update card request
-      const cardRequest = await CardRequest.findOne({ 
-        paymentReference: ClientReference 
+      const cardRequest = await CardRequest.findOne({
+        paymentReference: ClientReference
       }).populate('student');
 
       if (cardRequest) {
@@ -336,8 +448,8 @@ router.post('/hubtel-callback', async (req, res) => {
       // Payment failed
       const { ClientReference } = req.body.Data || {};
       if (ClientReference) {
-        const cardRequest = await CardRequest.findOne({ 
-          paymentReference: ClientReference 
+        const cardRequest = await CardRequest.findOne({
+          paymentReference: ClientReference
         });
 
         if (cardRequest) {
@@ -429,7 +541,7 @@ router.post('/check-mtn-payment', async (req, res) => {
       // If payment is successful, update card request
       if (result.data.status === 'SUCCESSFUL') {
         const cardRequest = await CardRequest.findOne({ paymentReference }).populate('student');
-        
+
         if (cardRequest) {
           cardRequest.paymentStatus = 'paid';
           cardRequest.paymentVerifiedAt = new Date();

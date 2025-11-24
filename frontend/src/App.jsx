@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Home from './pages/Home';
 import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
+import VerifyEmail from './pages/VerifyEmail';
 import InstallButton from './components/InstallButton';
 import OnboardingTour from './components/OnboardingTour';
 import WelcomeModal from './components/WelcomeModal';
@@ -29,73 +30,74 @@ function AppContent() {
   };
 
   return (
-      <div className="app">
-        {!isAdminPage && (
-          <>
-            <OnboardingTour />
-            <WelcomeModal />
-            <HelpButton />
-            <ProgressTracker />
-            <LiveChat />
-          </>
-        )}
-        
-        <nav className="navbar">
-          <div className="container">
-            <div className="nav-brand">
-              <h2>🎓 Pathway</h2>
-              <p>Virtual Card Payment System</p>
-            </div>
-            
-            {/* Hamburger Menu Button */}
-            <button 
-              className={`hamburger ${mobileMenuOpen ? 'active' : ''}`}
-              onClick={toggleMobileMenu}
-              aria-label="Toggle menu"
-            >
-              <span></span>
-              <span></span>
-              <span></span>
-            </button>
+    <div className="app">
+      {!isAdminPage && (
+        <>
+          <OnboardingTour />
+          <WelcomeModal />
+          <HelpButton />
+          <ProgressTracker />
+          <LiveChat />
+        </>
+      )}
 
-            {/* Navigation Links */}
-            <ul className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-              <li><Link to="/" className="home-link" onClick={closeMobileMenu}>Home</Link></li>
-              <li><Link to="/register" className="register-link" onClick={closeMobileMenu}>Register</Link></li>
-              <li><Link to="/request" className="request-link" onClick={closeMobileMenu}>Request Card</Link></li>
-              <li><Link to="/dashboard" className="dashboard-link" onClick={closeMobileMenu}>Dashboard</Link></li>
-              <li><Link to="/faq" className="faq-link" onClick={closeMobileMenu}>FAQ</Link></li>
-              <li><Link to="/contact" className="contact-link" onClick={closeMobileMenu}>Contact</Link></li>
-              <li><InstallButton /></li>
-            </ul>
+      <nav className="navbar">
+        <div className="container">
+          <div className="nav-brand">
+            <h2>🎓 Pathway</h2>
+            <p>Virtual Card Payment System</p>
           </div>
-        </nav>
 
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/register" element={<StudentRegister />} />
-            <Route path="/request" element={<RequestPayment />} />
-            <Route path="/dashboard" element={<StudentDashboard />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-          </Routes>
-        </main>
+          {/* Hamburger Menu Button */}
+          <button
+            className={`hamburger ${mobileMenuOpen ? 'active' : ''}`}
+            onClick={toggleMobileMenu}
+            aria-label="Toggle menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
 
-        <footer className="footer">
-          <div className="container">
-            <div className="footer-content">
-              <div className="footer-links">
-                <Link to="/faq">FAQ</Link>
-                <span className="footer-divider">•</span>
-                <Link to="/contact">Contact</Link>
-              </div>
-              <p>&copy; 2025 Pathway. Payment Platform.</p>
+          {/* Navigation Links */}
+          <ul className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+            <li><Link to="/" className="home-link" onClick={closeMobileMenu}>Home</Link></li>
+            <li><Link to="/register" className="register-link" onClick={closeMobileMenu}>Register</Link></li>
+            <li><Link to="/request" className="request-link" onClick={closeMobileMenu}>Request Card</Link></li>
+            <li><Link to="/dashboard" className="dashboard-link" onClick={closeMobileMenu}>Dashboard</Link></li>
+            <li><Link to="/faq" className="faq-link" onClick={closeMobileMenu}>FAQ</Link></li>
+            <li><Link to="/contact" className="contact-link" onClick={closeMobileMenu}>Contact</Link></li>
+            <li><InstallButton /></li>
+          </ul>
+        </div>
+      </nav>
+
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/register" element={<StudentRegister />} />
+          <Route path="/request" element={<RequestPayment />} />
+          <Route path="/dashboard" element={<StudentDashboard />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+        </Routes>
+      </main>
+
+      <footer className="footer">
+        <div className="container">
+          <div className="footer-content">
+            <div className="footer-links">
+              <Link to="/faq">FAQ</Link>
+              <span className="footer-divider">•</span>
+              <Link to="/contact">Contact</Link>
             </div>
+            <p>&copy; 2025 Pathway. Payment Platform.</p>
           </div>
-        </footer>
-      </div>
+        </div>
+      </footer>
+    </div>
   );
 }
 
