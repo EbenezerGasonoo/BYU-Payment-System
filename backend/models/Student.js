@@ -28,9 +28,13 @@ const studentSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  verificationToken: {
-    type: String
+  verificationToken: String,
+  status: {
+    type: String,
+    enum: ['active', 'deleted'],
+    default: 'active'
   },
+  deletedAt: Date,
   createdAt: {
     type: Date,
     default: Date.now
@@ -38,4 +42,3 @@ const studentSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Student', studentSchema);
-

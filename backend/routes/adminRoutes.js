@@ -7,14 +7,14 @@ const { notifyStudentCardAssigned } = require('../utils/emailService');
 // Middleware to verify admin key
 const verifyAdminKey = (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
-  
+
   if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
     return res.status(403).json({
       success: false,
       message: 'Unauthorized: Invalid admin key'
     });
   }
-  
+
   next();
 };
 
@@ -25,7 +25,7 @@ router.use(verifyAdminKey);
 router.get('/requests', async (req, res) => {
   try {
     const { status } = req.query;
-    
+
     const filter = status ? { status } : {};
     const requests = await CardRequest.find(filter)
       .populate('student')
@@ -295,4 +295,91 @@ router.get('/stats', async (req, res) => {
 });
 
 module.exports = router;
+
+// Get all students (with optional status filter)
+router.get('/users', async (req, res) => {
+  try {
+    const { status } = req.query;
+    const filter = status ? { status } : { status: { $ne: 'deleted' } }; // Default to active only if not specified
+
+    // If status is 'all', remove filter
+    const query = status === 'all' ? {} : filter;
+
+    const students = await Student.find(query).sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: students
+    });
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Soft delete a student
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
+
+    student.status = 'deleted';
+    student.deletedAt = new Date();
+    await student.save();
+
+    res.json({
+      success: true,
+      message: 'Student soft-deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting student:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Restore a deleted student
+router.patch('/users/:id/restore', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
+
+    student.status = 'active';
+    student.deletedAt = undefined;
+    await student.save();
+
+    res.json({
+      success: true,
+      message: 'Student restored successfully'
+    });
+  } catch (error) {
+    console.error('Error restoring student:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
 

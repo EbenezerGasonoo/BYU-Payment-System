@@ -124,6 +124,28 @@ export const adminAPI = {
       { headers: { 'x-admin-key': adminKey } }
     );
     return response.data;
+  },
+
+  getUsers: async (adminKey, status = '') => {
+    const url = status ? `${API_BASE_URL}/admin/users?status=${status}` : `${API_BASE_URL}/admin/users`;
+    const response = await axios.get(url, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
+  },
+
+  deleteUser: async (adminKey, studentId) => {
+    const response = await axios.delete(`${API_BASE_URL}/admin/users/${studentId}`, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
+  },
+
+  restoreUser: async (adminKey, studentId) => {
+    const response = await axios.patch(`${API_BASE_URL}/admin/users/${studentId}/restore`, {}, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
   }
 };
 

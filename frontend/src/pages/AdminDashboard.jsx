@@ -12,7 +12,9 @@ function AdminDashboard() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
   const [activeTab, setActiveTab] = useState('requests');
-  
+  const [users, setUsers] = useState([]);
+  const [userFilter, setUserFilter] = useState('active'); // 'active' or 'deleted'
+
   // Manual card assignment state
   const [showCardForm, setShowCardForm] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
@@ -28,7 +30,7 @@ function AdminDashboard() {
       setError('Please enter an admin key');
       return;
     }
-    
+
     setError('');
     setAuthenticated(true);
     // Load dashboard immediately with the admin key
@@ -38,7 +40,7 @@ function AdminDashboard() {
   const loadDashboard = async () => {
     const keyToUse = adminKey || '';
     if (!keyToUse) return;
-    
+
     setLoading(true);
     setError('');
 
@@ -53,7 +55,7 @@ function AdminDashboard() {
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Failed to load admin dashboard';
       setError(errorMessage);
-      
+
       if (err.response?.status === 403) {
         setAuthenticated(false);
         setAdminKey('');
@@ -63,16 +65,36 @@ function AdminDashboard() {
     }
   };
 
+  const loadUsers = async () => {
+    const keyToUse = adminKey || '';
+    if (!keyToUse) return;
+
+    setLoading(true);
+    try {
+      const usersData = await adminAPI.getUsers(keyToUse, userFilter === 'deleted' ? 'deleted' : '');
+      setUsers(usersData.data || []);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+      // Don't show error to user to avoid disrupting other tabs, just log it
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (authenticated && adminKey) {
-      loadDashboard();
+      if (activeTab === 'users') {
+        loadUsers();
+      } else {
+        loadDashboard();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, authenticated]);
+  }, [filter, authenticated, activeTab, userFilter]);
 
   const handleAssignMock = async (requestId) => {
     if (!window.confirm('Assign a mock card to this request?')) return;
-    
+
     try {
       await adminAPI.assignMockCard(adminKey, requestId);
       alert('Mock card assigned successfully!');
@@ -100,7 +122,7 @@ function AdminDashboard() {
 
   const handleManualAssign = async (e) => {
     e.preventDefault();
-    
+
     if (!cardDetails.cardNumber || !cardDetails.cardholderName || !cardDetails.expiryDate || !cardDetails.cvv) {
       alert('All card details are required');
       return;
@@ -121,13 +143,37 @@ function AdminDashboard() {
 
   const handleAction = async (requestId, action) => {
     if (!window.confirm(`Mark this request as ${action}?`)) return;
-    
+
     try {
       await adminAPI.updateAction(adminKey, { requestId, action });
       alert(`Request marked as ${action}!`);
       await loadDashboard();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Are you sure you want to delete this user? They will be moved to the "Deleted Users" list.')) return;
+
+    try {
+      await adminAPI.deleteUser(adminKey, userId);
+      alert('User deleted successfully');
+      loadUsers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete user');
+    }
+  };
+
+  const handleRestoreUser = async (userId) => {
+    if (!window.confirm('Restore this user account?')) return;
+
+    try {
+      await adminAPI.restoreUser(adminKey, userId);
+      alert('User restored successfully');
+      loadUsers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to restore user');
     }
   };
 
@@ -167,7 +213,7 @@ function AdminDashboard() {
 
           {error && <div className="alert alert-error">{error}</div>}
 
-          <form 
+          <form
             className="admin-auth-form"
             onSubmit={(e) => {
               e.preventDefault();
@@ -206,17 +252,23 @@ function AdminDashboard() {
         </div>
         <div className="admin-header-actions">
           <div className="admin-tabs">
-            <button 
-              onClick={() => setActiveTab('requests')} 
+            <button
+              onClick={() => setActiveTab('requests')}
               className={`admin-tab ${activeTab === 'requests' ? 'active' : ''}`}
             >
               📋 Card Requests
             </button>
-            <button 
-              onClick={() => setActiveTab('chat')} 
+            <button
+              onClick={() => setActiveTab('chat')}
               className={`admin-tab ${activeTab === 'chat' ? 'active' : ''}`}
             >
               💬 Live Chat
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`}
+            >
+              👥 Users
             </button>
           </div>
           <button onClick={handleLogout} className="btn btn-secondary">
@@ -230,6 +282,91 @@ function AdminDashboard() {
       {/* Chat Tab */}
       {activeTab === 'chat' ? (
         <AdminChat adminKey={adminKey} />
+      ) : activeTab === 'users' ? (
+        <div className="users-section">
+          <div className="filter-section">
+            <div className="admin-tabs" style={{ marginBottom: 0 }}>
+              <button
+                onClick={() => setUserFilter('active')}
+                className={`admin-tab ${userFilter === 'active' ? 'active' : ''}`}
+                style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
+              >
+                Active Users
+              </button>
+              <button
+                onClick={() => setUserFilter('deleted')}
+                className={`admin-tab ${userFilter === 'deleted' ? 'active' : ''}`}
+                style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
+              >
+                Deleted Users
+              </button>
+            </div>
+            <button
+              onClick={loadUsers}
+              className="btn btn-primary"
+              disabled={loading}
+            >
+              {loading ? 'Refreshing...' : '🔄 Refresh'}
+            </button>
+          </div>
+
+          <div className="admin-table-container">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>BYU ID</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Status</th>
+                  <th>Joined</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>
+                      No {userFilter} users found.
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user) => (
+                    <tr key={user._id}>
+                      <td>{user.name}</td>
+                      <td>{user.byuId}</td>
+                      <td>{user.email}</td>
+                      <td>{user.phone}</td>
+                      <td>
+                        <span className={`badge ${user.status === 'deleted' ? 'badge-danger' : 'badge-success'}`}>
+                          {user.status || 'active'}
+                        </span>
+                      </td>
+                      <td>{formatDate(user.createdAt)}</td>
+                      <td>
+                        {user.status === 'deleted' ? (
+                          <button
+                            onClick={() => handleRestoreUser(user._id)}
+                            className="btn btn-success btn-sm"
+                          >
+                            Restore
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDeleteUser(user._id)}
+                            className="btn btn-danger btn-sm"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
         <>
           {/* Loading State */}
@@ -293,8 +430,8 @@ function AdminDashboard() {
                 <div className="metric-card">
                   <h3>Success Rate</h3>
                   <div className="metric-value success">
-                    {stats.totalRequests > 0 
-                      ? Math.round((stats.assignedRequests / stats.totalRequests) * 100) 
+                    {stats.totalRequests > 0
+                      ? Math.round((stats.assignedRequests / stats.totalRequests) * 100)
                       : 0}%
                   </div>
                   <div className="metric-description">
@@ -313,8 +450,8 @@ function AdminDashboard() {
                 <div className="metric-card">
                   <h3>Completion Rate</h3>
                   <div className="metric-value info">
-                    {stats.totalRequests > 0 
-                      ? Math.round((stats.paidRequests / stats.totalRequests) * 100) 
+                    {stats.totalRequests > 0
+                      ? Math.round((stats.paidRequests / stats.totalRequests) * 100)
                       : 0}%
                   </div>
                   <div className="metric-description">
@@ -329,10 +466,10 @@ function AdminDashboard() {
           <div className="filter-section">
             <div className="filter-controls">
               <label htmlFor="statusFilter">Filter by Status:</label>
-              <select 
+              <select
                 id="statusFilter"
-                value={filter} 
-                onChange={(e) => setFilter(e.target.value)} 
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
                 className="filter-select"
               >
                 <option value="">All Requests</option>
@@ -343,9 +480,9 @@ function AdminDashboard() {
                 <option value="declined">Declined</option>
               </select>
             </div>
-            <button 
-              onClick={loadDashboard} 
-              className="btn btn-primary" 
+            <button
+              onClick={loadDashboard}
+              className="btn btn-primary"
               disabled={loading}
             >
               {loading ? 'Refreshing...' : '🔄 Refresh'}
@@ -355,7 +492,7 @@ function AdminDashboard() {
           {/* Requests Table */}
           <div className="requests-section">
             <h2>Card Requests</h2>
-            
+
             {loading && requests.length === 0 ? (
               <div className="admin-loading">
                 <div className="loading-spinner">⏳</div>
@@ -365,8 +502,8 @@ function AdminDashboard() {
               <div className="alert alert-info">
                 <p>No requests found.</p>
                 {filter && (
-                  <button 
-                    onClick={() => setFilter('')} 
+                  <button
+                    onClick={() => setFilter('')}
                     className="btn btn-secondary btn-sm"
                     style={{ marginTop: '1rem' }}
                   >
@@ -516,21 +653,21 @@ function AdminDashboard() {
                   onChange={(e) => {
                     const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
                     const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
-                    setCardDetails({...cardDetails, cardNumber: formatted});
+                    setCardDetails({ ...cardDetails, cardNumber: formatted });
                   }}
                   placeholder="1234 5678 9012 3456"
                   maxLength="19"
                   required
                 />
               </div>
-              
+
               <div className="form-group">
                 <label htmlFor="cardholderName">Cardholder Name *</label>
                 <input
                   type="text"
                   id="cardholderName"
                   value={cardDetails.cardholderName}
-                  onChange={(e) => setCardDetails({...cardDetails, cardholderName: e.target.value.toUpperCase()})}
+                  onChange={(e) => setCardDetails({ ...cardDetails, cardholderName: e.target.value.toUpperCase() })}
                   placeholder="JOHN DOE"
                   required
                 />
@@ -549,7 +686,7 @@ function AdminDashboard() {
                       if (value.length >= 2) {
                         formatted = value.slice(0, 2) + '/' + value.slice(2, 4);
                       }
-                      setCardDetails({...cardDetails, expiryDate: formatted});
+                      setCardDetails({ ...cardDetails, expiryDate: formatted });
                     }}
                     placeholder="MM/YY"
                     maxLength="5"
@@ -565,7 +702,7 @@ function AdminDashboard() {
                     value={cardDetails.cvv}
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, '');
-                      setCardDetails({...cardDetails, cvv: value});
+                      setCardDetails({ ...cardDetails, cvv: value });
                     }}
                     placeholder="123"
                     maxLength="4"
