@@ -57,11 +57,12 @@ router.post('/register', async (req, res) => {
     });
     await student.save();
 
-    // Send verification email
-    await sendVerificationEmail(student, verificationToken);
+    // Send verification email asynchronously (non-blocking)
+    sendVerificationEmail(student, verificationToken).catch(err => {
+      console.error('Error sending verification email (non-blocking):', err);
+    });
 
     res.status(201).json({
-      success: true,
       success: true,
       message: 'Student registered successfully. Please check your email to verify your account.',
       data: student
