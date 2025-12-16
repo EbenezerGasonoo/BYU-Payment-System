@@ -1,19 +1,48 @@
 const nodemailer = require('nodemailer');
 
+// Check if email is configured
+const isEmailConfigured = () => {
+  return !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
+};
+
 // Create reusable transporter
-// Create reusable transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'mail.entechnologygh.com',
-  port: process.env.EMAIL_PORT || 465,
-  secure: true, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
+let transporter = null;
+
+if (isEmailConfigured()) {
+  transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'mail.entechnologygh.com',
+    port: process.env.EMAIL_PORT || 465,
+    secure: true, // true for 465, false for other ports
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD
+    }
+  });
+
+  // Verify transporter connection on startup
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('❌ Email transporter verification failed:', error.message);
+    } else {
+      console.log('✅ Email transporter is ready');
+    }
+  });
+} else {
+  console.warn('⚠️  Email not configured: EMAIL_USER and/or EMAIL_PASSWORD not set. Emails will not be sent.');
+}
 
 // Send email to admin when student requests card
 const notifyAdminNewRequest = async (student, cardRequest) => {
+  if (!isEmailConfigured()) {
+    console.warn('⚠️  Email not configured. Skipping admin notification.');
+    return;
+  }
+
+  if (!process.env.ADMIN_EMAIL) {
+    console.warn('⚠️  ADMIN_EMAIL not set. Skipping admin notification.');
+    return;
+  }
+
   try {
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -44,15 +73,21 @@ const notifyAdminNewRequest = async (student, cardRequest) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Admin notification sent');
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Admin notification sent to', process.env.ADMIN_EMAIL, 'Message ID:', info.messageId);
   } catch (error) {
-    console.error('❌ Error sending admin notification:', error);
+    console.error('❌ Error sending admin notification:', error.message);
+    console.error('Full error:', error);
   }
 };
 
 // Send email to student when card is assigned
 const notifyStudentCardAssigned = async (student, cardRequest) => {
+  if (!isEmailConfigured()) {
+    console.warn('⚠️  Email not configured. Skipping card assignment notification.');
+    return;
+  }
+
   try {
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -90,15 +125,21 @@ const notifyStudentCardAssigned = async (student, cardRequest) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Student notification sent (card assigned)');
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Student notification sent (card assigned) to', student.email, 'Message ID:', info.messageId);
   } catch (error) {
-    console.error('❌ Error sending student notification:', error);
+    console.error('❌ Error sending student notification:', error.message);
+    console.error('Full error:', error);
   }
 };
 
 // Send email to student when card expires
 const notifyStudentCardExpired = async (student, cardRequest) => {
+  if (!isEmailConfigured()) {
+    console.warn('⚠️  Email not configured. Skipping card expiry notification.');
+    return;
+  }
+
   try {
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -126,15 +167,22 @@ const notifyStudentCardExpired = async (student, cardRequest) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Student notification sent (card expired)');
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Student notification sent (card expired) to', student.email, 'Message ID:', info.messageId);
   } catch (error) {
-    console.error('❌ Error sending expiry notification:', error);
+    console.error('❌ Error sending expiry notification:', error.message);
+    console.error('Full error:', error);
   }
 };
 
 // Send verification email to student
 const sendVerificationEmail = async (student, token) => {
+  if (!isEmailConfigured()) {
+    console.warn('⚠️  Email not configured. Skipping verification email.');
+    console.warn('⚠️  Student registered but cannot receive verification email. Email:', student.email);
+    return;
+  }
+
   try {
     const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;
 
@@ -163,10 +211,14 @@ const sendVerificationEmail = async (student, token) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Verification email sent');
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Verification email sent to', student.email, 'Message ID:', info.messageId);
   } catch (error) {
-    console.error('❌ Error sending verification email:', error);
+    console.error('❌ Error sending verification email:', error.message);
+    console.error('Full error:', error);
+    if (error.response) {
+      console.error('SMTP Response:', error.response);
+    }
   }
 };
 
