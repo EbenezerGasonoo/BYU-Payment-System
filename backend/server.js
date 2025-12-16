@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const { startCardExpiryJob } = require('./utils/cronJobs');
 const ChatMessage = require('./models/ChatMessage');
@@ -28,12 +29,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
+// Health check endpoint (must work even if DB is down)
 app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    database: dbStatus,
+    port: PORT
   });
 });
 
@@ -141,11 +146,22 @@ app.get('/api/test-hubtel', async (req, res) => {
   }
 });
 
-// Connect to database
-connectDB();
+// Connect to database (non-blocking - server will start even if DB fails)
+connectDB().then(() => {
+  // Only start cron jobs if database is connected
+  if (mongoose.connection.readyState === 1) {
+    startCardExpiryJob();
+    console.log('✅ Cron jobs started');
+  } else {
+    console.warn('⚠️  Cron jobs not started - database not connected');
+  }
+}).catch((err) => {
+  console.error('Database connection error:', err);
+  // Server will still start for health checks
+});
 
-// Start cron jobs
-startCardExpiryJob();
+// Note: Server will start even if database connection fails
+// This allows health checks to work and helps with debugging
 
 // Routes
 app.get('/', (req, res) => {
