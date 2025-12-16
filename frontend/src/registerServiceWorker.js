@@ -2,62 +2,71 @@
 export function register() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      const swUrl = '/service-worker.js?v=' + Date.now(); // Cache bust
+      // Use static URL, not cache-busted (prevents infinite loops)
+      const swUrl = '/service-worker.js';
+
+      // Prevent infinite reload loops
+      let isReloading = false;
+      let reloadTimeout = null;
 
       navigator.serviceWorker
         .register(swUrl)
         .then((registration) => {
           console.log('✅ Service Worker registered:', registration);
 
-          // Check for updates every 60 seconds
-          setInterval(() => {
-            registration.update();
-          }, 60000);
+          // Only check for updates manually, not automatically
+          // Remove aggressive update checking that causes loops
 
-          // Check for updates on page focus
+          // Check for updates on page focus (less aggressive)
           window.addEventListener('focus', () => {
-            registration.update();
+            // Only check once per session
+            if (!sessionStorage.getItem('swUpdateChecked')) {
+              registration.update().catch(() => {});
+              sessionStorage.setItem('swUpdateChecked', 'true');
+            }
           });
 
-          // Check for updates
+          // Handle updates found
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
+            if (!newWorker) return;
+
             console.log('🔄 Service Worker update found');
 
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
-                  // New content available, force update
-                  console.log('🔄 New version available, updating...');
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  // Auto-reload after 1 second
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 1000);
+                  // New content available - but don't auto-reload
+                  console.log('🔄 New version available. Reload page to update.');
+                  // Don't auto-reload - let user decide or reload on next navigation
                 } else {
                   console.log('✅ Service Worker installed for the first time');
                 }
               }
             });
           });
-
-          // Listen for skip waiting message
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'SKIP_WAITING') {
-              window.location.reload();
-            }
-          });
         })
         .catch((error) => {
           console.error('❌ Service Worker registration failed:', error);
         });
 
-      // Handle service worker updates
+      // Handle service worker controller changes (only once)
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
+        if (!refreshing && !isReloading) {
+          // Only reload if we're not already reloading
           refreshing = true;
-          window.location.reload();
+          isReloading = true;
+          
+          // Clear any pending reload
+          if (reloadTimeout) {
+            clearTimeout(reloadTimeout);
+          }
+          
+          // Reload after a short delay
+          reloadTimeout = setTimeout(() => {
+            window.location.reload();
+          }, 100);
         }
       });
     });

@@ -4,8 +4,9 @@ import App from './App.jsx'
 import './index.css'
 import { register as registerServiceWorker, checkInstallability } from './registerServiceWorker'
 
-// Register service worker for PWA
-if (import.meta.env.PROD) {
+// Register service worker for PWA (only in production)
+// Disabled in dev to prevent refresh loops
+if (import.meta.env.PROD && !import.meta.env.DEV) {
   registerServiceWorker();
 }
 
