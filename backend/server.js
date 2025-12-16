@@ -24,23 +24,40 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
+// Log startup
+console.log('🚀 Initializing server...');
+console.log('📦 PORT:', PORT);
+console.log('🌍 NODE_ENV:', process.env.NODE_ENV || 'development');
+
+// Health check endpoint (register FIRST - before anything else)
+// This must work even if DB is down or routes fail
+app.get('/api/health', (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    
+    res.status(200).json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbStatus,
+      port: PORT
+    });
+  } catch (error) {
+    res.status(200).json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'unknown',
+      port: PORT,
+      error: error.message
+    });
+  }
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Health check endpoint (must work even if DB is down)
-app.get('/api/health', (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    database: dbStatus,
-    port: PORT
-  });
-});
 
 // Get server's public IP address (for Hubtel whitelisting)
 app.get('/api/my-ip', async (req, res) => {
@@ -306,11 +323,27 @@ io.on('connection', (socket) => {
   });
 });
 
+// Start server with error handling
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Server is running on port ${PORT}`);
   console.log(`📡 API URL: http://localhost:${PORT}`);
   console.log(`💬 Live Chat: Enabled`);
   console.log(`📧 Email notifications: ${process.env.EMAIL_USER ? 'Enabled' : 'Disabled'}`);
-  console.log(`🔐 Admin key: ${process.env.ADMIN_KEY ? 'Set' : 'Not set'}\n`);
+  console.log(`🔐 Admin key: ${process.env.ADMIN_KEY ? 'Set' : 'Not set'}`);
+  console.log(`💾 Database: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}\n`);
+}).on('error', (err) => {
+  console.error('❌ Server failed to start:', err);
+  process.exit(1);
+});
+
+// Handle uncaught errors
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+  // Don't exit - let server try to continue
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - let server try to continue
 });
 
