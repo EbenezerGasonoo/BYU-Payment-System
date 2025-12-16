@@ -2,12 +2,22 @@
 export function register() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      const swUrl = '/service-worker.js';
+      const swUrl = '/service-worker.js?v=' + Date.now(); // Cache bust
 
       navigator.serviceWorker
         .register(swUrl)
         .then((registration) => {
           console.log('✅ Service Worker registered:', registration);
+
+          // Check for updates every 60 seconds
+          setInterval(() => {
+            registration.update();
+          }, 60000);
+
+          // Check for updates on page focus
+          window.addEventListener('focus', () => {
+            registration.update();
+          });
 
           // Check for updates
           registration.addEventListener('updatefound', () => {
@@ -15,14 +25,27 @@ export function register() {
             console.log('🔄 Service Worker update found');
 
             newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New content available, show update prompt
-                if (confirm('New version available! Click OK to update.')) {
+              if (newWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  // New content available, force update
+                  console.log('🔄 New version available, updating...');
                   newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  window.location.reload();
+                  // Auto-reload after 1 second
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1000);
+                } else {
+                  console.log('✅ Service Worker installed for the first time');
                 }
               }
             });
+          });
+
+          // Listen for skip waiting message
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'SKIP_WAITING') {
+              window.location.reload();
+            }
           });
         })
         .catch((error) => {
