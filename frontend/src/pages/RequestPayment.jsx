@@ -244,11 +244,11 @@ function RequestPayment() {
               value={formData.byuId}
               onChange={handleChange}
               required
-              placeholder="e.g., 123456789"
-              pattern="[0-9]{9}"
-              title="Please enter your 9-digit BYU Student ID"
+              placeholder="e.g., 1234567 or 12345678"
+              pattern="[0-9]{7,8}"
+              title="Please enter your 7-8 digit BYU Student ID"
             />
-            <small className="field-hint">Enter your 9-digit BYU Student ID number</small>
+            <small className="field-hint">Enter your 7-8 digit BYU Student ID number</small>
           </div>
 
           <div className="form-group">

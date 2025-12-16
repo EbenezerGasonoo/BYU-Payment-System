@@ -34,10 +34,10 @@ router.post('/submit', async (req, res) => {
     }
 
     // Validate BYU Student ID format if provided
-    if (byuId && !/^\d{9}$/.test(byuId)) {
+    if (byuId && !/^\d{7,8}$/.test(byuId)) {
       return res.status(400).json({
         success: false,
-        message: 'BYU Student ID must be exactly 9 digits'
+        message: 'BYU Student ID must be 7-8 digits'
       });
     }
 

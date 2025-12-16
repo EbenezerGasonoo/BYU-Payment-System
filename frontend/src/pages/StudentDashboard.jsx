@@ -98,12 +98,12 @@ function StudentDashboard() {
           type="text"
           value={byuId}
           onChange={(e) => setByuId(e.target.value)}
-          placeholder="Enter your 9-digit BYU Student ID"
-          pattern="[0-9]{9}"
-          title="Please enter your 9-digit BYU Student ID"
+          placeholder="Enter your 7-8 digit BYU Student ID"
+          pattern="[0-9]{7,8}"
+          title="Please enter your 7-8 digit BYU Student ID"
           required
         />
-        <small className="field-hint">Enter your 9-digit BYU Student ID number</small>
+        <small className="field-hint">Enter your 7-8 digit BYU Student ID number</small>
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? 'Loading...' : 'Load Dashboard'}
         </button>

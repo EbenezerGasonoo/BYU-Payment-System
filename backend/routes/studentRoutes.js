@@ -20,11 +20,11 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Validate BYU Student ID format (9 digits)
-    if (!/^\d{9}$/.test(byuId)) {
+    // Validate BYU Student ID format (7-8 digits)
+    if (!/^\d{7,8}$/.test(byuId)) {
       return res.status(400).json({
         success: false,
-        message: 'BYU Student ID must be exactly 9 digits'
+        message: 'BYU Student ID must be 7-8 digits'
       });
     }
 
@@ -120,11 +120,11 @@ router.post('/request-card', async (req, res) => {
       });
     }
 
-    // Validate BYU Student ID format (9 digits)
-    if (!/^\d{9}$/.test(byuId)) {
+    // Validate BYU Student ID format (7-8 digits)
+    if (!/^\d{7,8}$/.test(byuId)) {
       return res.status(400).json({
         success: false,
-        message: 'BYU Student ID must be exactly 9 digits'
+        message: 'BYU Student ID must be 7-8 digits'
       });
     }
 
