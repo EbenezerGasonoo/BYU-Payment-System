@@ -1,64 +1,63 @@
 const axios = require('axios');
 
-// Hubtel Direct Debit API Configuration
-const HUBTEL_POS_SALES_ID = process.env.HUBTEL_POS_SALES_ID || '2030303';
-const HUBTEL_CHARGE_URL = process.env.HUBTEL_CHARGE_URL || 'https://rmp.hubtel.com/merchantaccount';
-const HUBTEL_BASE_URL = 'https://rmp.hubtel.com';
-const HUBTEL_CALLBACK_URL = process.env.HUBTEL_CALLBACK_URL || 'https://webhook.site/26a30efb-d7be-4864-87da-ccd60979f578';
-const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_API_KEY; // API Key is the Client Secret
-const HUBTEL_CLIENT_ID = process.env.HUBTEL_API_ID; // API ID is the Client ID
+// Hubtel Online Checkout API Configuration
+const HUBTEL_CLIENT_ID = process.env.HUBTEL_API_ID || process.env.HUBTEL_CLIENT_ID;
+const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_API_KEY || process.env.HUBTEL_CLIENT_SECRET;
+const HUBTEL_CHECKOUT_URL = process.env.HUBTEL_CHECKOUT_URL || 'https://payproxyapi.hubtel.com/items/initiate';
+const HUBTEL_CALLBACK_URL = process.env.HUBTEL_CALLBACK_URL || `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/student/hubtel-callback`;
+const HUBTEL_RETURN_URL = process.env.HUBTEL_RETURN_URL || `${process.env.FRONTEND_URL || 'http://localhost:5173'}/request?payment=success`;
 
 /**
- * Initiate Hubtel Direct Debit PreApproval (Step 1: Customer approval via USSD/OTP)
- * @param {string} phoneNumber - Customer phone number (e.g., 0241234567)
- * @param {number} amount - Amount to charge
+ * Initiate Hubtel Online Checkout Payment
+ * @param {number} amount - Amount to charge (in GHS)
  * @param {string} paymentReference - Unique payment reference
  * @param {string} description - Payment description
  * @param {string} customerName - Customer name
  * @param {string} customerEmail - Customer email
- * @returns {Promise<Object>} Payment initiation result
+ * @param {string} customerPhone - Customer phone number
+ * @returns {Promise<Object>} Payment initiation result with checkout URL
  */
-const initiatePayment = async (phoneNumber, amount, paymentReference, description, customerName = 'Student', customerEmail = '') => {
+const initiatePayment = async (amount, paymentReference, description, customerName = 'Student', customerEmail = '', customerPhone = '') => {
   try {
-    console.log('🚀 Initiating Hubtel Direct Debit PreApproval:', {
-      phoneNumber,
+    console.log('🚀 Initiating Hubtel Online Checkout:', {
       amount,
       paymentReference,
       description,
       customerName,
-      posId: HUBTEL_POS_SALES_ID
+      customerEmail,
+      customerPhone
     });
+
+    if (!HUBTEL_CLIENT_ID || !HUBTEL_CLIENT_SECRET) {
+      return {
+        success: false,
+        error: 'Hubtel credentials not configured. Please set HUBTEL_API_ID and HUBTEL_API_KEY environment variables.'
+      };
+    }
 
     // Hubtel API expects Basic Auth with CLIENT_ID:CLIENT_SECRET
     const authToken = Buffer.from(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`).toString('base64');
 
-    // Format phone number (remove leading 0 if present, add 233)
-    const formattedPhone = phoneNumber.startsWith('0') 
-      ? '233' + phoneNumber.substring(1) 
-      : phoneNumber.startsWith('233') 
-        ? phoneNumber 
-        : '233' + phoneNumber;
-
-    // Detect channel based on phone number
-    const channel = formattedPhone.startsWith('23324') || formattedPhone.startsWith('23325') || formattedPhone.startsWith('23354') || formattedPhone.startsWith('23355')
-      ? 'mtn-gh-direct-debit'
-      : 'vodafone-gh-direct-debit';
-
-    // Hubtel Direct Debit PreApproval API payload (CORRECT FORMAT from documentation)
+    // Hubtel Online Checkout API payload
     const requestBody = {
-      clientReferenceId: paymentReference,
-      customerMsisdn: formattedPhone,
-      channel: channel,
-      callbackUrl: HUBTEL_CALLBACK_URL
+      totalAmount: amount,
+      description: description || 'BYU Virtual Card Payment',
+      callbackUrl: HUBTEL_CALLBACK_URL,
+      returnUrl: HUBTEL_RETURN_URL,
+      merchantBusinessLogoUrl: '',
+      merchantAccountNumber: '',
+      cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/request?payment=cancelled`,
+      clientReference: paymentReference,
+      customerName: customerName,
+      customerEmail: customerEmail,
+      customerMsisdn: customerPhone
     };
 
-    console.log('📡 Using Hubtel Direct Debit PreApproval API (CORRECT ENDPOINT)');
-    console.log('📦 Request body:', requestBody);
-    console.log('📱 Sending to:', formattedPhone, 'via channel:', channel);
+    console.log('📡 Using Hubtel Online Checkout API');
+    console.log('📦 Request body:', { ...requestBody, callbackUrl: HUBTEL_CALLBACK_URL });
 
-    // CORRECT Hubtel Direct Debit PreApproval endpoint
     const response = await axios.post(
-      `${HUBTEL_BASE_URL}/merchant/${HUBTEL_POS_SALES_ID}/preapproval/initiate`,
+      HUBTEL_CHECKOUT_URL,
       requestBody,
       {
         headers: {
@@ -70,39 +69,40 @@ const initiatePayment = async (phoneNumber, amount, paymentReference, descriptio
       }
     );
 
-    console.log('✅ Hubtel Direct Debit PreApproval response:', response.data);
+    console.log('✅ Hubtel Online Checkout response:', response.data);
 
-    // Hubtel PreApproval response format
+    // Hubtel Checkout response format
     if (response.data && response.data.responseCode) {
-      const { responseCode, message, data } = response.data;
+      const { responseCode, data } = response.data;
       
-      // Response codes: 0000 = Success, 0001 = Pending (both are successful initiations)
-      const isSuccess = responseCode === '0000' || responseCode === '0001';
-      const isPending = data?.preapprovalStatus === 'PENDING';
-      
-      return {
-        success: isSuccess || isPending, // PENDING is actually SUCCESS (waiting for customer approval)
-        data: {
-          hubtelPreApprovalId: data?.hubtelPreApprovalId,
-          clientReferenceId: data?.clientReferenceId,
-          verificationType: data?.verificationType, // USSD or OTP
-          otpPrefix: data?.otpPrefix,
-          preapprovalStatus: data?.preapprovalStatus, // PENDING, APPROVED, REJECTED
-          status: data?.preapprovalStatus === 'APPROVED' ? 'approved' : 'pending',
-          message: message || 'Payment request sent successfully. Customer needs to approve.',
-          transactionId: data?.hubtelPreApprovalId
-        }
-      };
+      if (responseCode === '0000' && data) {
+        return {
+          success: true,
+          data: {
+            checkoutUrl: data.checkoutUrl || data.checkoutDirectUrl,
+            checkoutId: data.checkoutId || data.transactionId,
+            status: 'pending',
+            message: 'Payment checkout created successfully. Redirecting to Hubtel...',
+            transactionId: data.checkoutId || data.transactionId
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Failed to create checkout',
+          details: response.data
+        };
+      }
     } else {
       console.error('❌ Hubtel returned unexpected response:', response.data);
       return {
         success: false,
-        error: response.data.message || 'Payment initiation failed',
+        error: response.data?.message || 'Payment initiation failed',
         details: response.data
       };
     }
   } catch (error) {
-    console.error('❌ Hubtel Direct Debit error:', error.response?.data || error.message);
+    console.error('❌ Hubtel Online Checkout error:', error.response?.data || error.message);
     return {
       success: false,
       error: error.response?.data?.message || error.response?.data?.Message || error.message,

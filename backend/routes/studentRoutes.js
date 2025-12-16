@@ -345,12 +345,12 @@ router.post('/payment-failed', async (req, res) => {
   }
 });
 
-// Initiate Hubtel Payment
+// Initiate Hubtel Payment (Online Checkout)
 router.post('/initiate-hubtel-payment', async (req, res) => {
   try {
     const { phoneNumber, amount, paymentReference, studentName, studentEmail } = req.body;
 
-    console.log('🎯 Initiating Hubtel payment request:', {
+    console.log('🎯 Initiating Hubtel Online Checkout:', {
       phoneNumber,
       amount,
       paymentReference,
@@ -358,53 +358,39 @@ router.post('/initiate-hubtel-payment', async (req, res) => {
       studentEmail
     });
 
-    // Initiate Hubtel payment with customer details
+    // Initiate Hubtel Online Checkout
     const result = await initiatePayment(
-      phoneNumber,
       amount,
       paymentReference,
       `BYU Virtual Card Payment - ${studentName || 'Student'}`,
       studentName || 'Student',
-      studentEmail || ''
+      studentEmail || '',
+      phoneNumber || ''
     );
 
     if (result.success) {
-      // Update card request with Hubtel transaction ID
+      // Update card request with Hubtel checkout ID
       const cardRequest = await CardRequest.findOne({ paymentReference });
       if (cardRequest) {
-        cardRequest.hubtelCheckoutId = result.data.transactionId;
-
-        // If payment is already successful (ResponseCode "0000")
-        if (result.data.status === 'paid') {
-          cardRequest.paymentStatus = 'paid';
-          cardRequest.paymentVerifiedAt = new Date();
-          await cardRequest.save();
-
-          // Notify admin immediately
-          const student = await Student.findOne({ byuId: req.body.byuId });
-          if (student) {
-            await notifyAdminNewRequest(student, cardRequest);
-          }
-        } else {
-          await cardRequest.save();
-        }
+        cardRequest.hubtelCheckoutId = result.data.checkoutId;
+        cardRequest.paymentMethod = 'momo-hubtel';
+        await cardRequest.save();
       }
 
       res.json({
         success: true,
-        message: result.data.message || 'Payment initiated successfully',
+        message: result.data.message || 'Checkout created successfully',
         data: {
+          checkoutUrl: result.data.checkoutUrl,
+          checkoutId: result.data.checkoutId,
           transactionId: result.data.transactionId,
-          status: result.data.status,
-          message: result.data.message,
-          amount: result.data.amount,
-          charges: result.data.charges
+          status: 'pending'
         }
       });
     } else {
       res.status(400).json({
         success: false,
-        message: 'Failed to initiate payment',
+        message: result.error || 'Failed to create checkout',
         error: result.error,
         details: result.details
       });
@@ -419,45 +405,66 @@ router.post('/initiate-hubtel-payment', async (req, res) => {
   }
 });
 
-// Hubtel Payment Callback (webhook)
+// Hubtel Payment Callback (webhook) - Online Checkout
 router.post('/hubtel-callback', async (req, res) => {
   try {
-    console.log('📥 Hubtel callback received (POST):', req.body);
+    console.log('📥 Hubtel callback received (POST):', JSON.stringify(req.body, null, 2));
 
-    const { ResponseCode, Data } = req.body;
+    // Hubtel Online Checkout callback format
+    const { ResponseCode, Data, responseCode, data } = req.body;
+    
+    // Handle both response formats (ResponseCode/Data or responseCode/data)
+    const code = ResponseCode || responseCode;
+    const callbackData = Data || data;
 
-    // ResponseCode "0000" means success
-    if (ResponseCode === '0000' && Data) {
-      const { ClientReference } = Data;
+    // Hubtel Online Checkout callback - handle both response formats
+    const { ResponseCode, Data, responseCode, data } = req.body;
+    const code = ResponseCode || responseCode;
+    const callbackData = Data || data;
 
-      // Find and update card request
-      const cardRequest = await CardRequest.findOne({
-        paymentReference: ClientReference
-      }).populate('student');
+    // ResponseCode "0000" or "00" means success
+    if ((code === '0000' || code === '00') && callbackData) {
+      const clientReference = callbackData.ClientReference || callbackData.clientReference || callbackData.reference;
 
-      if (cardRequest) {
-        cardRequest.paymentStatus = 'paid';
-        cardRequest.paymentVerifiedAt = new Date();
-        await cardRequest.save();
+      if (clientReference) {
+        const cardRequest = await CardRequest.findOne({
+          paymentReference: clientReference
+        }).populate('student');
 
-        console.log('✅ Payment verified for:', ClientReference);
+        if (cardRequest) {
+          cardRequest.paymentStatus = 'paid';
+          cardRequest.paymentVerifiedAt = new Date();
+          await cardRequest.save();
 
-        // Notify admin of paid request
-        await notifyAdminNewRequest(cardRequest.student, cardRequest);
+          console.log('✅ Payment verified for:', clientReference);
+
+          // Notify admin of paid request
+          if (cardRequest.student) {
+            await notifyAdminNewRequest(cardRequest.student, cardRequest);
+          }
+        } else {
+          console.log('⚠️ Card request not found for reference:', clientReference);
+        }
       }
     } else {
-      // Payment failed
-      const { ClientReference } = req.body.Data || {};
-      if (ClientReference) {
+      // Payment failed or pending
+      const clientReference = callbackData?.ClientReference || callbackData?.clientReference || callbackData?.reference;
+      
+      if (clientReference) {
         const cardRequest = await CardRequest.findOne({
-          paymentReference: ClientReference
+          paymentReference: clientReference
         });
 
         if (cardRequest) {
-          cardRequest.paymentStatus = 'failed';
-          cardRequest.status = 'declined';
-          await cardRequest.save();
-          console.log('❌ Payment failed for:', ClientReference);
+          // Only mark as failed if explicitly failed
+          if (code === '0001' || code === '01' || (callbackData?.status && callbackData.status.toLowerCase() === 'failed')) {
+            cardRequest.paymentStatus = 'failed';
+            cardRequest.status = 'declined';
+            await cardRequest.save();
+            console.log('❌ Payment failed for:', clientReference);
+          } else {
+            console.log('⏳ Payment still pending for:', clientReference, 'Code:', code);
+          }
         }
       }
     }

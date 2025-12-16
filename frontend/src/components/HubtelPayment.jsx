@@ -3,7 +3,7 @@ import { studentAPI } from '../api/api';
 import './HubtelPayment.css';
 
 function HubtelPayment({ paymentData, onSuccess, onCancel }) {
-  const [paymentMethod, setPaymentMethod] = useState('momo-manual'); // Default to manual since Hubtel is coming soon
+  const [paymentMethod, setPaymentMethod] = useState('momo-hubtel'); // Default to Hubtel
   const [phoneNumber, setPhoneNumber] = useState('');
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -31,48 +31,37 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
 
     if (paymentMethod === 'momo-hubtel') {
       try {
-        setMessage({ type: 'info', text: 'Initiating payment with Hubtel...' });
+        setMessage({ type: 'info', text: 'Creating Hubtel checkout...' });
 
-        // Call backend to initiate Hubtel payment
+        // Call backend to initiate Hubtel Online Checkout
         const response = await studentAPI.initiateHubtelPayment({
-          phoneNumber,
+          phoneNumber: phoneNumber || '',
           amount: totalPaidGHS,
           paymentReference,
           studentName: studentName || 'Student',
           studentEmail: studentEmail || ''
         });
 
-        if (response.success) {
-          // Direct Debit returns status immediately or pending
-          if (response.data.status === 'paid') {
-            // Payment already successful!
-            setMessage({
-              type: 'success',
-              text: 'Payment successful! Submitting your card request...'
-            });
-            setTimeout(() => {
-              onSuccess(paymentReference, paymentMethod);
-            }, 1500);
-          } else {
-            // Payment pending - show instructions
-            setShowInstructions(true);
-            setMessage({
-              type: 'success',
-              text: `Payment request sent! Transaction ID: ${response.data.transactionId}`
-            });
-            setProcessing(false);
-          }
+        if (response.success && response.data.checkoutUrl) {
+          // Redirect to Hubtel checkout page
+          setMessage({
+            type: 'success',
+            text: 'Redirecting to Hubtel checkout...'
+          });
+          
+          // Redirect to Hubtel checkout
+          window.location.href = response.data.checkoutUrl;
         } else {
           setMessage({
             type: 'error',
-            text: response.message || 'Failed to initiate payment'
+            text: response.message || response.error || 'Failed to create checkout'
           });
           setProcessing(false);
         }
       } catch (error) {
         setMessage({
           type: 'error',
-          text: error.response?.data?.message || 'Failed to initiate Hubtel payment'
+          text: error.response?.data?.message || error.response?.data?.error || 'Failed to initiate Hubtel payment'
         });
         setProcessing(false);
       }
@@ -170,10 +159,8 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   };
 
   const paymentMethods = [
-    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: true, comingSoon: true },
+    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: false, comingSoon: false },
     { id: 'momo-manual', name: 'Manual Mobile Money', icon: '💰', description: 'Pay directly to our account', disabled: false, comingSoon: false }
-    // MTN Mobile Money Direct - Temporarily hidden (code kept for future implementation)
-    // { id: 'momo-direct', name: 'MTN Mobile Money Direct', icon: '💳', description: 'Direct MTN prompt to phone', disabled: false }
   ];
 
   return (
@@ -279,65 +266,50 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
             )}
 
             {paymentMethod === 'momo-hubtel' ? (
-              <div style={{ 
-                background: 'linear-gradient(135deg, rgba(255, 184, 28, 0.1), rgba(255, 200, 68, 0.05))', 
-                padding: '2rem', 
-                borderRadius: '16px', 
-                border: '2px solid rgba(255, 184, 28, 0.3)',
-                marginTop: '1.5rem',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🚀</div>
-                <h3 style={{ color: '#002E5D', marginBottom: '1rem', fontSize: '1.5rem', fontWeight: '700' }}>
-                  Hubtel Payment Coming Soon!
-                </h3>
-                <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '1rem', lineHeight: '1.6' }}>
-                  We're working hard to bring you secure Hubtel payment integration. 
-                  This feature will allow you to pay directly through MTN, Vodafone, and AirtelTigo Mobile Money.
-                </p>
+              <>
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                  <label>Mobile Money Number (Optional)</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g., 0241234567"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    pattern="[0-9]{10}"
+                  />
+                  <small>Optional: Enter your number for faster checkout</small>
+                </div>
+
                 <div style={{ 
-                  background: 'white', 
-                  padding: '1.25rem', 
+                  background: 'linear-gradient(135deg, rgba(0, 46, 93, 0.05), rgba(0, 61, 130, 0.05))', 
+                  padding: '1.5rem', 
                   borderRadius: '12px', 
-                  marginBottom: '1.5rem',
+                  marginTop: '1rem',
                   border: '1px solid rgba(0, 46, 93, 0.1)'
                 }}>
-                  <p style={{ margin: '0 0 0.75rem 0', color: '#002E5D', fontWeight: '600' }}>
-                    ✨ What to expect:
-                  </p>
-                  <ul style={{ 
-                    margin: 0, 
-                    paddingLeft: '1.5rem', 
-                    textAlign: 'left',
-                    color: '#666',
-                    lineHeight: '1.8'
-                  }}>
-                    <li>Instant payment processing</li>
-                    <li>Automatic verification</li>
-                    <li>Support for all major networks</li>
-                    <li>Secure and encrypted transactions</li>
-                  </ul>
+                  <h4 style={{ color: '#002E5D', marginBottom: '0.75rem', fontSize: '1rem', fontWeight: '600' }}>
+                    📱 How Hubtel Payment Works:
+                  </h4>
+                  <ol style={{ margin: 0, paddingLeft: '1.5rem', lineHeight: '1.8', color: '#666', fontSize: '0.9rem' }}>
+                    <li>Click "Proceed to Pay" to open Hubtel checkout</li>
+                    <li>Select your mobile money network (MTN, Vodafone, or AirtelTigo)</li>
+                    <li>Enter your mobile money number and approve payment</li>
+                    <li>You'll be redirected back automatically after payment</li>
+                  </ol>
                 </div>
-                <p style={{ 
-                  color: '#002E5D', 
-                  fontWeight: '600', 
-                  fontSize: '0.95rem',
-                  marginBottom: '1.5rem'
-                }}>
-                  💡 In the meantime, please use <strong>Manual Mobile Money</strong> to complete your payment.
-                </p>
-                <button 
-                  className="btn btn-primary" 
-                  onClick={() => setPaymentMethod('momo-manual')}
-                  style={{ 
-                    background: 'linear-gradient(135deg, #002E5D 0%, #003D82 100%)',
-                    color: 'white',
-                    border: 'none'
-                  }}
-                >
-                  Switch to Manual Payment
-                </button>
-              </div>
+
+                <div className="payment-actions" style={{ marginTop: '1.5rem' }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={initiatePayment}
+                    disabled={processing}
+                  >
+                    {processing ? 'Creating Checkout...' : 'Proceed to Hubtel Checkout'}
+                  </button>
+                  <button className="btn btn-secondary" onClick={onCancel}>
+                    Cancel
+                  </button>
+                </div>
+              </>
             ) : paymentMethod === 'momo-manual' ? (
               <div className="payment-instructions" style={{ marginTop: '1.5rem' }}>
                 <div style={{ 
