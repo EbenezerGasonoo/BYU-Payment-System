@@ -410,14 +410,7 @@ router.post('/hubtel-callback', async (req, res) => {
   try {
     console.log('📥 Hubtel callback received (POST):', JSON.stringify(req.body, null, 2));
 
-    // Hubtel Online Checkout callback format
-    const { ResponseCode, Data, responseCode, data } = req.body;
-    
-    // Handle both response formats (ResponseCode/Data or responseCode/data)
-    const code = ResponseCode || responseCode;
-    const callbackData = Data || data;
-
-    // Hubtel Online Checkout callback - handle both response formats
+    // Hubtel Online Checkout callback - handle both response formats (ResponseCode/Data or responseCode/data)
     const { ResponseCode, Data, responseCode, data } = req.body;
     const code = ResponseCode || responseCode;
     const callbackData = Data || data;

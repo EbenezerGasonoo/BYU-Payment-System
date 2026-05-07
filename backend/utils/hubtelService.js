@@ -4,6 +4,7 @@ const axios = require('axios');
 const HUBTEL_CLIENT_ID = process.env.HUBTEL_API_ID || process.env.HUBTEL_CLIENT_ID;
 const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_API_KEY || process.env.HUBTEL_CLIENT_SECRET;
 const HUBTEL_CHECKOUT_URL = process.env.HUBTEL_CHECKOUT_URL || 'https://payproxyapi.hubtel.com/items/initiate';
+const HUBTEL_BASE_URL = process.env.HUBTEL_BASE_URL || 'https://rmsc.hubtel.com';
 const HUBTEL_CALLBACK_URL = process.env.HUBTEL_CALLBACK_URL || `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/student/hubtel-callback`;
 const HUBTEL_RETURN_URL = process.env.HUBTEL_RETURN_URL || `${process.env.FRONTEND_URL || 'http://localhost:5173'}/request?payment=success`;
 
@@ -132,15 +133,25 @@ const checkPaymentStatus = async (transactionId) => {
 
     console.log('✅ Hubtel transaction status:', response.data);
 
-    if (response.data && response.data.ResponseCode === '0000') {
+    const code = response.data?.ResponseCode || response.data?.responseCode;
+    const payload = response.data?.Data || response.data?.data;
+
+    if ((code === '0000' || code === '00') && payload) {
+      // Normalize the Hubtel status string ("Paid", "Success", etc.) so callers
+      // can reliably check for `status === 'paid'`.
+      const rawStatus = (payload.Status || payload.status || '').toString().toLowerCase();
+      const normalizedStatus = ['paid', 'success', 'successful', 'completed'].includes(rawStatus)
+        ? 'paid'
+        : rawStatus || 'pending';
+
       return {
         success: true,
-        data: response.data.Data
+        data: { ...payload, status: normalizedStatus }
       };
     } else {
       return {
         success: false,
-        error: response.data.Message || 'Status check failed'
+        error: response.data?.Message || response.data?.message || 'Status check failed'
       };
     }
   } catch (error) {

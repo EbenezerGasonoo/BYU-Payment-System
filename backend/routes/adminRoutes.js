@@ -294,8 +294,6 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // Get all students (with optional status filter)
 router.get('/users', async (req, res) => {
   try {
@@ -383,3 +381,4 @@ router.patch('/users/:id/restore', async (req, res) => {
   }
 });
 
+module.exports = router;
