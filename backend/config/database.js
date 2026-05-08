@@ -26,6 +26,11 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
   }
 });
 
+// Track readiness via lifecycle, not the pool's transient size. Sequelize evicts
+// idle connections after `pool.idle` ms, so `pool.size === 0` does NOT mean the
+// database is unreachable — the next query lazily acquires a fresh connection.
+let dbReady = false;
+
 // Ensure the target database exists before Sequelize tries to use it. This makes
 // fresh XAMPP setups work with zero manual SQL.
 const ensureDatabaseExists = async () => {
@@ -55,18 +60,16 @@ const connectDB = async () => {
     const { syncModels } = require('../models');
     await syncModels();
 
+    dbReady = true;
     return sequelize;
   } catch (error) {
+    dbReady = false;
     console.error('MySQL connection error:', error.message);
     console.warn('Server will continue without database. Some features may not work.');
     return null;
   }
 };
 
-const isConnected = () => {
-  // Sequelize keeps a connection manager pool; check whether it has been initialized.
-  const pool = sequelize.connectionManager?.pool;
-  return !!(pool && pool.size > 0 && !pool._draining);
-};
+const isConnected = () => dbReady;
 
 module.exports = { sequelize, connectDB, isConnected };
