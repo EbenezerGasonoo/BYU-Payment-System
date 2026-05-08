@@ -1,27 +1,52 @@
-// Quick test to see what's preventing server startup
-const mongoose = require('mongoose');
+// Quick MySQL (XAMPP) connectivity smoke test
+require('dotenv').config();
+const mysql = require('mysql2/promise');
 
-console.log('Testing MongoDB connection...\n');
+const config = {
+  host: process.env.MYSQL_HOST || 'localhost',
+  port: parseInt(process.env.MYSQL_PORT || '3306', 10),
+  user: process.env.MYSQL_USER || 'root',
+  password: process.env.MYSQL_PASSWORD || '',
+  database: process.env.MYSQL_DATABASE || 'byu_payment'
+};
 
-mongoose.connect('mongodb://localhost:27017/byu_virtual', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => {
-  console.log('✅ MongoDB is connected and working!');
-  console.log('You can start the servers now.\n');
-  process.exit(0);
-})
-.catch((error) => {
-  console.log('❌ MongoDB Connection Failed!\n');
-  console.log('Error:', error.message);
-  console.log('\n📋 This means MongoDB is not installed or not running.');
-  console.log('\n🔧 To fix this:');
-  console.log('   1. Download MongoDB from: https://www.mongodb.com/try/download/community');
-  console.log('   2. Install it (choose "Complete" installation)');
-  console.log('   3. MongoDB will run as a Windows service automatically');
-  console.log('   4. Then try starting the servers again\n');
-  console.log('See MONGODB_SETUP.md for detailed instructions.\n');
-  process.exit(1);
-});
+console.log(`Testing MySQL connection at ${config.user}@${config.host}:${config.port}...\n`);
 
+(async () => {
+  try {
+    // Connect without selecting a database first so we can verify the server is up
+    // even if the target DB doesn't exist yet.
+    const conn = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      password: config.password
+    });
+
+    const [rows] = await conn.query('SELECT VERSION() AS version');
+    console.log(`✅ MySQL is reachable. Server version: ${rows[0].version}`);
+
+    const [dbs] = await conn.query(
+      `SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?`,
+      [config.database]
+    );
+    if (dbs.length) {
+      console.log(`✅ Database "${config.database}" exists.`);
+    } else {
+      console.log(`ℹ️  Database "${config.database}" does not exist yet — the server will create it on startup.`);
+    }
+
+    await conn.end();
+    console.log('\nYou can start the backend now.\n');
+    process.exit(0);
+  } catch (error) {
+    console.log('❌ MySQL connection failed!\n');
+    console.log('Error:', error.message);
+    console.log('\n🔧 To fix this:');
+    console.log('   1. Open the XAMPP Control Panel.');
+    console.log('   2. Make sure "MySQL" is started (green).');
+    console.log('   3. If you set a password for `root`, put it in backend/.env (MYSQL_PASSWORD).');
+    console.log('   4. Default XAMPP creds: user=root, password=(empty), port=3306.\n');
+    process.exit(1);
+  }
+})();

@@ -1,6 +1,11 @@
-// Use timestamp for cache versioning - updates on each deploy
-const CACHE_VERSION = 'byu-virtual-card-' + Date.now();
-const CACHE_NAME = 'byu-virtual-card-v2';
+// Static version - bump manually on deploys that need a fresh SW.
+// Using Date.now() here caused an infinite reload loop because every fetch
+// of this file produced different bytes, which made the browser treat the
+// SW as "updated" on every navigation. Combined with skipWaiting() +
+// clients.claim() below, that triggered a controllerchange -> page reload
+// cycle on every load.
+const CACHE_VERSION = 'byu-virtual-card-v3';
+const CACHE_NAME = 'byu-virtual-card-v3';
 
 // Install event - cache resources
 self.addEventListener('install', (event) => {

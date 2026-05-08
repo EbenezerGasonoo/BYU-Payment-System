@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const CardRequest = require('../models/CardRequest');
-const Student = require('../models/Student');
+const { Op } = require('sequelize');
+const { Student, CardRequest } = require('../models');
 const { notifyStudentCardAssigned } = require('../utils/emailService');
 
 // Middleware to verify admin key
@@ -26,10 +26,12 @@ router.get('/requests', async (req, res) => {
   try {
     const { status } = req.query;
 
-    const filter = status ? { status } : {};
-    const requests = await CardRequest.find(filter)
-      .populate('student')
-      .sort({ createdAt: -1 });
+    const where = status ? { status } : undefined;
+    const requests = await CardRequest.findAll({
+      where,
+      include: [{ model: Student, as: 'student' }],
+      order: [['createdAt', 'DESC']]
+    });
 
     res.json({
       success: true,
@@ -57,7 +59,9 @@ router.post('/assign', async (req, res) => {
       });
     }
 
-    const cardRequest = await CardRequest.findById(requestId).populate('student');
+    const cardRequest = await CardRequest.findByPk(requestId, {
+      include: [{ model: Student, as: 'student' }]
+    });
     if (!cardRequest) {
       return res.status(404).json({
         success: false,
@@ -113,7 +117,9 @@ router.post('/assign/mock', async (req, res) => {
       });
     }
 
-    const cardRequest = await CardRequest.findById(requestId).populate('student');
+    const cardRequest = await CardRequest.findByPk(requestId, {
+      include: [{ model: Student, as: 'student' }]
+    });
     if (!cardRequest) {
       return res.status(404).json({
         success: false,
@@ -175,7 +181,7 @@ router.post('/update-cardholder', async (req, res) => {
       });
     }
 
-    const cardRequest = await CardRequest.findById(requestId);
+    const cardRequest = await CardRequest.findByPk(requestId);
     if (!cardRequest) {
       return res.status(404).json({
         success: false,
@@ -227,7 +233,7 @@ router.post('/action', async (req, res) => {
       });
     }
 
-    const cardRequest = await CardRequest.findById(requestId);
+    const cardRequest = await CardRequest.findByPk(requestId);
     if (!cardRequest) {
       return res.status(404).json({
         success: false,
@@ -261,16 +267,16 @@ router.post('/action', async (req, res) => {
 // Get admin dashboard statistics
 router.get('/stats', async (req, res) => {
   try {
-    const totalRequests = await CardRequest.countDocuments();
-    const pendingRequests = await CardRequest.countDocuments({ status: 'pending' });
-    const assignedRequests = await CardRequest.countDocuments({ status: 'assigned' });
-    const paidRequests = await CardRequest.countDocuments({ status: 'paid' });
-    const expiredRequests = await CardRequest.countDocuments({ status: 'expired' });
-    const totalStudents = await Student.countDocuments();
+    const totalRequests = await CardRequest.count();
+    const pendingRequests = await CardRequest.count({ where: { status: 'pending' } });
+    const assignedRequests = await CardRequest.count({ where: { status: 'assigned' } });
+    const paidRequests = await CardRequest.count({ where: { status: 'paid' } });
+    const expiredRequests = await CardRequest.count({ where: { status: 'expired' } });
+    const totalStudents = await Student.count();
 
     // Calculate total revenue from paid requests
-    const paidRequestsData = await CardRequest.find({ status: 'paid' });
-    const totalRevenue = paidRequestsData.reduce((sum, request) => sum + (request.amount || 0), 0);
+    const paidRequestsData = await CardRequest.findAll({ where: { status: 'paid' } });
+    const totalRevenue = paidRequestsData.reduce((sum, request) => sum + (Number(request.amount) || 0), 0);
 
     res.json({
       success: true,
@@ -298,12 +304,19 @@ router.get('/stats', async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const { status } = req.query;
-    const filter = status ? { status } : { status: { $ne: 'deleted' } }; // Default to active only if not specified
+    let where;
+    if (status === 'all') {
+      where = undefined;
+    } else if (status) {
+      where = { status };
+    } else {
+      where = { status: { [Op.ne]: 'deleted' } }; // Default: active only
+    }
 
-    // If status is 'all', remove filter
-    const query = status === 'all' ? {} : filter;
-
-    const students = await Student.find(query).sort({ createdAt: -1 });
+    const students = await Student.findAll({
+      where,
+      order: [['createdAt', 'DESC']]
+    });
 
     res.json({
       success: true,
@@ -324,7 +337,7 @@ router.delete('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const student = await Student.findById(id);
+    const student = await Student.findByPk(id);
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -355,7 +368,7 @@ router.patch('/users/:id/restore', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const student = await Student.findById(id);
+    const student = await Student.findByPk(id);
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -364,7 +377,7 @@ router.patch('/users/:id/restore', async (req, res) => {
     }
 
     student.status = 'active';
-    student.deletedAt = undefined;
+    student.deletedAt = null;
     await student.save();
 
     res.json({

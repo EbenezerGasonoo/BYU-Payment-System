@@ -3,10 +3,9 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
-const mongoose = require('mongoose');
-const connectDB = require('./config/database');
+const { connectDB, isConnected } = require('./config/database');
 const { startCardExpiryJob } = require('./utils/cronJobs');
-const ChatMessage = require('./models/ChatMessage');
+const { ChatMessage } = require('./models');
 
 // Import routes
 const studentRoutes = require('./routes/studentRoutes');
@@ -33,18 +32,18 @@ console.log('🌍 NODE_ENV:', process.env.NODE_ENV || 'development');
 // This must work even if DB is down or routes fail
 app.get('/api/health', (req, res) => {
   try {
-    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-    
-    res.status(200).json({ 
-      status: 'OK', 
+    const dbStatus = isConnected() ? 'connected' : 'disconnected';
+
+    res.status(200).json({
+      status: 'OK',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       database: dbStatus,
       port: PORT
     });
   } catch (error) {
-    res.status(200).json({ 
-      status: 'OK', 
+    res.status(200).json({
+      status: 'OK',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       database: 'unknown',
@@ -159,16 +158,14 @@ app.get('/api/test-hubtel', async (req, res) => {
 
 // Connect to database (non-blocking - server will start even if DB fails)
 connectDB().then(() => {
-  // Only start cron jobs if database is connected
-  if (mongoose.connection.readyState === 1) {
+  if (isConnected()) {
     startCardExpiryJob();
-    console.log('✅ Cron jobs started');
+    console.log('Cron jobs started');
   } else {
-    console.warn('⚠️  Cron jobs not started - database not connected');
+    console.warn('Cron jobs not started - database not connected');
   }
 }).catch((err) => {
   console.error('Database connection error:', err);
-  // Server will still start for health checks
 });
 
 // Note: Server will start even if database connection fails
@@ -250,7 +247,11 @@ io.on('connection', (socket) => {
     }
 
     // Load previous messages
-    const messages = await ChatMessage.find({ sessionId }).sort({ createdAt: 1 }).limit(50);
+    const messages = await ChatMessage.findAll({
+      where: { sessionId },
+      order: [['createdAt', 'ASC']],
+      limit: 50
+    });
     socket.emit('previous-messages', messages);
   });
 
@@ -260,13 +261,12 @@ io.on('connection', (socket) => {
       const { sessionId, sender, senderName, message } = data;
 
       // Save to database
-      const chatMessage = new ChatMessage({
+      const chatMessage = await ChatMessage.create({
         sessionId,
         sender,
         senderName,
         message
       });
-      await chatMessage.save();
 
       // Broadcast to everyone in the session
       io.to(sessionId).emit('new-message', chatMessage);
@@ -324,7 +324,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`💬 Live Chat: Enabled`);
   console.log(`📧 Email notifications: ${process.env.EMAIL_USER ? 'Enabled' : 'Disabled'}`);
   console.log(`🔐 Admin key: ${process.env.ADMIN_KEY ? 'Set' : 'Not set'}`);
-  console.log(`💾 Database: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}\n`);
+  console.log(`💾 Database: ${isConnected() ? 'Connected' : 'Disconnected'}\n`);
 }).on('error', (err) => {
   console.error('❌ Server failed to start:', err);
   process.exit(1);

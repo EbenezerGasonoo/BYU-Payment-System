@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Student = require('../models/Student');
-const CardRequest = require('../models/CardRequest');
+const { Op } = require('sequelize');
+const { Student, CardRequest } = require('../models');
 const { notifyAdminNewRequest, sendVerificationEmail } = require('../utils/emailService');
 const { initiatePayment, checkPaymentStatus } = require('../utils/hubtelService');
 const mtnMomoService = require('../utils/mtnMomoService');
@@ -37,7 +37,9 @@ router.post('/register', async (req, res) => {
     }
 
     // Check if student already exists
-    const existingStudent = await Student.findOne({ $or: [{ byuId }, { email }] });
+    const existingStudent = await Student.findOne({
+      where: { [Op.or]: [{ byuId }, { email: email.toLowerCase() }] }
+    });
     if (existingStudent) {
       return res.status(400).json({
         success: false,
@@ -47,7 +49,7 @@ router.post('/register', async (req, res) => {
 
     // Create new student
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    const student = new Student({
+    const student = await Student.create({
       name,
       byuId,
       email,
@@ -55,7 +57,6 @@ router.post('/register', async (req, res) => {
       verificationToken,
       isVerified: false
     });
-    await student.save();
 
     // Send verification email asynchronously (non-blocking)
     sendVerificationEmail(student, verificationToken).catch(err => {
@@ -82,7 +83,7 @@ router.get('/verify-email/:token', async (req, res) => {
   try {
     const { token } = req.params;
 
-    const student = await Student.findOne({ verificationToken: token });
+    const student = await Student.findOne({ where: { verificationToken: token } });
     if (!student) {
       return res.status(400).json({
         success: false,
@@ -91,7 +92,7 @@ router.get('/verify-email/:token', async (req, res) => {
     }
 
     student.isVerified = true;
-    student.verificationToken = undefined;
+    student.verificationToken = null;
     await student.save();
 
     res.json({
@@ -130,7 +131,7 @@ router.post('/request-card', async (req, res) => {
     }
 
     // Find student
-    const student = await Student.findOne({ byuId });
+    const student = await Student.findOne({ where: { byuId } });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -148,9 +149,11 @@ router.post('/request-card', async (req, res) => {
 
     // Check if student has a pending or assigned request with unpaid/pending payment
     const existingRequest = await CardRequest.findOne({
-      student: student._id,
-      status: { $in: ['pending', 'assigned'] },
-      paymentStatus: { $in: ['unpaid', 'pending'] }
+      where: {
+        studentId: student.id,
+        status: { [Op.in]: ['pending', 'assigned'] },
+        paymentStatus: { [Op.in]: ['unpaid', 'pending'] }
+      }
     });
 
     if (existingRequest) {
@@ -166,8 +169,8 @@ router.post('/request-card', async (req, res) => {
     const paymentReference = `BYU-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
     // Create card request with payment pending
-    const cardRequest = new CardRequest({
-      student: student._id,
+    const cardRequest = await CardRequest.create({
+      studentId: student.id,
       amount,
       amountInGHS,
       exchangeRate,
@@ -178,7 +181,6 @@ router.post('/request-card', async (req, res) => {
       paymentStatus: 'pending',
       status: 'pending'
     });
-    await cardRequest.save();
 
     res.status(201).json({
       success: true,
@@ -218,7 +220,10 @@ router.post('/verify-payment', async (req, res) => {
     }
 
     // Find the card request
-    const cardRequest = await CardRequest.findOne({ paymentReference }).populate('student');
+    const cardRequest = await CardRequest.findOne({
+      where: { paymentReference },
+      include: [{ model: Student, as: 'student' }]
+    });
     if (!cardRequest) {
       return res.status(404).json({
         success: false,
@@ -264,7 +269,10 @@ router.get('/check-payment-status/:paymentReference', async (req, res) => {
     const { paymentReference } = req.params;
 
     // Find the card request
-    const cardRequest = await CardRequest.findOne({ paymentReference }).populate('student');
+    const cardRequest = await CardRequest.findOne({
+      where: { paymentReference },
+      include: [{ model: Student, as: 'student' }]
+    });
     if (!cardRequest) {
       return res.status(404).json({
         success: false,
@@ -324,7 +332,7 @@ router.post('/payment-failed', async (req, res) => {
   try {
     const { paymentReference, reason } = req.body;
 
-    const cardRequest = await CardRequest.findOne({ paymentReference });
+    const cardRequest = await CardRequest.findOne({ where: { paymentReference } });
     if (cardRequest) {
       cardRequest.paymentStatus = 'failed';
       cardRequest.status = 'declined';
@@ -370,7 +378,7 @@ router.post('/initiate-hubtel-payment', async (req, res) => {
 
     if (result.success) {
       // Update card request with Hubtel checkout ID
-      const cardRequest = await CardRequest.findOne({ paymentReference });
+      const cardRequest = await CardRequest.findOne({ where: { paymentReference } });
       if (cardRequest) {
         cardRequest.hubtelCheckoutId = result.data.checkoutId;
         cardRequest.paymentMethod = 'momo-hubtel';
@@ -421,8 +429,9 @@ router.post('/hubtel-callback', async (req, res) => {
 
       if (clientReference) {
         const cardRequest = await CardRequest.findOne({
-          paymentReference: clientReference
-        }).populate('student');
+          where: { paymentReference: clientReference },
+          include: [{ model: Student, as: 'student' }]
+        });
 
         if (cardRequest) {
           cardRequest.paymentStatus = 'paid';
@@ -445,7 +454,7 @@ router.post('/hubtel-callback', async (req, res) => {
       
       if (clientReference) {
         const cardRequest = await CardRequest.findOne({
-          paymentReference: clientReference
+          where: { paymentReference: clientReference }
         });
 
         if (cardRequest) {
@@ -496,7 +505,7 @@ router.post('/initiate-mtn-payment', async (req, res) => {
 
     if (result.success) {
       // Update card request with MTN reference ID
-      const cardRequest = await CardRequest.findOne({ paymentReference });
+      const cardRequest = await CardRequest.findOne({ where: { paymentReference } });
       if (cardRequest) {
         cardRequest.mtnReferenceId = result.data.referenceId;
         await cardRequest.save();
@@ -541,7 +550,10 @@ router.post('/check-mtn-payment', async (req, res) => {
     if (result.success) {
       // If payment is successful, update card request
       if (result.data.status === 'SUCCESSFUL') {
-        const cardRequest = await CardRequest.findOne({ paymentReference }).populate('student');
+        const cardRequest = await CardRequest.findOne({
+          where: { paymentReference },
+          include: [{ model: Student, as: 'student' }]
+        });
 
         if (cardRequest) {
           cardRequest.paymentStatus = 'paid';
@@ -583,7 +595,7 @@ router.get('/dashboard/:byuId', async (req, res) => {
     const { byuId } = req.params;
 
     // Find student
-    const student = await Student.findOne({ byuId });
+    const student = await Student.findOne({ where: { byuId } });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -592,7 +604,10 @@ router.get('/dashboard/:byuId', async (req, res) => {
     }
 
     // Get all card requests for this student
-    const cardRequests = await CardRequest.find({ student: student._id }).sort({ createdAt: -1 });
+    const cardRequests = await CardRequest.findAll({
+      where: { studentId: student.id },
+      order: [['createdAt', 'DESC']]
+    });
 
     res.json({
       success: true,
@@ -616,7 +631,10 @@ router.get('/request/:requestToken', async (req, res) => {
   try {
     const { requestToken } = req.params;
 
-    const cardRequest = await CardRequest.findOne({ requestToken }).populate('student');
+    const cardRequest = await CardRequest.findOne({
+      where: { requestToken },
+      include: [{ model: Student, as: 'student' }]
+    });
     if (!cardRequest) {
       return res.status(404).json({
         success: false,

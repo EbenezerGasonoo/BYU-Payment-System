@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ContactMessage = require('../models/ContactMessage');
+const { ContactMessage } = require('../models');
 const nodemailer = require('nodemailer');
 
 // Create reusable transporter
@@ -42,14 +42,13 @@ router.post('/submit', async (req, res) => {
     }
 
     // Save to database
-    const contactMessage = new ContactMessage({
+    const contactMessage = await ContactMessage.create({
       name,
       email,
       byuId,
       subject,
       message
     });
-    await contactMessage.save();
 
     // Send email to admin (if email is configured)
     if (process.env.EMAIL_USER && process.env.ADMIN_EMAIL) {
@@ -86,7 +85,7 @@ router.post('/submit', async (req, res) => {
               
               <p style="color: #666; font-size: 12px; margin-top: 30px;">
                 Pathway Virtual Card System<br>
-                Support Request ID: ${contactMessage._id}
+                Support Request ID: ${contactMessage.id}
               </p>
             </div>
           `
@@ -105,7 +104,7 @@ router.post('/submit', async (req, res) => {
               
               <div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px; margin: 20px 0;">
                 <p><strong>Subject:</strong> ${subjectLabels[subject]}</p>
-                <p><strong>Reference ID:</strong> ${contactMessage._id}</p>
+                <p><strong>Reference ID:</strong> ${contactMessage.id}</p>
               </div>
               
               <p>In the meantime, you can:</p>
@@ -133,7 +132,7 @@ router.post('/submit', async (req, res) => {
       success: true,
       message: 'Your message has been received. We\'ll respond within 24 hours.',
       data: {
-        referenceId: contactMessage._id,
+        referenceId: contactMessage.id,
         createdAt: contactMessage.createdAt
       }
     });
@@ -160,9 +159,12 @@ router.get('/messages', async (req, res) => {
     }
 
     const { status } = req.query;
-    const filter = status ? { status } : {};
-    
-    const messages = await ContactMessage.find(filter).sort({ createdAt: -1 });
+    const where = status ? { status } : undefined;
+
+    const messages = await ContactMessage.findAll({
+      where,
+      order: [['createdAt', 'DESC']]
+    });
 
     res.json({
       success: true,
@@ -191,14 +193,7 @@ router.patch('/messages/:id', async (req, res) => {
     }
 
     const { status } = req.body;
-    const message = await ContactMessage.findByIdAndUpdate(
-      req.params.id,
-      { 
-        status,
-        respondedAt: status === 'responded' ? new Date() : undefined
-      },
-      { new: true }
-    );
+    const message = await ContactMessage.findByPk(req.params.id);
 
     if (!message) {
       return res.status(404).json({
@@ -206,6 +201,11 @@ router.patch('/messages/:id', async (req, res) => {
         message: 'Message not found'
       });
     }
+
+    await message.update({
+      status,
+      respondedAt: status === 'responded' ? new Date() : null
+    });
 
     res.json({
       success: true,
