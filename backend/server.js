@@ -158,11 +158,12 @@ app.get('/api/test-hubtel', async (req, res) => {
 
 // Connect to database (non-blocking - server will start even if DB fails)
 connectDB().then(() => {
+  console.log(`💾 Database: ${isConnected() ? 'Connected' : 'Disconnected'}`);
   if (isConnected()) {
     startCardExpiryJob();
-    console.log('Cron jobs started');
+    console.log('✅ Cron jobs started');
   } else {
-    console.warn('Cron jobs not started - database not connected');
+    console.warn('⚠️  Cron jobs not started - database not connected');
   }
 }).catch((err) => {
   console.error('Database connection error:', err);
@@ -323,8 +324,8 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`📡 API URL: http://localhost:${PORT}`);
   console.log(`💬 Live Chat: Enabled`);
   console.log(`📧 Email notifications: ${process.env.EMAIL_USER ? 'Enabled' : 'Disabled'}`);
-  console.log(`🔐 Admin key: ${process.env.ADMIN_KEY ? 'Set' : 'Not set'}`);
-  console.log(`💾 Database: ${isConnected() ? 'Connected' : 'Disconnected'}\n`);
+  console.log(`🔐 Admin key: ${process.env.ADMIN_KEY ? 'Set' : 'Not set'}\n`);
+  // Database status is printed by connectDB() once it actually resolves.
 }).on('error', (err) => {
   console.error('❌ Server failed to start:', err);
   process.exit(1);
