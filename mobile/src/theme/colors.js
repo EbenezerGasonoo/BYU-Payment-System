@@ -1,0 +1,32 @@
+export const colors = {
+  bg: '#0b0c16',
+  cardBg: '#151628',
+  cardBorder: '#23253b',
+  cardHover: '#2a2c47',
+  textMain: '#ffffff',
+  textMuted: '#8e92bc',
+  textSub: '#94a3b8',
+  accentPurple: '#8b5cf6',
+  accentIndigo: '#6366f1',
+  accentPink: '#ec4899',
+  accentBlue: '#3b82f6',
+  accentGreen: '#10b981',
+  accentYellow: '#f59e0b',
+  accentCyan: '#06b6d4',
+  danger: '#ef4444',
+  inputBg: '#101120',
+  inputBorder: '#2d2f50',
+};
+
+export const WEST_AFRICA_COUNTRIES = {
+  GH: { name: 'Ghana', flag: '🇬🇭', currency: 'GHS', dialCode: '+233' },
+  NG: { name: 'Nigeria', flag: '🇳🇬', currency: 'NGN', dialCode: '+234' },
+  SN: { name: 'Senegal', flag: '🇸🇳', currency: 'XOF', dialCode: '+221' },
+  CI: { name: 'Ivory Coast', flag: '🇨🇮', currency: 'XOF', dialCode: '+225' },
+  CM: { name: 'Cameroon', flag: '🇨🇲', currency: 'XAF', dialCode: '+237' },
+  TG: { name: 'Togo', flag: '🇹🇬', currency: 'XOF', dialCode: '+228' },
+  BJ: { name: 'Benin', flag: '🇧🇯', currency: 'XOF', dialCode: '+229' },
+  SL: { name: 'Sierra Leone', flag: '🇸🇱', currency: 'SLL', dialCode: '+232' },
+  LR: { name: 'Liberia', flag: '🇱🇷', currency: 'LRD', dialCode: '+231' },
+  GM: { name: 'Gambia', flag: '🇬🇲', currency: 'GMD', dialCode: '+220' },
+};
