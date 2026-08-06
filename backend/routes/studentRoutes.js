@@ -145,7 +145,7 @@ router.post('/forgot-password', async (req, res) => {
           { email: searchKey.toLowerCase() },
           { byuId: searchKey }
         ],
-        status: 'active'
+        status: { [Op.ne]: 'deleted' }
       }
     });
 
@@ -195,7 +195,7 @@ router.post('/verify-reset-code', async (req, res) => {
 
     let whereClause = {
       resetPasswordExpires: { [Op.gt]: new Date() },
-      status: 'active'
+      status: { [Op.ne]: 'deleted' }
     };
 
     if (token) {
@@ -254,7 +254,7 @@ router.post('/reset-password', async (req, res) => {
 
     let whereClause = {
       resetPasswordExpires: { [Op.gt]: new Date() },
-      status: 'active'
+      status: { [Op.ne]: 'deleted' }
     };
 
     if (token) {
