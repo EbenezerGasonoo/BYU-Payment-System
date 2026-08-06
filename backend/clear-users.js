@@ -3,22 +3,23 @@ const { sequelize, connectDB } = require('./config/database');
 const { Student, CardRequest } = require('./models');
 
 async function clearDatabase() {
+  if (process.env.CONFIRM_CLEAR !== 'yes') {
+    console.error('❌ Refusing to run: set CONFIRM_CLEAR=yes to confirm database wipe.');
+    process.exit(1);
+  }
+
   try {
-    console.log('🔌 Connecting to MySQL...');
+    console.log('🔌 Connecting to Supabase PostgreSQL...');
     const connection = await connectDB();
     if (!connection) {
-      console.error('❌ Could not connect to MySQL. Aborting.');
+      console.error('❌ Could not connect to database. Aborting.');
       process.exit(1);
     }
-    console.log('✅ Connected to MySQL');
+    console.log('✅ Connected');
 
-    console.log('🗑️ Clearing card requests first (FK constraint to students)...');
-    const requestCount = await CardRequest.destroy({ where: {}, truncate: true });
-    console.log(`✅ Deleted ${requestCount} card requests.`);
-
-    console.log('🗑️ Clearing students...');
-    const studentCount = await Student.destroy({ where: {}, truncate: true });
-    console.log(`✅ Deleted ${studentCount} students.`);
+    console.log('🗑️ Clearing card requests and students...');
+    await sequelize.query('TRUNCATE TABLE card_requests, students RESTART IDENTITY CASCADE');
+    console.log('✅ Tables truncated.');
 
     console.log('✨ Database cleared successfully!');
     await sequelize.close();

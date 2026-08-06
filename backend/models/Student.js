@@ -12,7 +12,7 @@ class Student extends Model {
 Student.init(
   {
     id: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true
     },
@@ -36,6 +36,25 @@ Student.init(
     phone: {
       type: DataTypes.STRING(32),
       allowNull: false
+    },
+    countryCode: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      defaultValue: 'GH'
+    },
+    preferredCurrency: {
+      type: DataTypes.STRING(5),
+      allowNull: true,
+      defaultValue: 'GHS'
+    },
+    preferredLanguage: {
+      type: DataTypes.STRING(5),
+      allowNull: true,
+      defaultValue: 'en'
+    },
+    whatsappNumber: {
+      type: DataTypes.STRING(32),
+      allowNull: true
     },
     isVerified: {
       type: DataTypes.BOOLEAN,

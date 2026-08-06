@@ -15,12 +15,12 @@ class CardRequest extends Model {
 CardRequest.init(
   {
     id: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true
     },
     studentId: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false
     },
     amount: {
@@ -76,8 +76,36 @@ CardRequest.init(
       allowNull: true
     },
     paymentMethod: {
-      type: DataTypes.ENUM('momo-hubtel', 'momo-direct', 'momo-manual', 'pending'),
+      type: DataTypes.ENUM('momo-hubtel', 'momo-direct', 'momo-manual', 'paystack', 'flutterwave', 'wave', 'pending'),
       allowNull: true
+    },
+    country: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      defaultValue: 'GH'
+    },
+    currency: {
+      type: DataTypes.STRING(5),
+      allowNull: true,
+      defaultValue: 'GHS'
+    },
+    amountLocal: {
+      type: DataTypes.DOUBLE,
+      allowNull: true
+    },
+    paymentGateway: {
+      type: DataTypes.STRING(32),
+      allowNull: true,
+      defaultValue: 'hubtel'
+    },
+    gatewayReference: {
+      type: DataTypes.STRING(128),
+      allowNull: true
+    },
+    cardStatus: {
+      type: DataTypes.ENUM('active', 'frozen', 'terminated', 'pending'),
+      allowNull: false,
+      defaultValue: 'pending'
     },
     paymentVerifiedAt: {
       type: DataTypes.DATE,

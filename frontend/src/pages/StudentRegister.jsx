@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { studentAPI } from '../api/api';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../utils/AuthContext';
 
 function StudentRegister() {
   const [formData, setFormData] = useState({
@@ -13,6 +14,7 @@ function StudentRegister() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showHint, setShowHint] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   useEffect(() => {
     // Show hint for first-time visitors
@@ -39,15 +41,17 @@ function StudentRegister() {
       const response = await studentAPI.register(formData);
       setMessage({ type: 'success', text: response.message });
       localStorage.setItem('hasRegistered', 'true');
-      localStorage.setItem('userByuId', formData.byuId);
-      localStorage.setItem('userName', formData.name);
-      localStorage.setItem('userEmail', formData.email);
 
-      // Show success and guide to next step
-      // Show success and guide to verification
+      // Log the student in immediately after registration
+      login({
+        byuId: formData.byuId,
+        name: formData.name,
+        email: formData.email
+      });
+
       setTimeout(() => {
         alert('Registration successful! Please check your email to verify your account before requesting a card.');
-        navigate('/');
+        navigate('/dashboard');
       }, 2000);
 
       setFormData({ name: '', byuId: '', email: '', phone: '' });

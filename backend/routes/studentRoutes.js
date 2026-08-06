@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const { Student, CardRequest } = require('../models');
-const { notifyAdminNewRequest, sendVerificationEmail } = require('../utils/emailService');
+const { notifyAdminNewRequest, sendVerificationEmail, sendCardAssignedEmail } = require('../utils/emailService');
 const { initiatePayment, checkPaymentStatus } = require('../utils/hubtelService');
 const mtnMomoService = require('../utils/mtnMomoService');
+const paymentGatewayService = require('../utils/paymentGatewayService');
+const cardProviderService = require('../utils/cardProviderService');
+const africasTalkingService = require('../utils/africasTalkingService');
 const crypto = require('crypto');
 
 // Register new student
@@ -653,6 +656,153 @@ router.get('/request/:requestToken', async (req, res) => {
       message: 'Server error',
       error: error.message
     });
+  }
+});
+
+// GET /api/students/rates - West Africa exchange rates & country configs
+router.get('/rates', async (req, res) => {
+  try {
+    const rates = await paymentGatewayService.getExchangeRates();
+    res.json({
+      success: true,
+      rates,
+      countries: paymentGatewayService.COUNTRY_CONFIGS
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/students/cards/:id/freeze - Toggle virtual card freeze status
+router.post('/cards/:id/freeze', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cardRequest = await CardRequest.findByPk(id, { include: [{ model: Student, as: 'student' }] });
+    
+    if (!cardRequest || !cardRequest.virtualCardNumber) {
+      return res.status(404).json({ success: false, message: 'Active card not found' });
+    }
+
+    const currentStatus = cardRequest.cardStatus || 'active';
+    const newStatus = currentStatus === 'frozen' ? 'active' : 'frozen';
+    
+    cardRequest.cardStatus = newStatus;
+    await cardRequest.save();
+
+    res.json({
+      success: true,
+      message: `Virtual card is now ${newStatus}`,
+      cardStatus: newStatus
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/students/paystack/initialize - Initialize Paystack Payment
+router.post('/paystack/initialize', async (req, res) => {
+  try {
+    const { requestToken, currency = 'GHS', callbackUrl } = req.body;
+    const cardRequest = await CardRequest.findOne({
+      where: { requestToken },
+      include: [{ model: Student, as: 'student' }]
+    });
+
+    if (!cardRequest) {
+      return res.status(404).json({ success: false, message: 'Card request not found' });
+    }
+
+    const calc = await paymentGatewayService.calculateLocalAmount(cardRequest.amount, currency);
+    cardRequest.currency = currency;
+    cardRequest.amountLocal = calc.totalLocal;
+    cardRequest.exchangeRate = calc.exchangeRate;
+    cardRequest.paymentGateway = 'paystack';
+    await cardRequest.save();
+
+    const paystackResult = await paymentGatewayService.initializePaystackPayment({
+      email: cardRequest.student.email,
+      amountLocal: calc.totalLocal,
+      currency,
+      reference: cardRequest.requestToken,
+      callbackUrl
+    });
+
+    if (!paystackResult.success) {
+      return res.status(400).json(paystackResult);
+    }
+
+    res.json({
+      success: true,
+      authorizationUrl: paystackResult.authorizationUrl,
+      reference: cardRequest.requestToken,
+      simulated: paystackResult.simulated,
+      calculation: calc
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET /api/students/paystack/verify/:reference - Verify Paystack Payment & Auto-Issue Virtual Card
+router.get('/paystack/verify/:reference', async (req, res) => {
+  try {
+    const { reference } = req.params;
+    const cardRequest = await CardRequest.findOne({
+      where: { requestToken: reference },
+      include: [{ model: Student, as: 'student' }]
+    });
+
+    if (!cardRequest) {
+      return res.status(404).json({ success: false, message: 'Card request not found' });
+    }
+
+    const verifyResult = await paymentGatewayService.verifyPaystackPayment(reference);
+
+    if (verifyResult.verified) {
+      const now = new Date();
+      cardRequest.paymentStatus = 'paid';
+      cardRequest.status = 'paid';
+      cardRequest.paidAt = now;
+      cardRequest.paymentVerifiedAt = now;
+
+      // Auto-issue virtual card if not already assigned
+      if (!cardRequest.virtualCardNumber) {
+        const issuedCard = await cardProviderService.issueVirtualCard({
+          studentName: cardRequest.student.name,
+          amountUsd: cardRequest.amount,
+          cardRequestId: cardRequest.id
+        });
+
+        if (issuedCard.success) {
+          cardRequest.virtualCardNumber = issuedCard.cardNumber;
+          cardRequest.cardholderName = issuedCard.cardholderName;
+          cardRequest.cardExpiryDate = issuedCard.cardExpiryDate;
+          cardRequest.cardCVV = issuedCard.cvv;
+          cardRequest.status = 'assigned';
+          cardRequest.cardStatus = 'active';
+          cardRequest.assignedAt = now;
+
+          // Dispatch transactional notifications
+          sendCardAssignedEmail(cardRequest.student, cardRequest).catch(() => {});
+          africasTalkingService.sendSmsNotification({
+            toPhone: cardRequest.student.phone,
+            message: `BYU Pathway: Your USD Virtual Card (${issuedCard.cardNumber.slice(-4)}) is active!`
+          }).catch(() => {});
+        }
+      }
+
+      await cardRequest.save();
+
+      return res.json({
+        success: true,
+        message: 'Payment verified and Virtual Card issued successfully!',
+        data: cardRequest
+      });
+    }
+
+    res.status(400).json({ success: false, message: 'Payment verification failed' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

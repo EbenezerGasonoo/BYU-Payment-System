@@ -3,7 +3,7 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
-const { connectDB, isConnected } = require('./config/database');
+const { connectDB, isConnected, pingDB } = require('./config/database');
 const { startCardExpiryJob } = require('./utils/cronJobs');
 const { ChatMessage } = require('./models');
 
@@ -30,9 +30,9 @@ console.log('🌍 NODE_ENV:', process.env.NODE_ENV || 'development');
 
 // Health check endpoint (register FIRST - before anything else)
 // This must work even if DB is down or routes fail
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   try {
-    const dbStatus = isConnected() ? 'connected' : 'disconnected';
+    const dbStatus = (await pingDB()) ? 'connected' : 'disconnected';
 
     res.status(200).json({
       status: 'OK',
@@ -155,22 +155,6 @@ app.get('/api/test-hubtel', async (req, res) => {
     });
   }
 });
-
-// Connect to database (non-blocking - server will start even if DB fails)
-connectDB().then(() => {
-  console.log(`💾 Database: ${isConnected() ? 'Connected' : 'Disconnected'}`);
-  if (isConnected()) {
-    startCardExpiryJob();
-    console.log('✅ Cron jobs started');
-  } else {
-    console.warn('⚠️  Cron jobs not started - database not connected');
-  }
-}).catch((err) => {
-  console.error('Database connection error:', err);
-});
-
-// Note: Server will start even if database connection fails
-// This allows health checks to work and helps with debugging
 
 // Routes
 app.get('/', (req, res) => {
@@ -318,15 +302,32 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start server with error handling
-server.listen(PORT, '0.0.0.0', () => {
+const startServer = async () => {
+  await new Promise((resolve, reject) => {
+    server.listen(PORT, '0.0.0.0', resolve);
+    server.once('error', reject);
+  });
+
   console.log(`\n🚀 Server is running on port ${PORT}`);
   console.log(`📡 API URL: http://localhost:${PORT}`);
   console.log(`💬 Live Chat: Enabled`);
   console.log(`📧 Email notifications: ${process.env.EMAIL_USER ? 'Enabled' : 'Disabled'}`);
-  console.log(`🔐 Admin key: ${process.env.ADMIN_KEY ? 'Set' : 'Not set'}\n`);
-  // Database status is printed by connectDB() once it actually resolves.
-}).on('error', (err) => {
+  console.log(`🔐 Admin key: ${process.env.ADMIN_KEY ? 'Set' : 'Not set'}`);
+
+  await connectDB();
+
+  if (isConnected()) {
+    console.log('💾 Database: Connected');
+    startCardExpiryJob();
+    console.log('✅ Cron jobs started');
+  } else {
+    console.log('💾 Database: Disconnected');
+    console.warn('⚠️  Cron jobs not started - database not connected');
+  }
+  console.log('');
+};
+
+startServer().catch((err) => {
   console.error('❌ Server failed to start:', err);
   process.exit(1);
 });

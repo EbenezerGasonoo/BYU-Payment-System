@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { studentAPI } from '../api/api';
 import { useNavigate } from 'react-router-dom';
 import HubtelPayment from '../components/HubtelPayment';
+import CountryCurrencySelector, { WEST_AFRICA_COUNTRIES } from '../components/CountryCurrencySelector';
 
 function RequestPayment() {
   const [formData, setFormData] = useState({
     byuId: '',
     amount: ''
   });
+  const [selectedCountry, setSelectedCountry] = useState('GH');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [requestToken, setRequestToken] = useState('');
@@ -21,6 +24,7 @@ function RequestPayment() {
   const [paymentData, setPaymentData] = useState(null);
   const CHARGE_FEE_PERCENT = 5; // 5% chargeback fee
   const navigate = useNavigate();
+  const paymentVerifiedRef = useRef(false);
 
   useEffect(() => {
     // Pre-fill BYU ID if user has registered
@@ -125,6 +129,7 @@ function RequestPayment() {
     setShowPayment(false);
     setLoading(true);
     setMessage({ type: '', text: '' });
+    paymentVerifiedRef.current = false;
 
     try {
       // For manual payments, skip automatic verification (admin will verify manually)
@@ -160,6 +165,7 @@ function RequestPayment() {
 
             if (statusResponse.success && statusResponse.status === 'paid') {
               clearInterval(pollInterval);
+              paymentVerifiedRef.current = true;
 
               setMessage({ type: 'success', text: 'Payment verified successfully!' });
               setRequestToken(statusResponse.data.requestToken);
@@ -183,7 +189,7 @@ function RequestPayment() {
         // Stop polling after 2 minutes (120000 ms)
         setTimeout(() => {
           clearInterval(pollInterval);
-          if (loading) { // If still loading (not successful yet)
+          if (!paymentVerifiedRef.current) {
             setMessage({
               type: 'warning',
               text: 'Payment verification timed out. If you have paid, please contact support or check your dashboard later.'
@@ -250,6 +256,13 @@ function RequestPayment() {
             />
             <small className="field-hint">Enter your 7-8 digit BYU Student ID number</small>
           </div>
+
+          <CountryCurrencySelector
+            selectedCountry={selectedCountry}
+            onCountryChange={setSelectedCountry}
+            phoneValue={phone}
+            onPhoneChange={setPhone}
+          />
 
           <div className="form-group">
             <label htmlFor="amount">Amount to Pay (USD) *</label>

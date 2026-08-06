@@ -5,10 +5,6 @@ export function register() {
       // Use static URL, not cache-busted (prevents infinite loops)
       const swUrl = '/service-worker.js';
 
-      // Prevent infinite reload loops
-      let isReloading = false;
-      let reloadTimeout = null;
-
       navigator.serviceWorker
         .register(swUrl)
         .then((registration) => {
@@ -49,26 +45,6 @@ export function register() {
         .catch((error) => {
           console.error('❌ Service Worker registration failed:', error);
         });
-
-      // Handle service worker controller changes (only once)
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing && !isReloading) {
-          // Only reload if we're not already reloading
-          refreshing = true;
-          isReloading = true;
-          
-          // Clear any pending reload
-          if (reloadTimeout) {
-            clearTimeout(reloadTimeout);
-          }
-          
-          // Reload after a short delay
-          reloadTimeout = setTimeout(() => {
-            window.location.reload();
-          }, 100);
-        }
-      });
     });
   }
 }

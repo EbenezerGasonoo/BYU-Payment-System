@@ -1,161 +1,79 @@
-* {
+/* ============================================================
+   CONNECTPAY — GLOBAL RESET & DESIGN TOKENS
+   Premium West Africa Fintech Design System
+   ============================================================ */
+
+/* Design Tokens */
+:root {
+  --cp-navy:       #002E5D;
+  --cp-navy-dark:  #001a35;
+  --cp-navy-mid:   #08437d;
+  --cp-gold:       #FFB81C;
+  --cp-gold-light: #FFC844;
+  --cp-gold-dark:  #d97706;
+  --cp-emerald:    #10b981;
+  --cp-bg:         #f0f4f8;
+  --cp-surface:    #ffffff;
+  --cp-border:     #e2e8f0;
+  --cp-text:       #0f172a;
+  --cp-muted:      #64748b;
+  --cp-radius-lg:  24px;
+  --cp-radius-md:  16px;
+  --cp-radius-sm:  10px;
+  --cp-shadow-sm:  0 4px 16px rgba(0,46,93,0.06);
+  --cp-shadow-md:  0 12px 32px rgba(0,46,93,0.10);
+  --cp-shadow-lg:  0 24px 60px rgba(0,46,93,0.14);
+}
+
+/* Reset */
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* Base Body — clean off-white, no clashing dark bg */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #002E5D 0%, #003D82 40%, #005DAA 100%);
-  background-attachment: fixed;
+  background-color: var(--cp-bg);
+  color: var(--cp-text);
   min-height: 100vh;
   overflow-x: hidden;
+  line-height: 1.6;
 }
 
-/* Animated gradient background with floating orbs */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: 
-    radial-gradient(circle at 20% 50%, rgba(255, 184, 28, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(0, 46, 93, 0.4) 0%, transparent 50%),
-    radial-gradient(circle at 40% 90%, rgba(255, 184, 28, 0.12) 0%, transparent 50%);
-  animation: gradientShift 20s ease infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Floating orbs for extra visual interest */
+/* Remove old animated gradient blobs from body */
+body::before,
 body::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: 
-    radial-gradient(circle at 60% 20%, rgba(255, 184, 28, 0.18) 0%, transparent 40%),
-    radial-gradient(circle at 10% 80%, rgba(0, 61, 130, 0.3) 0%, transparent 40%),
-    radial-gradient(circle at 90% 50%, rgba(255, 200, 68, 0.15) 0%, transparent 40%);
-  animation: orbFloat 25s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@keyframes gradientShift {
-  0%, 100% {
-    opacity: 0.6;
-    transform: scale(1) rotate(0deg);
-  }
-  33% {
-    opacity: 0.8;
-    transform: scale(1.05) rotate(2deg);
-  }
-  66% {
-    opacity: 0.7;
-    transform: scale(1.08) rotate(-2deg);
-  }
-}
-
-@keyframes orbFloat {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.5;
-  }
-  33% {
-    transform: translate(30px, -30px) scale(1.1);
-    opacity: 0.7;
-  }
-  66% {
-    transform: translate(-20px, 40px) scale(0.95);
-    opacity: 0.6;
-  }
+  display: none;
 }
 
 code {
   font-family: 'Fira Code', 'Courier New', monospace;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 46, 93, 0.07);
+  color: var(--cp-navy);
   padding: 2px 6px;
   border-radius: 4px;
+  font-size: 0.9em;
 }
 
 #root {
   min-height: 100vh;
-  min-height: -webkit-fill-available; /* iOS Safari */
   display: flex;
   flex-direction: column;
   position: relative;
-  z-index: 1;
 }
 
-/* Safe area support for mobile (notches, etc) */
+/* Safe area support */
 @supports (padding: max(0px)) {
-  .navbar .container,
-  .container,
-  .help-button-container,
-  .progress-indicator {
-    padding-left: max(1.25rem, env(safe-area-inset-left));
-    padding-right: max(1.25rem, env(safe-area-inset-right));
-  }
-
-  .help-button-container {
-    bottom: max(1.5rem, env(safe-area-inset-bottom));
-  }
-
-  .footer {
-    padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+  body {
+    padding-left:  max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
   }
 }
-
-/* Glassmorphism Card Styles */
-.glass-card {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 
-    0 8px 32px rgba(31, 38, 135, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateY(-4px);
-  box-shadow: 
-    0 12px 48px rgba(31, 38, 135, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-/* White Glass Card (for main content) */
-.white-glass-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 
-    0 8px 32px rgba(31, 38, 135, 0.1),
-    0 20px 60px rgba(31, 38, 135, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.white-glass-card:hover {
-  box-shadow: 
-    0 12px 48px rgba(31, 38, 135, 0.15),
-    0 24px 72px rgba(31, 38, 135, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-  transform: translateY(-2px);
-}
-

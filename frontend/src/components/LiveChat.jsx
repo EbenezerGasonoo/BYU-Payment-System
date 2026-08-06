@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { getSocketUrl } from '../utils/socketUrl';
 
 function LiveChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,7 +32,7 @@ function LiveChat() {
     setUserName(savedName);
 
     // Initialize socket connection
-    const socket = io('http://localhost:3000', {
+    const socket = io(getSocketUrl(), {
       transports: ['websocket', 'polling']
     });
 

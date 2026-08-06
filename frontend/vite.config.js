@@ -8,9 +8,6 @@ export default defineConfig({
     host: true, // Listen on all addresses
     port: 5173,
     strictPort: false,
-    hmr: {
-      clientPort: 443 // For tunneling services
-    },
     // Allow all hosts for tunneling (ngrok, localtunnel, etc.)
     allowedHosts: [
       '.ngrok-free.app',

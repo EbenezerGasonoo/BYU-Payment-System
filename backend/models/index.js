@@ -17,7 +17,7 @@ CardRequest.belongsTo(Student, {
 
 const syncModels = async () => {
   await sequelize.sync();
-  console.log('MySQL tables synced');
+  console.log('Database tables synced');
 };
 
 module.exports = {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { getSocketUrl } from '../utils/socketUrl';
 import './AdminChat.css';
 
 function AdminChat({ adminKey }) {
@@ -24,11 +25,7 @@ function AdminChat({ adminKey }) {
   }, [messages]);
 
   useEffect(() => {
-    // Connect to Socket.io server
-    const API_BASE = import.meta.env.VITE_API_URL || 
-      (window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://byupay.up.railway.app');
-    
-    const newSocket = io(API_BASE, {
+    const newSocket = io(getSocketUrl(), {
       transports: ['websocket', 'polling']
     });
 
