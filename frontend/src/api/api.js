@@ -161,6 +161,20 @@ export const adminAPI = {
       headers: { 'x-admin-key': adminKey }
     });
     return response.data;
+  },
+
+  getCountryStats: async (adminKey) => {
+    const response = await axios.get(`${API_BASE_URL}/admin/country-requests`, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
+  },
+
+  createStudent: async (adminKey, data) => {
+    const response = await axios.post(`${API_BASE_URL}/admin/create-student`, data, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
   }
 };
 

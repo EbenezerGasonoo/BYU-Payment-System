@@ -316,12 +316,52 @@ const sendPasswordChangeConfirmationEmail = async (student) => {
   }
 };
 
+
+// Send welcome email to admin-created student with temp password
+const sendWelcomeEmail = async (student, tempPassword) => {
+  if (!transporter) {
+    console.log('📧 [DEV] Welcome email (no SMTP):', student.email, '| Temp password:', tempPassword);
+    return;
+  }
+
+  try {
+    const mailOptions = {
+      from: `"ConnectPay BYU" <${process.env.EMAIL_USER}>`,
+      to: student.email,
+      subject: '🎉 Welcome to ConnectPay — Your Account is Ready',
+      html: `
+        <div style="font-family: 'Segoe UI', sans-serif; background:#0b0c16; color:#e2e8f0; padding:40px; border-radius:16px; max-width:520px; margin:auto;">
+          <div style="text-align:center; margin-bottom:28px;">
+            <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6); border-radius:50%; width:56px; height:56px; display:inline-flex; align-items:center; justify-content:center; font-size:28px;">⚡</div>
+            <h1 style="color:#c4b5fd; margin:12px 0 4px;">Welcome to ConnectPay</h1>
+            <p style="color:#94a3b8; margin:0;">BYU Pathway Virtual Card System</p>
+          </div>
+          <p>Hi <strong style="color:#fff;">${student.name}</strong>,</p>
+          <p>Your ConnectPay student account has been created by the admin team. Here are your login credentials:</p>
+          <div style="background:#1a1b2e; border:1px solid #2d2f50; border-radius:12px; padding:20px; margin:20px 0;">
+            <p style="margin:6px 0;"><strong style="color:#a78bfa;">BYU ID:</strong> <code style="color:#fff;">${student.byuId}</code></p>
+            <p style="margin:6px 0;"><strong style="color:#a78bfa;">Temp Password:</strong> <code style="color:#fff; font-size:18px; letter-spacing:2px;">${tempPassword}</code></p>
+          </div>
+          <p style="color:#94a3b8; font-size:13px;">Please log in and change your password immediately. Your account country is set to <strong style="color:#c4b5fd;">${student.countryCode}</strong>.</p>
+          <p style="color:#64748b; font-size:12px; margin-top:32px;">ConnectPay — BYU Pathway West Africa Virtual Card Program</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Welcome email sent to', student.email);
+  } catch (error) {
+    console.error('❌ Error sending welcome email:', error.message);
+  }
+};
+
 module.exports = {
   notifyAdminNewRequest,
   notifyStudentCardAssigned,
   notifyStudentCardExpired,
   sendVerificationEmail,
   sendPasswordResetEmail,
-  sendPasswordChangeConfirmationEmail
+  sendPasswordChangeConfirmationEmail,
+  sendWelcomeEmail
 };
 

@@ -1,8 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const { Op } = require('sequelize');
+const { Op, fn, col, literal } = require('sequelize');
+const bcrypt = require('bcryptjs');
 const { Student, CardRequest } = require('../models');
-const { notifyStudentCardAssigned } = require('../utils/emailService');
+const { notifyStudentCardAssigned, sendWelcomeEmail } = require('../utils/emailService');
+
+// West Africa country reference
+const WEST_AFRICA_COUNTRIES = {
+  GH: { name: 'Ghana',        flag: '🇬🇭', currency: 'GHS' },
+  NG: { name: 'Nigeria',      flag: '🇳🇬', currency: 'NGN' },
+  SN: { name: 'Senegal',      flag: '🇸🇳', currency: 'XOF' },
+  CI: { name: 'Ivory Coast',  flag: '🇨🇮', currency: 'XOF' },
+  CM: { name: 'Cameroon',     flag: '🇨🇲', currency: 'XAF' },
+  TG: { name: 'Togo',         flag: '🇹🇬', currency: 'XOF' },
+  BJ: { name: 'Benin',        flag: '🇧🇯', currency: 'XOF' },
+  SL: { name: 'Sierra Leone', flag: '🇸🇱', currency: 'SLL' },
+  LR: { name: 'Liberia',      flag: '🇱🇷', currency: 'LRD' },
+  GM: { name: 'Gambia',       flag: '🇬🇲', currency: 'GMD' },
+};
 
 // Middleware to verify admin key
 const verifyAdminKey = (req, res, next) => {
@@ -272,11 +287,37 @@ router.get('/stats', async (req, res) => {
     const assignedRequests = await CardRequest.count({ where: { status: 'assigned' } });
     const paidRequests = await CardRequest.count({ where: { status: 'paid' } });
     const expiredRequests = await CardRequest.count({ where: { status: 'expired' } });
-    const totalStudents = await Student.count();
+    const totalStudents = await Student.count({ where: { status: { [Op.ne]: 'deleted' } } });
 
     // Calculate total revenue from paid requests
     const paidRequestsData = await CardRequest.findAll({ where: { status: 'paid' } });
     const totalRevenue = paidRequestsData.reduce((sum, request) => sum + (Number(request.amount) || 0), 0);
+
+    // Students grouped by countryCode
+    const studentsByCountryRaw = await Student.findAll({
+      where: { status: { [Op.ne]: 'deleted' } },
+      attributes: ['countryCode', [fn('COUNT', col('id')), 'count']],
+      group: ['countryCode'],
+      raw: true
+    });
+    const studentsByCountry = studentsByCountryRaw.map(row => ({
+      countryCode: row.countryCode || 'GH',
+      count: Number(row.count),
+      ...(WEST_AFRICA_COUNTRIES[row.countryCode] || { name: row.countryCode, flag: '🌍', currency: 'USD' })
+    })).sort((a, b) => b.count - a.count);
+
+    // Requests grouped by student countryCode
+    const requestsByCountryRaw = await CardRequest.findAll({
+      attributes: [[fn('COUNT', col('CardRequest.id')), 'count']],
+      include: [{ model: Student, as: 'student', attributes: ['countryCode'], required: true }],
+      group: ['student.countryCode'],
+      raw: true
+    });
+    const requestsByCountry = requestsByCountryRaw.map(row => ({
+      countryCode: row['student.countryCode'] || 'GH',
+      count: Number(row.count),
+      ...(WEST_AFRICA_COUNTRIES[row['student.countryCode']] || { name: row['student.countryCode'], flag: '🌍', currency: 'USD' })
+    })).sort((a, b) => b.count - a.count);
 
     res.json({
       success: true,
@@ -287,7 +328,9 @@ router.get('/stats', async (req, res) => {
         paidRequests,
         expiredRequests,
         totalStudents,
-        totalRevenue
+        totalRevenue,
+        studentsByCountry,
+        requestsByCountry
       }
     });
   } catch (error) {
@@ -297,6 +340,85 @@ router.get('/stats', async (req, res) => {
       message: 'Server error',
       error: error.message
     });
+  }
+});
+
+// Country leaderboard — top countries by request volume
+router.get('/country-requests', async (req, res) => {
+  try {
+    const rows = await CardRequest.findAll({
+      attributes: [[fn('COUNT', col('CardRequest.id')), 'count']],
+      include: [{ model: Student, as: 'student', attributes: ['countryCode'], required: true }],
+      group: ['student.countryCode'],
+      raw: true
+    });
+
+    const totalAll = rows.reduce((s, r) => s + Number(r.count), 0);
+    const leaderboard = rows.map(row => {
+      const code = row['student.countryCode'] || 'GH';
+      const count = Number(row.count);
+      const info = WEST_AFRICA_COUNTRIES[code] || { name: code, flag: '🌍', currency: 'USD' };
+      return { countryCode: code, count, pct: totalAll > 0 ? Math.round((count / totalAll) * 100) : 0, ...info };
+    }).sort((a, b) => b.count - a.count);
+
+    res.json({ success: true, data: leaderboard, total: totalAll });
+  } catch (error) {
+    console.error('Error fetching country leaderboard:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Admin creates a student manually
+router.post('/create-student', async (req, res) => {
+  try {
+    const { name, byuId, email, phone, countryCode, whatsappNumber } = req.body;
+
+    if (!name || !byuId || !email || !phone) {
+      return res.status(400).json({ success: false, message: 'Name, BYU ID, email, and phone are required.' });
+    }
+
+    const countryInfo = WEST_AFRICA_COUNTRIES[countryCode] || WEST_AFRICA_COUNTRIES['GH'];
+
+    // Check for existing student
+    const existing = await Student.findOne({ where: { [Op.or]: [{ byuId }, { email: email.toLowerCase().trim() }] } });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'A student with this BYU ID or email already exists.' });
+    }
+
+    // Generate a temporary password
+    const tempPassword = `BYU${Math.floor(100000 + Math.random() * 900000)}`;
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    const student = await Student.create({
+      name: name.trim(),
+      byuId: byuId.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone.trim(),
+      countryCode: countryCode || 'GH',
+      preferredCurrency: countryInfo.currency,
+      whatsappNumber: whatsappNumber?.trim() || null,
+      password: hashedPassword,
+      isVerified: true,
+      status: 'active'
+    });
+
+    // Try to send a welcome email (non-blocking)
+    try {
+      if (typeof sendWelcomeEmail === 'function') {
+        await sendWelcomeEmail(student, tempPassword);
+      }
+    } catch (emailErr) {
+      console.warn('Welcome email failed (non-fatal):', emailErr.message);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Student created successfully',
+      data: { ...student.toJSON(), tempPassword }
+    });
+  } catch (error) {
+    console.error('Error creating student:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
 

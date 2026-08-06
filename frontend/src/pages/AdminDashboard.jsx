@@ -3,21 +3,50 @@ import { adminAPI } from '../api/api';
 import AdminChat from '../components/AdminChat';
 import './AdminDashboard.css';
 
+// West Africa country reference
+const WEST_AFRICA_COUNTRIES = {
+  GH: { name: 'Ghana',        flag: '🇬🇭', currency: 'GHS' },
+  NG: { name: 'Nigeria',      flag: '🇳🇬', currency: 'NGN' },
+  SN: { name: 'Senegal',      flag: '🇸🇳', currency: 'XOF' },
+  CI: { name: 'Ivory Coast',  flag: '🇨🇮', currency: 'XOF' },
+  CM: { name: 'Cameroon',     flag: '🇨🇲', currency: 'XAF' },
+  TG: { name: 'Togo',         flag: '🇹🇬', currency: 'XOF' },
+  BJ: { name: 'Benin',        flag: '🇧🇯', currency: 'XOF' },
+  SL: { name: 'Sierra Leone', flag: '🇸🇱', currency: 'SLL' },
+  LR: { name: 'Liberia',      flag: '🇱🇷', currency: 'LRD' },
+  GM: { name: 'Gambia',       flag: '🇬🇲', currency: 'GMD' },
+};
+
+const countryLabel = (code) => {
+  const c = WEST_AFRICA_COUNTRIES[code];
+  return c ? `${c.flag} ${c.name}` : (code || '🌍 Unknown');
+};
+
 function AdminDashboard() {
   const [adminKey, setAdminKey] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [requests, setRequests] = useState([]);
   const [stats, setStats] = useState(null);
+  const [countryStats, setCountryStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'requests', 'users', 'chat', 'analytics'
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [users, setUsers] = useState([]);
   const [userFilter, setUserFilter] = useState('active');
+  const [countryFilter, setCountryFilter] = useState('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+
+  // Create Student Modal
+  const [showCreateStudentModal, setShowCreateStudentModal] = useState(false);
+  const [createStudentForm, setCreateStudentForm] = useState({
+    name: '', byuId: '', email: '', phone: '', countryCode: 'GH', whatsappNumber: ''
+  });
+  const [createStudentLoading, setCreateStudentLoading] = useState(false);
+  const [createStudentResult, setCreateStudentResult] = useState(null);
 
   // Manual card assignment modal
   const [showCardForm, setShowCardForm] = useState(false);
@@ -37,13 +66,15 @@ function AdminDashboard() {
     setError('');
 
     try {
-      const [requestsData, statsData] = await Promise.all([
+      const [requestsData, statsData, countryData] = await Promise.all([
         adminAPI.getRequests(keyToUse, filter),
-        adminAPI.getStats(keyToUse)
+        adminAPI.getStats(keyToUse),
+        adminAPI.getCountryStats(keyToUse)
       ]);
 
       setRequests(requestsData.data || []);
       setStats(statsData.data || null);
+      setCountryStats(countryData.data || []);
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Failed to load dashboard data';
       setError(errorMessage);
@@ -120,16 +151,20 @@ function AdminDashboard() {
   }, [requests, searchQuery]);
 
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return users;
+    let list = users;
+    if (countryFilter !== 'all') {
+      list = list.filter(u => (u.countryCode || 'GH') === countryFilter);
+    }
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
-    return users.filter((u) => {
+    return list.filter((u) => {
       const name = u.name?.toLowerCase() || '';
       const byuId = u.byuId?.toLowerCase() || '';
       const email = u.email?.toLowerCase() || '';
       const phone = u.phone?.toLowerCase() || '';
       return name.includes(q) || byuId.includes(q) || email.includes(q) || phone.includes(q);
     });
-  }, [users, searchQuery]);
+  }, [users, searchQuery, countryFilter]);
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -268,7 +303,30 @@ function AdminDashboard() {
     setAdminKey('');
     setRequests([]);
     setStats(null);
+    setCountryStats([]);
     setError('');
+  };
+
+  const handleCreateStudent = async (e) => {
+    e.preventDefault();
+    setCreateStudentLoading(true);
+    setCreateStudentResult(null);
+    try {
+      const result = await adminAPI.createStudent(adminKey, createStudentForm);
+      setCreateStudentResult({ success: true, tempPassword: result.data?.tempPassword, name: result.data?.name });
+      setCreateStudentForm({ name: '', byuId: '', email: '', phone: '', countryCode: 'GH', whatsappNumber: '' });
+      await loadUsers();
+    } catch (err) {
+      setCreateStudentResult({ success: false, message: err.response?.data?.message || 'Failed to create student' });
+    } finally {
+      setCreateStudentLoading(false);
+    }
+  };
+
+  const closeCreateStudentModal = () => {
+    setShowCreateStudentModal(false);
+    setCreateStudentResult(null);
+    setCreateStudentForm({ name: '', byuId: '', email: '', phone: '', countryCode: 'GH', whatsappNumber: '' });
   };
 
   const getStatusBadge = (status) => {
@@ -335,11 +393,45 @@ function AdminDashboard() {
     );
   }
 
-  // Calculate metrics for Bento Grid
-  const totalVolume = stats?.totalRevenue || 857850;
-  const totalExpenses = (stats?.paidRequests || 0) * 45 || 198110;
-  const issuanceRate = stats?.totalRequests > 0 ? Math.round((stats.assignedRequests / stats.totalRequests) * 100) : 76;
-  const settlementRate = stats?.totalRequests > 0 ? Math.round((stats.paidRequests / stats.totalRequests) * 100) : 84;
+  // ── Real metrics from API ──
+  const totalVolume = stats?.totalRevenue ?? 0;
+  const totalStudents = stats?.totalStudents ?? 0;
+  const totalRequests = stats?.totalRequests ?? 0;
+  const paidCount = stats?.paidRequests ?? 0;
+  const assignedCount = stats?.assignedRequests ?? 0;
+  const pendingCount = stats?.pendingRequests ?? 0;
+  const expiredCount = stats?.expiredRequests ?? 0;
+
+  // Expenses estimated as sum of assigned card fees ($45 processing each)
+  const totalExpenses = assignedCount * 45 + paidCount * 10;
+
+  // Gauge rates (real percentages, 0 when no data)
+  const issuanceRate = totalRequests > 0 ? Math.round((assignedCount / totalRequests) * 100) : 0;
+  const settlementRate = totalRequests > 0 ? Math.round((paidCount / totalRequests) * 100) : 0;
+  const pendingRate = totalRequests > 0 ? Math.round((pendingCount / totalRequests) * 100) : 0;
+
+  // Donut circumference = 2πr = 2π×38 ≈ 238.76; scale each segment
+  const CIRC = 238.76;
+  const paidSeg   = totalRequests > 0 ? Math.round((paidCount / totalRequests) * CIRC) : 0;
+  const assignSeg = totalRequests > 0 ? Math.round((assignedCount / totalRequests) * CIRC) : 0;
+  const pendSeg   = totalRequests > 0 ? Math.round((pendingCount / totalRequests) * CIRC) : 0;
+  const expSeg    = totalRequests > 0 ? Math.round((expiredCount / totalRequests) * CIRC) : 0;
+
+  const paidOff   = 0;
+  const assignOff = -(paidSeg);
+  const pendOff   = -(paidSeg + assignSeg);
+  const expOff    = -(paidSeg + assignSeg + pendSeg);
+
+  const paidPct   = totalRequests > 0 ? Math.round((paidCount / totalRequests) * 100) : 0;
+  const assignPct = totalRequests > 0 ? Math.round((assignedCount / totalRequests) * 100) : 0;
+  const pendPct   = totalRequests > 0 ? Math.round((pendingCount / totalRequests) * 100) : 0;
+  const expPct    = totalRequests > 0 ? Math.round((expiredCount / totalRequests) * 100) : 0;
+
+  // Active virtual card balance estimate = assigned requests × avg $250
+  const activeCardBalance = assignedCount * 250;
+
+  // Wave chart tooltip value = total revenue
+  const waveTooltipValue = `$${totalVolume.toLocaleString()}`;
 
   return (
     <div className="bento-app-container">
@@ -458,19 +550,39 @@ function AdminDashboard() {
                   className={`bento-subtab ${userFilter === 'active' ? 'active' : ''}`}
                   onClick={() => setUserFilter('active')}
                 >
-                  Active Users
+                  Active
                 </button>
                 <button
                   className={`bento-subtab ${userFilter === 'deleted' ? 'active' : ''}`}
                   onClick={() => setUserFilter('deleted')}
                 >
-                  Deleted Users
+                  Deleted
                 </button>
+
+                {/* Country filter */}
+                <select
+                  value={countryFilter}
+                  onChange={(e) => setCountryFilter(e.target.value)}
+                  className="bento-select"
+                >
+                  <option value="all">🌍 All Countries</option>
+                  {Object.entries(WEST_AFRICA_COUNTRIES).map(([code, c]) => (
+                    <option key={code} value={code}>{c.flag} {c.name}</option>
+                  ))}
+                </select>
+
                 <button onClick={exportUsersToCSV} className="bento-btn-sm btn-ghost">
                   📥 Export CSV
                 </button>
                 <button onClick={loadUsers} className="bento-btn-sm btn-indigo" disabled={loading}>
                   {loading ? '...' : '🔄 Refresh'}
+                </button>
+                <button
+                  onClick={() => setShowCreateStudentModal(true)}
+                  className="bento-btn-sm btn-indigo"
+                  style={{ background: 'linear-gradient(135deg,#10b981,#059669)', fontWeight: 700 }}
+                >
+                  + Create Student
                 </button>
               </div>
             </div>
@@ -481,17 +593,18 @@ function AdminDashboard() {
                   <tr>
                     <th>Student Name</th>
                     <th>BYU ID</th>
+                    <th>Country</th>
                     <th>Pathway Email</th>
                     <th>Phone</th>
                     <th>Status</th>
-                    <th>Joined Date</th>
+                    <th>Joined</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="bento-table-empty">
+                      <td colSpan="8" className="bento-table-empty">
                         No student accounts found {searchQuery ? `matching "${searchQuery}"` : ''}.
                       </td>
                     </tr>
@@ -506,6 +619,11 @@ function AdminDashboard() {
                           >
                             {u.byuId} {copiedId === (u._id || u.id) ? '✓' : '📋'}
                           </code>
+                        </td>
+                        <td>
+                          <span className="country-pill">
+                            {WEST_AFRICA_COUNTRIES[u.countryCode]?.flag || '🌍'} {countryLabel(u.countryCode || 'GH')}
+                          </span>
                         </td>
                         <td>{u.email}</td>
                         <td>{u.phone}</td>
@@ -559,12 +677,12 @@ function AdminDashboard() {
               <table className="bento-table">
                 <thead>
                   <tr>
-                    <th>Student & Token</th>
+                    <th>Student & Country</th>
                     <th>Requested USD</th>
                     <th>Total Paid (GHS)</th>
                     <th>Payment Method</th>
                     <th>Card Status</th>
-                    <th>Submission Date</th>
+                    <th>Submitted</th>
                     <th>Action Controls</th>
                   </tr>
                 </thead>
@@ -581,6 +699,8 @@ function AdminDashboard() {
                         <td>
                           <div className="table-name-bold">{r.student?.name || 'Unknown Student'}</div>
                           <div className="table-sub-info">
+                            <span className="country-pill-xs">{countryLabel(r.student?.countryCode || 'GH')}</span>
+                            <span className="sub-divider">•</span>
                             ID: <code>{r.student?.byuId || 'N/A'}</code>
                             <span className="sub-divider">•</span>
                             <span
@@ -640,11 +760,11 @@ function AdminDashboard() {
             <div className="bento-card kpi-card">
               <div className="kpi-top">
                 <span className="kpi-label">Total Volume Processed</span>
-                <div className="bento-dropdown-pill">last month ▾</div>
+                <div className="bento-dropdown-pill">all time</div>
               </div>
               <div className="kpi-value">${totalVolume.toLocaleString()}</div>
               <div className="kpi-footer">
-                <span className="kpi-trend green">↑ 20.3% last month</span>
+                <span className="kpi-trend green">↑ {paidCount} paid requests</span>
                 {/* SVG Sparkline 1 */}
                 <svg className="sparkline-svg" viewBox="0 0 120 30" preserveAspectRatio="none">
                   <defs>
@@ -661,12 +781,12 @@ function AdminDashboard() {
             {/* KPI 2: Total Expenses */}
             <div className="bento-card kpi-card">
               <div className="kpi-top">
-                <span className="kpi-label">Total Expenses & Fees</span>
-                <div className="bento-dropdown-pill">last month ▾</div>
+                <span className="kpi-label">Processing Fees Est.</span>
+                <div className="bento-dropdown-pill">all time</div>
               </div>
               <div className="kpi-value">${totalExpenses.toLocaleString()}</div>
               <div className="kpi-footer">
-                <span className="kpi-trend red">↓ 3.12% last month</span>
+                <span className="kpi-trend" style={{ color: '#a78bfa' }}>↗ {totalStudents} students enrolled</span>
                 {/* SVG Sparkline 2 */}
                 <svg className="sparkline-svg" viewBox="0 0 120 30" preserveAspectRatio="none">
                   <defs>
@@ -691,10 +811,12 @@ function AdminDashboard() {
                   <span className="mini-card-bank">ConnectPay</span>
                   <span className="mini-card-logo">VISA</span>
                 </div>
-                <div className="mini-card-balance">${(stats?.assignedRequests ? stats.assignedRequests * 250 : 1452.23).toLocaleString()}</div>
+                <div className="mini-card-balance">
+                  {assignedCount > 0 ? `${assignedCount} Active` : 'No Active Cards'}
+                </div>
                 <div className="mini-card-footer">
-                  <span className="mini-card-num">•••• 4578</span>
-                  <span className="mini-card-exp">12/28</span>
+                  <span className="mini-card-num">{assignedCount} assigned</span>
+                  <span className="mini-card-exp">{paidCount} paid</span>
                 </div>
               </div>
             </div>
@@ -703,31 +825,41 @@ function AdminDashboard() {
             <div className="bento-card doughnut-card">
               <div className="kpi-top">
                 <span className="kpi-label">Request Breakdown</span>
-                <div className="bento-dropdown-pill">last month ▾</div>
+                <div className="bento-dropdown-pill">{totalRequests} total</div>
               </div>
               <div className="doughnut-content">
                 <div className="svg-donut-wrapper">
                   <svg viewBox="0 0 100 100" className="donut-svg">
                     <circle cx="50" cy="50" r="38" fill="none" stroke="#23253b" strokeWidth="12" />
-                    {/* Paid Segment (Blue) */}
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="#3b82f6" strokeWidth="12" strokeDasharray="95 144" strokeDashoffset="0" />
-                    {/* Assigned Segment (Purple) */}
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="#8b5cf6" strokeWidth="12" strokeDasharray="70 169" strokeDashoffset="-95" />
-                    {/* Pending Segment (Green) */}
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="#10b981" strokeWidth="12" strokeDasharray="45 194" strokeDashoffset="-165" />
-                    {/* Expired Segment (Orange) */}
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="#f59e0b" strokeWidth="12" strokeDasharray="28 211" strokeDashoffset="-210" />
+                    {totalRequests === 0 ? (
+                      <circle cx="50" cy="50" r="38" fill="none" stroke="#23253b" strokeWidth="12" strokeDasharray="238 0" />
+                    ) : (
+                      <>
+                        {/* Paid Segment (Blue) */}
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#3b82f6" strokeWidth="12"
+                          strokeDasharray={`${paidSeg} ${CIRC - paidSeg}`} strokeDashoffset={paidOff} />
+                        {/* Assigned Segment (Purple) */}
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#8b5cf6" strokeWidth="12"
+                          strokeDasharray={`${assignSeg} ${CIRC - assignSeg}`} strokeDashoffset={assignOff} />
+                        {/* Pending Segment (Green) */}
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#10b981" strokeWidth="12"
+                          strokeDasharray={`${pendSeg} ${CIRC - pendSeg}`} strokeDashoffset={pendOff} />
+                        {/* Expired Segment (Orange) */}
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#f59e0b" strokeWidth="12"
+                          strokeDasharray={`${expSeg} ${CIRC - expSeg}`} strokeDashoffset={expOff} />
+                      </>
+                    )}
                   </svg>
                   <div className="donut-center-text">
-                    <span className="donut-num">100%</span>
-                    <span className="donut-sub">processed</span>
+                    <span className="donut-num">{totalRequests}</span>
+                    <span className="donut-sub">requests</span>
                   </div>
                 </div>
                 <div className="donut-legend">
-                  <div className="legend-item"><span className="dot blue"></span> Paid {stats?.totalRequests ? Math.round(((stats.paidRequests||0)/stats.totalRequests)*100) : 34}%</div>
-                  <div className="legend-item"><span className="dot purple"></span> Assigned {stats?.totalRequests ? Math.round(((stats.assignedRequests||0)/stats.totalRequests)*100) : 25}%</div>
-                  <div className="legend-item"><span className="dot green"></span> Pending {stats?.totalRequests ? Math.round(((stats.pendingRequests||0)/stats.totalRequests)*100) : 22}%</div>
-                  <div className="legend-item"><span className="dot orange"></span> Expired {stats?.totalRequests ? Math.round(((stats.expiredRequests||0)/stats.totalRequests)*100) : 19}%</div>
+                  <div className="legend-item"><span className="dot blue"></span> Paid {paidPct}% ({paidCount})</div>
+                  <div className="legend-item"><span className="dot purple"></span> Assigned {assignPct}% ({assignedCount})</div>
+                  <div className="legend-item"><span className="dot green"></span> Pending {pendPct}% ({pendingCount})</div>
+                  <div className="legend-item"><span className="dot orange"></span> Expired {expPct}% ({expiredCount})</div>
                 </div>
               </div>
             </div>
@@ -771,19 +903,19 @@ function AdminDashboard() {
                 <div className="bento-dropdown-pill">last month ▾</div>
               </div>
               <div className="gauges-grid">
-                {/* Gauge 1 */}
+                {/* Gauge 1: Paid/Settlement Rate */}
                 <div className="gauge-item">
                   <div className="gauge-ring-wrapper">
                     <svg viewBox="0 0 36 36" className="gauge-svg">
                       <path className="gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#23253b" strokeWidth="3" />
-                      <path className="gauge-fill green" strokeDasharray="57, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" strokeWidth="3.5" />
+                      <path className="gauge-fill green" strokeDasharray={`${settlementRate}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" strokeWidth="3.5" />
                     </svg>
-                    <span className="gauge-percent">57%</span>
+                    <span className="gauge-percent">{settlementRate}%</span>
                   </div>
-                  <span className="gauge-label">Issuance</span>
+                  <span className="gauge-label">Paid</span>
                 </div>
 
-                {/* Gauge 2 */}
+                {/* Gauge 2: Assigned Rate */}
                 <div className="gauge-item">
                   <div className="gauge-ring-wrapper">
                     <svg viewBox="0 0 36 36" className="gauge-svg">
@@ -795,28 +927,28 @@ function AdminDashboard() {
                   <span className="gauge-label">Assigned</span>
                 </div>
 
-                {/* Gauge 3 */}
+                {/* Gauge 3: Pending Rate */}
                 <div className="gauge-item">
                   <div className="gauge-ring-wrapper">
                     <svg viewBox="0 0 36 36" className="gauge-svg">
                       <path className="gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#23253b" strokeWidth="3" />
-                      <path className="gauge-fill pink" strokeDasharray={`${settlementRate}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#ec4899" strokeWidth="3.5" />
+                      <path className="gauge-fill pink" strokeDasharray={`${pendingRate}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#ec4899" strokeWidth="3.5" />
                     </svg>
-                    <span className="gauge-percent">{settlementRate}%</span>
+                    <span className="gauge-percent">{pendingRate}%</span>
                   </div>
-                  <span className="gauge-label">Settlement</span>
+                  <span className="gauge-label">Pending</span>
                 </div>
 
-                {/* Gauge 4 */}
+                {/* Gauge 4: Total Students enrolled */}
                 <div className="gauge-item">
                   <div className="gauge-ring-wrapper">
                     <svg viewBox="0 0 36 36" className="gauge-svg">
                       <path className="gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#23253b" strokeWidth="3" />
                       <path className="gauge-fill cyan" strokeDasharray="99, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#06b6d4" strokeWidth="3.5" />
                     </svg>
-                    <span className="gauge-percent">99%</span>
+                    <span className="gauge-percent">{totalStudents}</span>
                   </div>
-                  <span className="gauge-label">Uptime</span>
+                  <span className="gauge-label">Students</span>
                 </div>
               </div>
             </div>
@@ -889,10 +1021,10 @@ function AdminDashboard() {
                   <path d="M0,110 C90,60 170,120 250,70 C330,20 410,90 500,50 L500,140 L0,140 Z" fill="url(#wavePinkGrad)" />
                   <path d="M0,110 C90,60 170,120 250,70 C330,20 410,90 500,50" fill="none" stroke="#ec4899" strokeWidth="3" />
 
-                  {/* Interactive Dot Tooltip */}
+                  {/* Interactive Dot Tooltip – shows real total revenue */}
                   <circle cx="390" cy="42" r="6" fill="#8b5cf6" stroke="#ffffff" strokeWidth="2.5" />
-                  <rect x="365" y="10" width="50" height="22" rx="11" fill="#6366f1" />
-                  <text x="390" y="25" fill="#ffffff" fontSize="10" fontWeight="bold" textAnchor="middle">$85,732</text>
+                  <rect x="355" y="10" width="70" height="22" rx="11" fill="#6366f1" />
+                  <text x="390" y="25" fill="#ffffff" fontSize="9" fontWeight="bold" textAnchor="middle">{waveTooltipValue}</text>
                 </svg>
 
                 <div className="waves-days">
@@ -907,9 +1039,154 @@ function AdminDashboard() {
               </div>
             </div>
 
+            {/* Country Leaderboard Bento Card */}
+            <div className="bento-card country-leaderboard-card">
+              <div className="kpi-top">
+                <h3>🌍 West Africa Leaderboard</h3>
+                <div className="bento-dropdown-pill">by requests</div>
+              </div>
+              <div className="country-leaderboard-list">
+                {countryStats.length === 0 ? (
+                  <div className="bento-table-empty" style={{ padding: '1.5rem 0' }}>No country data yet.</div>
+                ) : (
+                  countryStats.slice(0, 6).map((c, i) => (
+                    <div key={c.countryCode} className="country-row">
+                      <span className="country-rank">#{i + 1}</span>
+                      <span className="country-flag-name">
+                        <span style={{ fontSize: '1.4rem' }}>{c.flag}</span>
+                        <span className="country-name-text">{c.name}</span>
+                      </span>
+                      <div className="country-bar-wrap">
+                        <div className="country-bar-fill" style={{ width: `${c.pct}%` }} />
+                      </div>
+                      <span className="country-count">{c.count}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
           </div>
         )}
       </main>
+
+      {/* Create Student Modal */}
+      {showCreateStudentModal && (
+        <div className="modal-overlay" onClick={closeCreateStudentModal}>
+          <div className="bento-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h2>🌍 Create Student</h2>
+              <button className="modal-close" onClick={closeCreateStudentModal}>&times;</button>
+            </div>
+
+            {createStudentResult ? (
+              <div style={{ padding: '1.5rem' }}>
+                {createStudentResult.success ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+                    <h3 style={{ color: '#10b981', marginBottom: '.5rem' }}>Student Created!</h3>
+                    <p style={{ color: '#94a3b8' }}>{createStudentResult.name} has been registered.</p>
+                    <div style={{ background: '#1a1b2e', border: '1px solid #2d2f50', borderRadius: 12, padding: '1rem', margin: '1rem 0' }}>
+                      <p style={{ color: '#a78bfa', margin: '0 0 .5rem' }}>Temporary Password</p>
+                      <code style={{ color: '#fff', fontSize: '1.5rem', letterSpacing: 3 }}>{createStudentResult.tempPassword}</code>
+                      <p style={{ color: '#64748b', fontSize: 12, marginTop: '.5rem' }}>Share this with the student so they can log in and change it.</p>
+                    </div>
+                    <button
+                      className="bento-btn-primary"
+                      onClick={closeCreateStudentModal}
+                      style={{ marginTop: '.5rem' }}
+                    >Done</button>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>❌</div>
+                    <p style={{ color: '#f87171' }}>{createStudentResult.message}</p>
+                    <button
+                      className="bento-btn-sm btn-ghost"
+                      onClick={() => setCreateStudentResult(null)}
+                    >Try Again</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <form onSubmit={handleCreateStudent} className="modal-form">
+                <div className="bento-form-row">
+                  <div className="bento-input-group">
+                    <label>Full Name *</label>
+                    <input
+                      type="text" required
+                      value={createStudentForm.name}
+                      onChange={(e) => setCreateStudentForm({ ...createStudentForm, name: e.target.value })}
+                      placeholder="Kwame Mensah"
+                    />
+                  </div>
+                  <div className="bento-input-group">
+                    <label>BYU ID *</label>
+                    <input
+                      type="text" required
+                      value={createStudentForm.byuId}
+                      onChange={(e) => setCreateStudentForm({ ...createStudentForm, byuId: e.target.value })}
+                      placeholder="123456789"
+                    />
+                  </div>
+                </div>
+
+                <div className="bento-input-group">
+                  <label>Email *</label>
+                  <input
+                    type="email" required
+                    value={createStudentForm.email}
+                    onChange={(e) => setCreateStudentForm({ ...createStudentForm, email: e.target.value })}
+                    placeholder="kwame@byupathway.org"
+                  />
+                </div>
+
+                <div className="bento-form-row">
+                  <div className="bento-input-group">
+                    <label>Phone *</label>
+                    <input
+                      type="text" required
+                      value={createStudentForm.phone}
+                      onChange={(e) => setCreateStudentForm({ ...createStudentForm, phone: e.target.value })}
+                      placeholder="+233 24 000 0000"
+                    />
+                  </div>
+                  <div className="bento-input-group">
+                    <label>WhatsApp</label>
+                    <input
+                      type="text"
+                      value={createStudentForm.whatsappNumber}
+                      onChange={(e) => setCreateStudentForm({ ...createStudentForm, whatsappNumber: e.target.value })}
+                      placeholder="+233 24 000 0000"
+                    />
+                  </div>
+                </div>
+
+                <div className="bento-input-group">
+                  <label>Country *</label>
+                  <select
+                    className="bento-select" required
+                    value={createStudentForm.countryCode}
+                    onChange={(e) => setCreateStudentForm({ ...createStudentForm, countryCode: e.target.value })}
+                    style={{ width: '100%', padding: '10px 14px' }}
+                  >
+                    {Object.entries(WEST_AFRICA_COUNTRIES).map(([code, c]) => (
+                      <option key={code} value={code}>{c.flag} {c.name} ({c.currency})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" onClick={closeCreateStudentModal} className="bento-btn-sm btn-ghost">Cancel</button>
+                  <button type="submit" className="bento-btn-primary" disabled={createStudentLoading}>
+                    {createStudentLoading ? 'Creating...' : '🌍 Create Student →'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Manual Card Assignment Modal */}
       {showCardForm && selectedRequest && (
