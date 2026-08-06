@@ -499,6 +499,12 @@
   grid-column: span 1;
 }
 
+/* Country Leaderboard card — spans full width at bottom of grid */
+.country-leaderboard-card {
+  grid-column: span 4;
+  padding: 1.5rem;
+}
+
 .kpi-top {
   display: flex;
   justify-content: space-between;
@@ -1138,12 +1144,122 @@
   margin-top: 1.25rem;
 }
 
+/* ── Country Leaderboard Styles ── */
+.country-leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 0.75rem;
+}
+
+.country-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.country-rank {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--bento-text-muted);
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.country-flag-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.country-name-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--bento-text-main);
+  white-space: nowrap;
+}
+
+.country-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: rgba(139, 92, 246, 0.12);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.country-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+  min-width: 4px;
+}
+
+.country-count {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #a78bfa;
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Country pill — in Students table */
+.country-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #c4b5fd;
+  border-radius: 99px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Compact country pill — in Requests sub-info line */
+.country-pill-xs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(139, 92, 246, 0.1);
+  color: #a78bfa;
+  border-radius: 99px;
+  padding: 1px 7px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* bento-code-badge — clickable BYU ID in table cells */
+.bento-code-badge {
+  display: inline-block;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: #a78bfa;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+}
+.bento-code-badge:hover {
+  background: rgba(99, 102, 241, 0.22);
+}
+
 /* Responsive adjustments */
 @media (max-width: 1200px) {
   .bento-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .bar-chart-card, .gauges-card, .activity-card, .waves-card {
+  .bar-chart-card, .gauges-card, .activity-card, .waves-card, .country-leaderboard-card {
     grid-column: span 2;
   }
 }
@@ -1160,10 +1276,13 @@
   .bento-grid {
     grid-template-columns: 1fr;
   }
-  .kpi-card, .card-widget-card, .doughnut-card, .bar-chart-card, .gauges-card, .activity-card, .waves-card {
+  .kpi-card, .card-widget-card, .doughnut-card, .bar-chart-card, .gauges-card, .activity-card, .waves-card, .country-leaderboard-card {
     grid-column: span 1;
   }
   .gauges-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .country-flag-name {
+    width: 110px;
   }
 }
