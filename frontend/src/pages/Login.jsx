@@ -85,6 +85,11 @@ export default function Login() {
               autoFocus
             />
             <small className="login-hint">Enter your 7–8 digit BYU Student ID number</small>
+            <div style={{ textAlign: 'right', marginTop: '6px' }}>
+              <Link to="/forgot-password" style={{ color: '#002E5D', fontSize: '13px', textDecoration: 'none', fontWeight: '500' }}>
+                🔑 Forgot Password?
+              </Link>
+            </div>
           </div>
 
           <button

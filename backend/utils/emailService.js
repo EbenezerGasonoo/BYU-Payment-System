@@ -222,10 +222,106 @@ const sendVerificationEmail = async (student, token) => {
   }
 };
 
+// Send password reset email with OTP and direct reset link
+const sendPasswordResetEmail = async (student, resetToken, resetCode) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const resetLink = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(student.email)}`;
+
+  if (!isEmailConfigured()) {
+    console.warn('⚠️  Email not configured. Simulation Mode: Password Reset link generated:');
+    console.warn(`🔗  Reset Link: ${resetLink}`);
+    console.warn(`🔑  OTP Code: ${resetCode}`);
+    return;
+  }
+
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: student.email,
+      subject: '🔑 Password Reset Request - ConnectPay',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+          <div style="background: linear-gradient(135deg, #002E5D 0%, #004B87 100%); color: #ffffff; padding: 24px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 700;">ConnectPay</h1>
+            <p style="margin: 6px 0 0 0; opacity: 0.9; font-size: 14px;">Password Reset Request</p>
+          </div>
+          
+          <div style="padding: 28px; color: #2d3748; line-height: 1.6;">
+            <p>Hello <strong>${student.name}</strong>,</p>
+            <p>We received a request to reset the password for your ConnectPay account associated with <strong>${student.email}</strong>.</p>
+            
+            <div style="background-color: #f7fafc; border: 2px dashed #cbd5e0; border-radius: 8px; padding: 18px; text-align: center; margin: 24px 0;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #718096; font-weight: 600;">Your 6-Digit Reset Code (OTP)</p>
+              <div style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #002E5D; margin: 8px 0;">${resetCode}</div>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #a0aec0;">Valid for 15 minutes</p>
+            </div>
+            
+            <div style="text-align: center; margin: 28px 0;">
+              <a href="${resetLink}" style="background-color: #002E5D; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 12px rgba(0, 46, 93, 0.25);">Reset Password Online →</a>
+            </div>
+
+            <p style="font-size: 13px; color: #4a5568;">If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="background-color: #edf2f7; padding: 10px; border-radius: 6px; word-break: break-all; font-size: 11px; font-family: monospace; color: #4a5568;">${resetLink}</p>
+
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+            <p style="font-size: 12px; color: #718096; margin: 0;">If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+          </div>
+          
+          <div style="background-color: #f7fafc; padding: 16px; text-align: center; border-top: 1px solid #edf2f7; font-size: 12px; color: #a0aec0;">
+            ConnectPay • West Africa Virtual Card Platform
+          </div>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Password reset email sent to', student.email, 'Message ID:', info.messageId);
+  } catch (error) {
+    console.error('❌ Error sending password reset email:', error.message);
+  }
+};
+
+// Send confirmation email after password reset success
+const sendPasswordChangeConfirmationEmail = async (student) => {
+  if (!isEmailConfigured()) {
+    console.warn(`⚠️  Email not configured. Simulation: Password change confirmation for ${student.email}`);
+    return;
+  }
+
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: student.email,
+      subject: '🔒 Security Alert: Your ConnectPay Password Was Reset',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+          <div style="background-color: #2b6cb0; color: #ffffff; padding: 20px; text-align: center;">
+            <h2 style="margin: 0;">ConnectPay Security Notice</h2>
+          </div>
+          <div style="padding: 24px; color: #2d3748; line-height: 1.6;">
+            <p>Hello <strong>${student.name}</strong>,</p>
+            <p>This email confirms that the password for your ConnectPay account (<strong>${student.email}</strong>) was successfully updated.</p>
+            <p style="background-color: #fffaf0; border-left: 4px solid #dd6b20; padding: 12px; font-size: 13px; color: #744210;">
+              If you did not perform this action, please contact support immediately.
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Password change confirmation sent to', student.email);
+  } catch (error) {
+    console.error('❌ Error sending password change confirmation email:', error.message);
+  }
+};
+
 module.exports = {
   notifyAdminNewRequest,
   notifyStudentCardAssigned,
   notifyStudentCardExpired,
-  sendVerificationEmail
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendPasswordChangeConfirmationEmail
 };
 

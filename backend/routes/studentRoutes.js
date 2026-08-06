@@ -2,7 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const { Student, CardRequest } = require('../models');
-const { notifyAdminNewRequest, sendVerificationEmail, sendCardAssignedEmail } = require('../utils/emailService');
+const {
+  notifyAdminNewRequest,
+  sendVerificationEmail,
+  notifyStudentCardAssigned,
+  sendPasswordResetEmail,
+  sendPasswordChangeConfirmationEmail
+} = require('../utils/emailService');
 const { initiatePayment, checkPaymentStatus } = require('../utils/hubtelService');
 const mtnMomoService = require('../utils/mtnMomoService');
 const paymentGatewayService = require('../utils/paymentGatewayService');
@@ -107,6 +113,197 @@ router.get('/verify-email/:token', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Helper for hashing passwords
+const hashPassword = (password) => {
+  const salt = 'byu_connectpay_salt_2025';
+  return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+};
+
+// 1. Forgot password - Request reset link & OTP
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { emailOrByuId } = req.body;
+
+    if (!emailOrByuId || !emailOrByuId.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide your Pathway email or BYU Student ID'
+      });
+    }
+
+    const searchKey = emailOrByuId.trim();
+
+    // Find student by email or BYU ID
+    const student = await Student.findOne({
+      where: {
+        [Op.or]: [
+          { email: searchKey.toLowerCase() },
+          { byuId: searchKey }
+        ],
+        status: 'active'
+      }
+    });
+
+    if (!student) {
+      // Return success to avoid account enumeration, but indicate if needed
+      return res.status(200).json({
+        success: true,
+        message: 'If an account exists with that email or BYU ID, a reset code has been sent to your email address.'
+      });
+    }
+
+    // Generate secure token & 6-digit OTP code
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    student.resetPasswordToken = resetToken;
+    student.resetPasswordCode = resetCode;
+    student.resetPasswordExpires = resetExpires;
+    await student.save();
+
+    // Send reset email asynchronously
+    sendPasswordResetEmail(student, resetToken, resetCode).catch(err => {
+      console.error('Error sending reset email (non-blocking):', err);
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Password reset link and OTP code sent to your registered email (${student.email.replace(/(.{2})(.*)(?=@)/, (gp1, gp2, gp3) => gp2 + '*'.repeat(gp3.length))}).`,
+      email: student.email,
+      byuId: student.byuId
+    });
+  } catch (error) {
+    console.error('Error in forgot-password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error processing password reset request',
+      error: error.message
+    });
+  }
+});
+
+// 2. Verify reset code/OTP
+router.post('/verify-reset-code', async (req, res) => {
+  try {
+    const { emailOrByuId, resetCode, token } = req.body;
+
+    let whereClause = {
+      resetPasswordExpires: { [Op.gt]: new Date() },
+      status: 'active'
+    };
+
+    if (token) {
+      whereClause.resetPasswordToken = token;
+    } else if (resetCode) {
+      whereClause.resetPasswordCode = String(resetCode).trim();
+      if (emailOrByuId) {
+        whereClause[Op.or] = [
+          { email: emailOrByuId.trim().toLowerCase() },
+          { byuId: emailOrByuId.trim() }
+        ];
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide either a reset token or 6-digit code'
+      });
+    }
+
+    const student = await Student.findOne({ where: whereClause });
+
+    if (!student) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset code/link. Please request a new one.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Reset code verified successfully',
+      token: student.resetPasswordToken,
+      email: student.email
+    });
+  } catch (error) {
+    console.error('Error verifying reset code:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error verifying reset code',
+      error: error.message
+    });
+  }
+});
+
+// 3. Reset password with token/code
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, resetCode, emailOrByuId, newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    let whereClause = {
+      resetPasswordExpires: { [Op.gt]: new Date() },
+      status: 'active'
+    };
+
+    if (token) {
+      whereClause.resetPasswordToken = token;
+    } else if (resetCode) {
+      whereClause.resetPasswordCode = String(resetCode).trim();
+      if (emailOrByuId) {
+        whereClause[Op.or] = [
+          { email: emailOrByuId.trim().toLowerCase() },
+          { byuId: emailOrByuId.trim() }
+        ];
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token or code is required'
+      });
+    }
+
+    const student = await Student.findOne({ where: whereClause });
+
+    if (!student) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired password reset link/code. Please request a new one.'
+      });
+    }
+
+    // Hash and update password, clear reset fields
+    student.password = hashPassword(newPassword);
+    student.resetPasswordToken = null;
+    student.resetPasswordCode = null;
+    student.resetPasswordExpires = null;
+    await student.save();
+
+    // Send confirmation email
+    sendPasswordChangeConfirmationEmail(student).catch(err => {
+      console.error('Error sending password change confirmation:', err);
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Your password has been reset successfully! You can now sign in.'
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error resetting password',
       error: error.message
     });
   }

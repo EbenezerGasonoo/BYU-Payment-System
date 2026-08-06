@@ -65,6 +65,22 @@ Student.init(
       type: DataTypes.STRING(128),
       allowNull: true
     },
+    password: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    resetPasswordToken: {
+      type: DataTypes.STRING(128),
+      allowNull: true
+    },
+    resetPasswordCode: {
+      type: DataTypes.STRING(6),
+      allowNull: true
+    },
+    resetPasswordExpires: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     status: {
       type: DataTypes.ENUM('active', 'deleted'),
       allowNull: false,

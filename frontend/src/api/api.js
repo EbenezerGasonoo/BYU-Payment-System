@@ -69,6 +69,21 @@ export const studentAPI = {
   getRequest: async (requestToken) => {
     const response = await axios.get(`${API_BASE_URL}/student/request/${requestToken}`);
     return response.data;
+  },
+
+  forgotPassword: async (emailOrByuId) => {
+    const response = await axios.post(`${API_BASE_URL}/student/forgot-password`, { emailOrByuId });
+    return response.data;
+  },
+
+  verifyResetCode: async (data) => {
+    const response = await axios.post(`${API_BASE_URL}/student/verify-reset-code`, data);
+    return response.data;
+  },
+
+  resetPassword: async (data) => {
+    const response = await axios.post(`${API_BASE_URL}/student/reset-password`, data);
+    return response.data;
   }
 };
 

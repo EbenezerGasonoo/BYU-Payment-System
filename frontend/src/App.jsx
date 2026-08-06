@@ -9,6 +9,8 @@ import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
 import VerifyEmail from './pages/VerifyEmail';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import InstallButton from './components/InstallButton';
 import OnboardingTour from './components/OnboardingTour';
 import WelcomeModal from './components/WelcomeModal';
@@ -110,6 +112,8 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<StudentRegister />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/admin" element={<AdminDashboard />} />
