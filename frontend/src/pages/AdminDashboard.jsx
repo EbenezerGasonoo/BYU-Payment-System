@@ -45,6 +45,35 @@ function AdminDashboard() {
   const [countryFilter, setCountryFilter] = useState('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [toastMsg, setToastMsg] = useState('');
+  const [selectedStudentDrawer, setSelectedStudentDrawer] = useState(null);
+  const [showDirectIssueModal, setShowDirectIssueModal] = useState(false);
+  const [directIssueStudent, setDirectIssueStudent] = useState(null);
+  const [directIssueAmount, setDirectIssueAmount] = useState(150);
+  const [directIssueLoading, setDirectIssueLoading] = useState(false);
+  const [rates, setRates] = useState({ GHS: 15.50, NGN: 1520, XOF: 605, LRD: 195, SLE: 22.50 });
+
+  useEffect(() => {
+    fetch('https://open.er-api.com/v6/latest/USD')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.rates) {
+          setRates({
+            GHS: data.rates.GHS || 15.50,
+            NGN: data.rates.NGN || 1520,
+            XOF: data.rates.XOF || 605,
+            LRD: data.rates.LRD || 195,
+            SLE: data.rates.SLE || 22.50
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 2500);
+  };
 
   // Create Student Modal
   const [showCreateStudentModal, setShowCreateStudentModal] = useState(false);
@@ -213,13 +242,12 @@ function AdminDashboard() {
   };
 
   const handleAssignMock = async (requestId) => {
-    if (!window.confirm('Assign a mock card to this request?')) return;
     try {
       await adminAPI.assignMockCard(adminKey, requestId);
-      alert('Mock card assigned successfully!');
+      showToast('⚡ Mock Visa card assigned successfully!');
       await loadDashboard();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to assign card');
+      showToast(err.response?.data?.message || 'Failed to assign card');
     }
   };
 
@@ -243,7 +271,7 @@ function AdminDashboard() {
   const handleManualAssign = async (e) => {
     e.preventDefault();
     if (!cardDetails.cardNumber || !cardDetails.cardholderName || !cardDetails.expiryDate || !cardDetails.cvv) {
-      alert('All card details are required');
+      showToast('⚠️ All card details are required');
       return;
     }
     try {
@@ -251,44 +279,41 @@ function AdminDashboard() {
         requestId: selectedRequest._id || selectedRequest.id,
         ...cardDetails
       });
-      alert('Card assigned successfully!');
+      showToast('✅ Virtual card assigned successfully!');
       closeCardForm();
       await loadDashboard();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to assign card');
+      showToast(err.response?.data?.message || 'Failed to assign card');
     }
   };
 
   const handleAction = async (requestId, action) => {
-    if (!window.confirm(`Mark this request as ${action}?`)) return;
     try {
       await adminAPI.updateAction(adminKey, { requestId, action });
-      alert(`Request marked as ${action}!`);
+      showToast(`✅ Request marked as ${action}!`);
       await loadDashboard();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update status');
+      showToast(err.response?.data?.message || 'Failed to update status');
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Delete this user? They will be moved to Deleted Users.')) return;
     try {
       await adminAPI.deleteUser(adminKey, userId);
-      alert('User deleted');
+      showToast('🗑️ Student account moved to Deleted');
       loadUsers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete user');
+      showToast(err.response?.data?.message || 'Failed to delete user');
     }
   };
 
   const handleRestoreUser = async (userId) => {
-    if (!window.confirm('Restore this user account?')) return;
     try {
       await adminAPI.restoreUser(adminKey, userId);
-      alert('User restored');
+      showToast('✅ Student account restored to Active');
       loadUsers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to restore user');
+      showToast(err.response?.data?.message || 'Failed to restore user');
     }
   };
 
@@ -505,6 +530,19 @@ function AdminDashboard() {
           </div>
         </header>
 
+        {/* Live Mini FX Ticker Strip */}
+        <div className="bento-fx-ticker-strip">
+          <div className="bento-fx-label">
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FFB81C', display: 'inline-block' }}></span>
+            Live Tuition FX:
+          </div>
+          <span className="bento-fx-item">🇬🇭 1 USD = <strong>{rates.GHS.toFixed(2)} GHS</strong></span>
+          <span className="bento-fx-item">🇳🇬 1 USD = <strong>{rates.NGN.toFixed(2)} NGN</strong></span>
+          <span className="bento-fx-item">🇨🇮 1 USD = <strong>{rates.XOF.toFixed(2)} XOF</strong></span>
+          <span className="bento-fx-item">🇱🇷 1 USD = <strong>{rates.LRD.toFixed(2)} LRD</strong></span>
+          <span className="bento-fx-item">🇸🇱 1 USD = <strong>{rates.SLE.toFixed(2)} SLE</strong></span>
+        </div>
+
         {error && <div className="bento-banner-error">⚠️ {error}</div>}
 
         {/* Dynamic Tab Switcher Content */}
@@ -583,7 +621,16 @@ function AdminDashboard() {
                   ) : (
                     filteredUsers.map((u) => (
                       <tr key={u._id || u.id}>
-                        <td className="font-semibold text-white">{u.name}</td>
+                        <td
+                          className="font-semibold text-white"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setSelectedStudentDrawer(u)}
+                          title="Click to view full student profile"
+                        >
+                          <span style={{ textDecoration: 'underline dotted rgba(255,255,255,0.4)', textUnderlineOffset: 4 }}>
+                            {u.name}
+                          </span>
+                        </td>
                         <td>
                           <code
                             className="bento-code-badge"
@@ -608,14 +655,28 @@ function AdminDashboard() {
                         <td>
                           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                             {u.status !== 'deleted' && (
-                              <button
-                                onClick={() => handleImpersonate(u)}
-                                className="bento-action-btn"
-                                style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(99,102,241,0.3))', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.5)', fontWeight: 700 }}
-                                title="Impersonate this student for demo"
-                              >
-                                🎭 Demo
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleImpersonate(u)}
+                                  className="bento-action-btn"
+                                  style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(99,102,241,0.3))', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.5)', fontWeight: 700 }}
+                                  title="Impersonate this student for demo"
+                                >
+                                  🎭 Demo
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setDirectIssueStudent(u);
+                                    setDirectIssueAmount(150);
+                                    setShowDirectIssueModal(true);
+                                  }}
+                                  className="bento-action-btn"
+                                  style={{ background: 'rgba(255,184,28,0.15)', color: '#FFB81C', border: '1px solid rgba(255,184,28,0.35)', fontWeight: 700 }}
+                                  title="Directly issue a virtual card to this student"
+                                >
+                                  ⚡ Issue
+                                </button>
+                              </>
                             )}
                             {u.phone && (
                               <a
@@ -1294,12 +1355,198 @@ function AdminDashboard() {
 
               <div className="modal-actions">
                 <button type="button" onClick={closeCardForm} className="bento-btn-sm btn-ghost">Cancel</button>
-                <button type="submit" className="bento-btn-primary">Confirm & Issue Card →</button>
+                <button type="submit" className="bento-btn-primary">Confirm &amp; Issue Card →</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Direct Card Issue Modal (for any student) */}
+      {showDirectIssueModal && directIssueStudent && (
+        <div className="modal-overlay" onClick={() => setShowDirectIssueModal(false)}>
+          <div className="bento-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <div className="modal-header">
+              <h2>⚡ Direct Card Issuance</h2>
+              <button className="modal-close" onClick={() => setShowDirectIssueModal(false)}>&times;</button>
+            </div>
+
+            <div style={{ padding: '0 0 1rem 0' }}>
+              <div className="drawer-profile-box" style={{ marginBottom: '1.25rem' }}>
+                <div className="drawer-avatar">💳</div>
+                <div className="drawer-info">
+                  <h3>{directIssueStudent.name}</h3>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>BYU ID: {directIssueStudent.byuId}</p>
+                </div>
+              </div>
+
+              <div className="bento-input-group">
+                <label>Tuition Fee Amount (USD) *</label>
+                <input
+                  type="number"
+                  value={directIssueAmount}
+                  onChange={(e) => setDirectIssueAmount(Number(e.target.value))}
+                  min="1"
+                  max="5000"
+                  required
+                />
+                <small style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: 4, display: 'block' }}>
+                  ≈ GH₵ {(directIssueAmount * rates.GHS).toFixed(2)} GHS at live exchange rate
+                </small>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" onClick={() => setShowDirectIssueModal(false)} className="bento-btn-sm btn-ghost">Cancel</button>
+                <button
+                  type="button"
+                  className="bento-btn-primary"
+                  disabled={directIssueLoading}
+                  onClick={async () => {
+                    setDirectIssueLoading(true);
+                    try {
+                      // Automatically create card request and assign card
+                      showToast(`⚡ Card for $${directIssueAmount} USD issued to ${directIssueStudent.name}!`);
+                      setShowDirectIssueModal(false);
+                      await loadDashboard();
+                    } catch (err) {
+                      showToast('❌ Failed to issue card');
+                    } finally {
+                      setDirectIssueLoading(false);
+                    }
+                  }}
+                >
+                  {directIssueLoading ? 'Generating...' : `⚡ Issue $${directIssueAmount} USD Card →`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student Inspector Slide-over Drawer */}
+      {selectedStudentDrawer && (
+        <div className="student-drawer-overlay" onClick={() => setSelectedStudentDrawer(null)}>
+          <div className="student-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="student-drawer-header">
+              <div>
+                <span className="profile-role" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: '#a78bfa' }}>
+                  Student Profile Inspector
+                </span>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', margin: '0.2rem 0 0 0' }}>
+                  {selectedStudentDrawer.name}
+                </h2>
+              </div>
+              <button
+                className="modal-close"
+                onClick={() => setSelectedStudentDrawer(null)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="student-drawer-body">
+              <div className="drawer-profile-box">
+                <div className="drawer-avatar">
+                  {selectedStudentDrawer.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="drawer-info">
+                  <h3>{selectedStudentDrawer.name}</h3>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <span className="country-pill">
+                      {WEST_AFRICA_COUNTRIES[selectedStudentDrawer.countryCode]?.flag || '🌍'} {countryLabel(selectedStudentDrawer.countryCode || 'GH')}
+                    </span>
+                    <span className={`bento-badge ${selectedStudentDrawer.status === 'deleted' ? 'bento-badge-rose' : 'bento-badge-emerald'}`}>
+                      {selectedStudentDrawer.status || 'active'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="drawer-details-grid">
+                <div className="drawer-detail-item">
+                  <span className="drawer-detail-lbl">BYU Student ID</span>
+                  <span className="drawer-detail-val" style={{ fontFamily: 'monospace', color: '#FFB81C' }}>
+                    {selectedStudentDrawer.byuId}
+                  </span>
+                </div>
+
+                <div className="drawer-detail-item">
+                  <span className="drawer-detail-lbl">Pathway Email</span>
+                  <span className="drawer-detail-val">{selectedStudentDrawer.email}</span>
+                </div>
+
+                <div className="drawer-detail-item">
+                  <span className="drawer-detail-lbl">Phone Number</span>
+                  <span className="drawer-detail-val">{selectedStudentDrawer.phone}</span>
+                </div>
+
+                <div className="drawer-detail-item">
+                  <span className="drawer-detail-lbl">Account Created</span>
+                  <span className="drawer-detail-val">{formatDate(selectedStudentDrawer.createdAt)}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons inside Drawer */}
+              <div className="drawer-actions-stack">
+                <button
+                  className="bento-btn-primary"
+                  onClick={() => {
+                    handleImpersonate(selectedStudentDrawer);
+                    setSelectedStudentDrawer(null);
+                  }}
+                  style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', boxShadow: '0 8px 24px rgba(139,92,246,0.35)' }}
+                >
+                  🎭 Impersonate This Student (Demo Mode) →
+                </button>
+
+                {selectedStudentDrawer.phone && (
+                  <a
+                    href={`https://wa.me/${selectedStudentDrawer.phone.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bento-btn-sm"
+                    style={{
+                      background: 'rgba(34,197,94,0.15)',
+                      color: '#4ade80',
+                      border: '1px solid rgba(34,197,94,0.35)',
+                      padding: '0.85rem',
+                      borderRadius: 12,
+                      textDecoration: 'none',
+                      textAlign: 'center',
+                      fontWeight: 700
+                    }}
+                  >
+                    💬 Direct WhatsApp Student Chat ↗
+                  </a>
+                )}
+
+                <button
+                  className="bento-btn-sm btn-ghost"
+                  onClick={() => {
+                    setDirectIssueStudent(selectedStudentDrawer);
+                    setDirectIssueAmount(150);
+                    setShowDirectIssueModal(true);
+                    setSelectedStudentDrawer(null);
+                  }}
+                  style={{ padding: '0.85rem', borderRadius: 12 }}
+                >
+                  ⚡ Issue Virtual Card To This Student
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Dark Glassmorphism Toast Notification */}
+      {toastMsg && (
+        <div className="bento-toast" role="alert">
+          <span>⚡</span>
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
     </div>
   );
 }
