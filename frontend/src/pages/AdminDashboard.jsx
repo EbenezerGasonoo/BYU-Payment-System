@@ -423,6 +423,7 @@ function AdminDashboard() {
           >
             <span className="nav-icon">👥</span>
             <span className="nav-text">Students</span>
+            {users.length > 0 && <span className="nav-pill" style={{ background: '#8b5cf6' }}>{users.length}</span>}
           </button>
 
           <button
@@ -477,6 +478,21 @@ function AdminDashboard() {
                 <button className="search-clear-sm" onClick={() => setSearchQuery('')}>✕</button>
               )}
             </div>
+
+            {/* Live DB Connection Badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.35rem 0.85rem', borderRadius: 20, fontSize: '0.8rem', color: '#34d399', fontWeight: 700 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }}></span>
+              MongoDB Atlas Live
+            </div>
+
+            {/* Create Student Header Shortcut */}
+            <button
+              onClick={() => setShowCreateStudentModal(true)}
+              className="bento-btn-sm"
+              style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: '#ffffff', fontWeight: 800, padding: '0.45rem 0.9rem', borderRadius: 10, border: 'none', cursor: 'pointer' }}
+            >
+              + Create Student
+            </button>
 
             <div className="bento-profile-pill">
               <div className="profile-avatar">🛡️</div>
@@ -595,11 +611,23 @@ function AdminDashboard() {
                               <button
                                 onClick={() => handleImpersonate(u)}
                                 className="bento-action-btn"
-                                style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)' }}
+                                style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(99,102,241,0.3))', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.5)', fontWeight: 700 }}
                                 title="Impersonate this student for demo"
                               >
                                 🎭 Demo
                               </button>
+                            )}
+                            {u.phone && (
+                              <a
+                                href={`https://wa.me/${u.phone.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bento-action-btn"
+                                style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+                                title="Chat on WhatsApp"
+                              >
+                                💬 WA
+                              </a>
                             )}
                             {u.status === 'deleted' ? (
                               <button onClick={() => handleRestoreUser(u._id || u.id)} className="bento-action-btn green">Restore</button>
@@ -938,7 +966,17 @@ function AdminDashboard() {
                       <span className="activity-title">{r.student?.name || 'Student Request'}</span>
                       <span className="activity-sub">BYU ID: {r.student?.byuId || 'N/A'} • {formatDate(r.createdAt)}</span>
                     </div>
-                    <div className="activity-right">
+                    <div className="activity-right" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      {r.student && (
+                        <button
+                          onClick={() => handleImpersonate(r.student)}
+                          className="bento-action-btn"
+                          style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)', padding: '2px 8px', fontSize: '0.72rem' }}
+                          title="Impersonate student"
+                        >
+                          🎭 Demo
+                        </button>
+                      )}
                       <span className="activity-amount">${r.amount || 0}</span>
                       <span className={`bento-badge ${getStatusBadge(r.status)}`}>{(r.status || 'pending').toUpperCase()}</span>
                     </div>
