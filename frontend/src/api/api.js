@@ -175,6 +175,22 @@ export const adminAPI = {
       headers: { 'x-admin-key': adminKey }
     });
     return response.data;
+  },
+
+  // Verify that an admin key is valid (used by AdminLogin page)
+  verifyKey: async (adminKey) => {
+    const response = await axios.get(`${API_BASE_URL}/admin/verify`, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
+  },
+
+  // Fetch a single student by BYU ID for impersonation
+  getStudentByByuId: async (adminKey, byuId) => {
+    const response = await axios.get(`${API_BASE_URL}/admin/users/by-byu/${byuId}`, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
   }
 };
 

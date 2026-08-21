@@ -4,6 +4,7 @@ import StudentRegister from './pages/StudentRegister';
 import RequestPayment from './pages/RequestPayment';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminLogin from './pages/AdminLogin';
 import Home from './pages/Home';
 import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
@@ -19,7 +20,10 @@ import ProgressTracker from './components/ProgressTracker';
 import LiveChat from './components/LiveChat';
 import LanguageToggle from './components/LanguageToggle';
 import ProtectedRoute from './components/ProtectedRoute';
+import ImpersonationBanner from './components/ImpersonationBanner';
 import { AuthProvider, useAuth } from './utils/AuthContext';
+import { AdminAuthProvider } from './utils/AdminAuthContext';
+import { ImpersonationProvider } from './utils/ImpersonationContext';
 import './App.css';
 
 function AppContent() {
@@ -28,7 +32,7 @@ function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const isAdminPage = location.pathname === '/admin';
+  const isAdminPage = location.pathname.startsWith('/admin');
 
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -41,6 +45,9 @@ function AppContent() {
 
   return (
     <div className="app">
+      {/* Impersonation banner — always on top when active */}
+      <ImpersonationBanner />
+
       {!isAdminPage && (
         <>
           <OnboardingTour />
@@ -116,10 +123,13 @@ function AppContent() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
 
-          {/* ── PROTECTED ROUTES ── */}
+          {/* ── ADMIN ROUTES ── */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+
+          {/* ── PROTECTED STUDENT ROUTES ── */}
           <Route
             path="/request"
             element={
@@ -158,11 +168,16 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <AdminAuthProvider>
+        <ImpersonationProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </ImpersonationProvider>
+      </AdminAuthProvider>
     </Router>
   );
 }
 
 export default App;
+

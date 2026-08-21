@@ -4,6 +4,101 @@
   flex-direction: column;
 }
 
+/* ============================================================
+   IMPERSONATION BANNER — Admin demo mode indicator
+   ============================================================ */
+.impersonation-banner {
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  background: linear-gradient(90deg, #b45309 0%, #d97706 50%, #b45309 100%);
+  background-size: 200% 100%;
+  animation: impBannerPulse 3s ease-in-out infinite;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 3px 12px rgba(180, 83, 9, 0.5);
+  border-bottom: 2px solid #fbbf24;
+}
+
+@keyframes impBannerPulse {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+.imp-banner-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.55rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.imp-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.imp-icon {
+  font-size: 1.15rem;
+}
+
+.imp-label {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  font-weight: 900;
+}
+
+.imp-divider {
+  opacity: 0.6;
+}
+
+.imp-name {
+  font-size: 0.88rem;
+}
+
+.imp-name strong {
+  color: #fef3c7;
+}
+
+.imp-id-badge {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 1px 8px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: #fef3c7;
+}
+
+.imp-exit-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.imp-exit-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: #ffffff;
+  transform: scale(1.03);
+}
+
 /* Navbar */
 .navbar {
   background: rgba(0, 46, 93, 0.75);

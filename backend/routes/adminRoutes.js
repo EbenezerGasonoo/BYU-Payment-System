@@ -36,7 +36,27 @@ const verifyAdminKey = (req, res, next) => {
 // Apply admin middleware to all routes
 router.use(verifyAdminKey);
 
-// Get all card requests with filters
+// ── Verify admin key (used by AdminLogin page to validate key) ──
+router.get('/verify', (req, res) => {
+  res.json({ success: true, message: 'Admin key is valid' });
+});
+
+// ── Get a single student by byuId (used for impersonation) ──
+router.get('/users/by-byu/:byuId', async (req, res) => {
+  try {
+    const { byuId } = req.params;
+    const student = await Student.findOne({ where: { byuId } });
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    res.json({ success: true, data: student });
+  } catch (error) {
+    console.error('Error fetching student for impersonation:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+
 router.get('/requests', async (req, res) => {
   try {
     const { status } = req.query;

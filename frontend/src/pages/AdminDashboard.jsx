@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../api/api';
+import { useAdminAuth } from '../utils/AdminAuthContext';
+import { useImpersonation } from '../utils/ImpersonationContext';
+import { useAuth } from '../utils/AuthContext';
 import AdminChat from '../components/AdminChat';
 import './AdminDashboard.css';
 
@@ -23,9 +27,11 @@ const countryLabel = (code) => {
 };
 
 function AdminDashboard() {
-  const [adminKey, setAdminKey] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [authenticated, setAuthenticated] = useState(false);
+  const { isAdmin, adminKey, adminLogout } = useAdminAuth();
+  const { impersonate } = useImpersonation();
+  const { login: studentLogin } = useAuth();
+  const navigate = useNavigate();
+
   const [requests, setRequests] = useState([]);
   const [stats, setStats] = useState(null);
   const [countryStats, setCountryStats] = useState([]);
@@ -59,42 +65,35 @@ function AdminDashboard() {
   });
 
   const loadDashboard = useCallback(async () => {
-    const keyToUse = adminKey || '';
-    if (!keyToUse) return;
-
+    if (!adminKey) return;
     setLoading(true);
     setError('');
-
     try {
       const [requestsData, statsData, countryData] = await Promise.all([
-        adminAPI.getRequests(keyToUse, filter),
-        adminAPI.getStats(keyToUse),
-        adminAPI.getCountryStats(keyToUse)
+        adminAPI.getRequests(adminKey, filter),
+        adminAPI.getStats(adminKey),
+        adminAPI.getCountryStats(adminKey)
       ]);
-
       setRequests(requestsData.data || []);
       setStats(statsData.data || null);
       setCountryStats(countryData.data || []);
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Failed to load dashboard data';
       setError(errorMessage);
-
       if (err.response?.status === 403) {
-        setAuthenticated(false);
-        setAdminKey('');
+        adminLogout();
+        navigate('/admin/login');
       }
     } finally {
       setLoading(false);
     }
-  }, [adminKey, filter]);
+  }, [adminKey, filter, adminLogout, navigate]);
 
   const loadUsers = useCallback(async () => {
-    const keyToUse = adminKey || '';
-    if (!keyToUse) return;
-
+    if (!adminKey) return;
     setLoading(true);
     try {
-      const usersData = await adminAPI.getUsers(keyToUse, userFilter === 'deleted' ? 'deleted' : '');
+      const usersData = await adminAPI.getUsers(adminKey, userFilter === 'deleted' ? 'deleted' : '');
       setUsers(usersData.data || []);
     } catch (err) {
       console.error('Failed to load users:', err);
@@ -103,30 +102,26 @@ function AdminDashboard() {
     }
   }, [adminKey, userFilter]);
 
-  const handleAuth = async () => {
-    if (!adminKey.trim()) {
-      setError('Please enter your admin access key');
-      return;
+  // Redirect to login if not authenticated as admin
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate('/admin/login', { replace: true });
     }
-
-    setError('');
-    setAuthenticated(true);
-    await loadDashboard();
-  };
+  }, [isAdmin, navigate]);
 
   useEffect(() => {
-    if (authenticated && adminKey) {
+    if (isAdmin && adminKey) {
       if (activeTab === 'users') {
         loadUsers();
       } else {
         loadDashboard();
       }
     }
-  }, [filter, authenticated, activeTab, userFilter, loadDashboard, loadUsers]);
+  }, [filter, isAdmin, adminKey, activeTab, userFilter, loadDashboard, loadUsers]);
 
   // Auto-refresh interval (30s)
   useEffect(() => {
-    if (!autoRefresh || !authenticated) return;
+    if (!autoRefresh || !isAdmin) return;
     const interval = setInterval(() => {
       if (activeTab === 'users') {
         loadUsers();
@@ -134,9 +129,8 @@ function AdminDashboard() {
         loadDashboard();
       }
     }, 30000);
-
     return () => clearInterval(interval);
-  }, [autoRefresh, authenticated, activeTab, loadDashboard, loadUsers]);
+  }, [autoRefresh, isAdmin, activeTab, loadDashboard, loadUsers]);
 
   const filteredRequests = useMemo(() => {
     if (!searchQuery.trim()) return requests;
@@ -298,13 +292,16 @@ function AdminDashboard() {
     }
   };
 
+  // ── Impersonation: inject student into AuthContext then navigate ──
+  const handleImpersonate = (student) => {
+    impersonate(student);
+    studentLogin({ byuId: student.byuId, name: student.name, email: student.email || '' });
+    navigate('/dashboard');
+  };
+
   const handleLogout = () => {
-    setAuthenticated(false);
-    setAdminKey('');
-    setRequests([]);
-    setStats(null);
-    setCountryStats([]);
-    setError('');
+    adminLogout();
+    navigate('/admin/login');
   };
 
   const handleCreateStudent = async (e) => {
@@ -349,49 +346,8 @@ function AdminDashboard() {
     });
   };
 
-  // ── Authentication Screen ──
-  if (!authenticated) {
-    return (
-      <div className="bento-auth-wrapper">
-        <div className="bento-auth-card">
-          <div className="bento-auth-brand">
-            <div className="brand-logo-pill">⚡</div>
-            <h2>ConnectPay Studio</h2>
-            <p>Admin Operations & Oversight Console</p>
-          </div>
-
-          {error && <div className="bento-auth-alert">⚠️ {error}</div>}
-
-          <form onSubmit={(e) => { e.preventDefault(); handleAuth(); }}>
-            <div className="bento-input-group">
-              <label>Admin Security Key</label>
-              <div className="bento-input-relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={adminKey}
-                  onChange={(e) => { setAdminKey(e.target.value); setError(''); }}
-                  placeholder="Enter secret key..."
-                  autoFocus
-                  required
-                />
-                <button
-                  type="button"
-                  className="bento-eye-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? '👁️' : '🙈'}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" className="bento-btn-primary">
-              Enter Workspace →
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
+  // Redirect handled by useEffect above — show loading while redirecting
+  if (!isAdmin) return null;
 
   // ── Real metrics from API ──
   const totalVolume = stats?.totalRevenue ?? 0;
@@ -634,11 +590,23 @@ function AdminDashboard() {
                         </td>
                         <td>{formatDate(u.createdAt)}</td>
                         <td>
-                          {u.status === 'deleted' ? (
-                            <button onClick={() => handleRestoreUser(u._id || u.id)} className="bento-action-btn green">Restore</button>
-                          ) : (
-                            <button onClick={() => handleDeleteUser(u._id || u.id)} className="bento-action-btn red">Delete</button>
-                          )}
+                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                            {u.status !== 'deleted' && (
+                              <button
+                                onClick={() => handleImpersonate(u)}
+                                className="bento-action-btn"
+                                style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)' }}
+                                title="Impersonate this student for demo"
+                              >
+                                🎭 Demo
+                              </button>
+                            )}
+                            {u.status === 'deleted' ? (
+                              <button onClick={() => handleRestoreUser(u._id || u.id)} className="bento-action-btn green">Restore</button>
+                            ) : (
+                              <button onClick={() => handleDeleteUser(u._id || u.id)} className="bento-action-btn red">Delete</button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
