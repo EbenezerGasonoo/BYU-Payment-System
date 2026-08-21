@@ -1,24 +1,55 @@
-const { sequelize } = require('../config/database');
-const Student = require('./Student');
-const CardRequest = require('./CardRequest');
-const ContactMessage = require('./ContactMessage');
-const ChatMessage = require('./ChatMessage');
+const { sequelize, isConnected: isSqlConnected } = require('../config/database');
+const { isMongoConnected } = require('../config/mongodb');
+const SqlStudent = require('./Student');
+const SqlCardRequest = require('./CardRequest');
+const SqlContactMessage = require('./ContactMessage');
+const SqlChatMessage = require('./ChatMessage');
+const {
+  StudentAdapter,
+  CardRequestAdapter,
+  ContactMessageAdapter,
+  ChatMessageAdapter
+} = require('./mongoAdapter');
 
-Student.hasMany(CardRequest, {
+SqlStudent.hasMany(SqlCardRequest, {
   foreignKey: { name: 'studentId', allowNull: false },
   as: 'cardRequests',
   onDelete: 'CASCADE'
 });
 
-CardRequest.belongsTo(Student, {
+SqlCardRequest.belongsTo(SqlStudent, {
   foreignKey: { name: 'studentId', allowNull: false },
   as: 'student'
 });
 
 const syncModels = async () => {
-  await sequelize.sync();
-  console.log('Database tables synced');
+  if (isSqlConnected()) {
+    await sequelize.sync();
+    console.log('Database tables synced (PostgreSQL)');
+  }
 };
+
+/**
+ * Creates a dynamic proxy that delegates to MongoAdapter if MongoDB is connected,
+ * otherwise delegates to the Sequelize Model.
+ */
+function createProxy(mongoAdapter, sqlModel) {
+  return new Proxy(sqlModel, {
+    get(target, prop) {
+      if (isMongoConnected()) {
+        if (prop in mongoAdapter) {
+          return mongoAdapter[prop];
+        }
+      }
+      return target[prop];
+    }
+  });
+}
+
+const Student        = createProxy(StudentAdapter,        SqlStudent);
+const CardRequest    = createProxy(CardRequestAdapter,    SqlCardRequest);
+const ContactMessage = createProxy(ContactMessageAdapter, SqlContactMessage);
+const ChatMessage    = createProxy(ChatMessageAdapter,    SqlChatMessage);
 
 module.exports = {
   sequelize,
@@ -28,3 +59,4 @@ module.exports = {
   ChatMessage,
   syncModels
 };
+

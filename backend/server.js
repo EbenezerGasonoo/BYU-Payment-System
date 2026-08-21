@@ -4,6 +4,7 @@ const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const { connectDB, isConnected, pingDB } = require('./config/database');
+const { connectMongoDB, isMongoConnected, pingMongo } = require('./config/mongodb');
 const { startCardExpiryJob } = require('./utils/cronJobs');
 const { ChatMessage } = require('./models');
 
@@ -32,7 +33,12 @@ console.log('🌍 NODE_ENV:', process.env.NODE_ENV || 'development');
 // This must work even if DB is down or routes fail
 app.get('/api/health', async (req, res) => {
   try {
-    const dbStatus = (await pingDB()) ? 'connected' : 'disconnected';
+    let dbStatus = 'disconnected';
+    if (isMongoConnected()) {
+      dbStatus = (await pingMongo()) ? 'connected' : 'disconnected';
+    } else {
+      dbStatus = (await pingDB()) ? 'connected' : 'disconnected';
+    }
 
     res.status(200).json({
       status: 'OK',
@@ -315,9 +321,13 @@ const startServer = async () => {
   console.log(`📧 Email notifications: ${process.env.EMAIL_USER ? 'Enabled' : 'Disabled'}`);
   console.log(`🔐 Admin key: ${process.env.ADMIN_KEY ? 'Set' : 'Not set'}`);
 
-  await connectDB();
+  if (process.env.MONGODB_URI) {
+    await connectMongoDB();
+  } else {
+    await connectDB();
+  }
 
-  if (isConnected()) {
+  if (isMongoConnected() || isConnected()) {
     console.log('💾 Database: Connected');
     startCardExpiryJob();
     console.log('✅ Cron jobs started');
