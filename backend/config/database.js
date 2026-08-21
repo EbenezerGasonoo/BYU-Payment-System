@@ -58,8 +58,10 @@ const getConnectionLabel = () => {
 };
 
 const connectDB = async () => {
-  if (!DATABASE_URL && !DB_PASSWORD && DB_HOST.includes('supabase')) {
-    console.warn('⚠️  Set DATABASE_URL or SUPABASE_DB_PASSWORD in backend/.env');
+  if (!DATABASE_URL && !DB_PASSWORD && !process.env.DB_PASSWORD) {
+    console.warn('⚠️ No DATABASE_URL or DB_PASSWORD configured in backend/.env. Server will run in standalone mode.');
+    dbReady = false;
+    return null;
   }
 
   try {

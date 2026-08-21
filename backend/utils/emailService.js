@@ -11,11 +11,14 @@ let transporter = null;
 if (isEmailConfigured()) {
   transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST || 'mail.entechnologygh.com',
-    port: process.env.EMAIL_PORT || 465,
-    secure: true, // true for 465, false for other ports
+    port: parseInt(process.env.EMAIL_PORT || '465', 10),
+    secure: (process.env.EMAIL_PORT || '465') === '465', // true for 465, false for other ports
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD
+    },
+    tls: {
+      rejectUnauthorized: false
     }
   });
 

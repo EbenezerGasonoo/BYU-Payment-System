@@ -3,12 +3,17 @@ const router = express.Router();
 const { ContactMessage } = require('../models');
 const nodemailer = require('nodemailer');
 
-// Create reusable transporter
+// Create reusable transporter matching email configuration
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.EMAIL_HOST || 'mail.entechnologygh.com',
+  port: parseInt(process.env.EMAIL_PORT || '465', 10),
+  secure: (process.env.EMAIL_PORT || '465') === '465',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 });
 
