@@ -32,10 +32,11 @@ function Home() {
 
   return (
     <div className="home-page-wrapper">
+      
       {/* WEST AFRICA FX LIVE TICKER BAR */}
       <div className="fx-ticker-bar">
         <div className="ticker-label">
-          <span className="live-dot"></span> LIVE WEST AFRICA FX:
+          <span className="live-dot"></span> LIVE BYU-PATHWAY TUITION FX:
         </div>
         <div className="ticker-track">
           <span className="ticker-item">🇬🇭 1 USD = <strong>{rates.GHS.toFixed(2)} GHS</strong></span>
@@ -46,7 +47,7 @@ function Home() {
         </div>
       </div>
 
-      {/* HERO SECTION */}
+      {/* HERO SECTION — HIGHER EDUCATION THAT FITS YOUR LIFE */}
       <section className="hero-modern-section">
         <div className="hero-mesh-overlay"></div>
         <div className="container hero-grid">
@@ -54,15 +55,15 @@ function Home() {
           {/* HERO LEFT COLUMN */}
           <div className="hero-text-content">
             <div className="hero-pill-badge">
-              <span className="badge-icon">⚡</span> Built for BYU Pathway Students across Ghana &amp; West Africa
+              <span className="badge-icon">🎓</span> BYU-Pathway Worldwide • Ghana Student Payment Desk
             </div>
             
             <h1 className="hero-main-title">
-              Empowering Your Future with <span className="text-gradient">Instant Virtual Cards</span>
+              Higher Education That <span className="text-gradient">Fits Your Life</span> — Funded from Home
             </h1>
             
             <p className="hero-description">
-              Pay your BYU Pathway university tuition effortlessly with MTN MoMo, Telecel Cash, or Paystack. ConnectPay delivers your secure USD Virtual Card automatically in minutes.
+              Earn spiritually-based, accredited online certificates and degrees from <strong>BYU-Idaho</strong> and <strong>Ensign College</strong> right from your home in Ghana. ConnectPay enables instant tuition fee payments directly using local Mobile Money (MTN MoMo, Telecel Cash, AT).
             </p>
 
             <div className="hero-cta-group">
@@ -74,170 +75,221 @@ function Home() {
               </Link>
             </div>
 
-            {/* TRUST METRICS BADGES */}
+            {/* TRUST METRICS */}
             <div className="hero-trust-metrics">
               <div className="trust-item">
-                <span className="trust-number">⚡ &lt; 5 Mins</span>
-                <span className="trust-label">Fast Card Issuance</span>
+                <span className="trust-number">🏠 100% Online</span>
+                <span className="trust-label">Study from Home</span>
               </div>
               <div className="trust-divider"></div>
               <div className="trust-item">
-                <span className="trust-number">🔒 256-Bit</span>
-                <span className="trust-label">Encrypted Gateway</span>
+                <span className="trust-number">📜 BYU-Idaho</span>
+                <span className="trust-label">&amp; Ensign Degrees</span>
               </div>
               <div className="trust-divider"></div>
               <div className="trust-item">
-                <span className="trust-number">🎓 1,200+</span>
-                <span className="trust-label">Students Supported</span>
+                <span className="trust-number">⚡ MTN MoMo</span>
+                <span className="trust-label">Direct Ghana Payment</span>
               </div>
             </div>
           </div>
 
-          {/* HERO RIGHT COLUMN - HUMAN PHOTO & VIRTUAL CARD PREVIEW */}
+          {/* HERO RIGHT COLUMN - STUDY AT HOME VISUAL */}
           <div className="hero-card-preview">
             <div className="hero-visual-container">
               <img 
-                src="/images/students-hero.jpg" 
-                alt="BYU Pathway Students in Ghana" 
+                src="/images/byu-study-home.jpg" 
+                alt="Student studying BYU-Pathway online courses from home in Ghana" 
                 className="hero-student-photo"
               />
               <div className="hero-floating-badge">
                 <div className="hero-badge-left">
-                  <div className="hero-avatar-stack">
-                    <img src="/images/avatar-kwame.jpg" alt="Student Kwame" className="hero-mini-avatar" />
-                    <img src="/images/avatar-ama.jpg" alt="Student Ama" className="hero-mini-avatar" />
-                    <img src="/images/support-specialist.jpg" alt="Support Specialist" className="hero-mini-avatar" />
-                  </div>
+                  <div className="home-icon">🏠</div>
                   <div className="hero-badge-text">
-                    <strong>1,200+ Ghanaian Students</strong>
-                    <span>Tuition Paid on Time</span>
+                    <strong>Online Learning at Home</strong>
+                    <span>Flexible coursework that fits work &amp; family</span>
                   </div>
                 </div>
-                <span className="hero-badge-pill">✓ Verified</span>
+                <span className="hero-badge-pill">✓ Ghana Cohort</span>
               </div>
             </div>
 
-            <div style={{ marginTop: '1.5rem' }}>
+            <div style={{ marginTop: '0.5rem' }}>
               <VirtualCardVisualizer
                 cardNumber="4124559081239842"
-                cardholderName="CONNECTPAY STUDENT"
+                cardholderName="BYU-PATHWAY STUDENT"
                 expiryDate="08/28"
                 cvv="892"
                 amountUsd={150.00}
                 cardStatus="active"
               />
-              <p className="card-interact-hint" style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
-                ✨ Click card above to flip and preview card credentials
-              </p>
             </div>
           </div>
 
         </div>
       </section>
 
-      {/* REGIONAL COVERAGE & PAYMENT RAILS SECTION */}
+      {/* SUPPORTED LOCAL PAYMENT CHANNELS */}
       <section className="rails-banner-section">
         <div className="container">
-          <p className="rails-title">SUPPORTED GHANA &amp; WEST AFRICA PAYMENT NETWORKS</p>
+          <p className="rails-title">SUPPORTED LOCAL MOBILE MONEY &amp; CARD SETTLEMENT CHANNELS</p>
           <div className="rails-grid">
-            <div className="rail-badge">🇬🇭 MTN Mobile Money</div>
+            <div className="rail-badge">🇬🇭 MTN Mobile Money (MoMo)</div>
             <div className="rail-badge">🇬🇭 Telecel Cash (Vodafone)</div>
             <div className="rail-badge">🇬🇭 AT Money (AirtelTigo)</div>
-            <div className="rail-badge">⚡ Hubtel Direct Debit</div>
-            <div className="rail-badge">💳 Paystack Visa &amp; Mastercard</div>
+            <div className="rail-badge">⚡ Hubtel Direct Debit Gateway</div>
+            <div className="rail-badge">💳 Paystack Local Bank Cards</div>
           </div>
         </div>
       </section>
 
-      {/* HUMAN FEATURE SPOTLIGHT: HOW MOBILE MONEY POWERS TUITION */}
-      <section className="container">
-        <div className="human-feature-row">
-          <div className="human-feature-img-box">
+      {/* 3 PILLARS OF BYU-PATHWAY WORLDWIDE */}
+      <section className="byu-pillars-section">
+        <div className="container">
+          <div className="section-header text-center">
+            <div className="hero-pill-badge" style={{ background: 'rgba(0, 46, 93, 0.08)', color: 'var(--cp-navy)', borderColor: 'rgba(0, 46, 93, 0.15)' }}>
+              <span>🌟</span> The BYU-Pathway Model
+            </div>
+            <h2 className="section-title">An Education Built for <span className="text-gradient">Your Success &amp; Discipleship</span></h2>
+            <p className="section-subtitle">
+              BYU-Pathway Worldwide combines low-cost online learning with gospel-centered support to help students throughout Ghana build self-reliance and career skills.
+            </p>
+          </div>
+
+          <div className="pillars-grid">
+            
+            {/* Pillar 1: Online Learning from Home */}
+            <div className="pillar-card">
+              <div className="pillar-icon-box blue-bg">💻</div>
+              <h3>100% Online Degrees</h3>
+              <p>
+                Complete your courses anytime, anywhere in Ghana. Coursework is delivered entirely online in partnership with <strong>BYU-Idaho</strong> and <strong>Ensign College</strong>, designed to fit around your work and family commitments.
+              </p>
+              <span className="pillar-tag">✓ Certificate-First Curriculum</span>
+            </div>
+
+            {/* Pillar 2: Weekly Gatherings */}
+            <div className="pillar-card gold">
+              <div className="pillar-icon-box gold-bg">🤝</div>
+              <h3>Weekly Gatherings</h3>
+              <p>
+                Connect weekly with fellow Ghanaian students at local Institute gathering centers (Accra, Kumasi, Cape Coast, Takoradi, Sunyani) or virtual cohorts for faith-filled collaboration, spiritual growth, and academic teamwork.
+              </p>
+              <span className="pillar-tag">✓ Local Fellowship &amp; Mentorship</span>
+            </div>
+
+            {/* Pillar 3: Accessible & Low-Cost Tuition */}
+            <div className="pillar-card emerald">
+              <div className="pillar-icon-box green-bg">💰</div>
+              <h3>Affordable Tuition in MoMo</h3>
+              <p>
+                Tuition rates are significantly discounted for West Africa with Heber J. Grant scholarships. ConnectPay eliminates foreign card barriers by letting you pay semester tuition directly in Cedis via Mobile Money.
+              </p>
+              <span className="pillar-tag">✓ Instant USD Virtual Card</span>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* GATHERING CENTER & COMMUNITY FEATURE */}
+      <section className="gathering-section">
+        <div className="container gathering-grid">
+          
+          <div className="gathering-img-box">
             <img 
-              src="/images/student-mobile-pay.jpg" 
-              alt="Student Paying BYU Pathway Tuition with Mobile Money" 
-              className="human-feature-img"
+              src="/images/byu-gathering.jpg" 
+              alt="Weekly BYU-Pathway student gathering in Ghana institute" 
+              className="gathering-img"
             />
-            <div className="img-floating-stat">
-              <span className="stat-emoji">📱</span>
-              <div className="stat-content">
-                <strong>Instant MoMo Debit</strong>
-                <span>Direct Hubtel Gateway</span>
-              </div>
+            <div className="gathering-floating-tag">
+              🇬🇭 Accra &amp; Kumasi Gathering Centers • Weekly Student Cohorts
             </div>
           </div>
 
-          <div className="human-feature-text">
-            <div className="hero-pill-badge" style={{ marginBottom: '1rem' }}>
-              <span>🇬🇭</span> Dedicated Ghana Student Desk
+          <div className="gathering-text">
+            <div className="hero-pill-badge" style={{ background: 'rgba(0, 46, 93, 0.06)', color: 'var(--cp-navy)', borderColor: 'rgba(0, 46, 93, 0.12)', marginBottom: '1rem' }}>
+              <span>🤝</span> Community &amp; Fellowship
             </div>
-            <h2>Pay Tuition with Mobile Money Without Leaving Campus</h2>
+            <h2>More Than an Online Class — A Gathering of Disciples</h2>
             <p>
-              No need to queue at commercial banks or struggle with dollar exchange limits. ConnectPay connects your local MoMo wallet directly to university tuition settlement rails.
+              In BYU-Pathway Worldwide, students in Ghana gather every week in local meetinghouses and online groups to discuss lessons, practice English and professional skills, and strengthen one another in the gospel of Jesus Christ.
             </p>
-            
-            <div className="feature-check-list">
-              <div className="check-item">
-                <span className="check-icon">✓</span>
-                <span>Direct debit on MTN MoMo, Telecel Cash, and AT Money</span>
-              </div>
-              <div className="check-item">
-                <span className="check-icon">✓</span>
-                <span>Virtual Card issued to your official @byupathway.edu email</span>
-              </div>
-              <div className="check-item">
-                <span className="check-icon">✓</span>
-                <span>Live Accra support team ready to assist via WhatsApp &amp; Phone</span>
-              </div>
+            <p style={{ fontSize: '0.95rem', color: 'var(--cp-muted)' }}>
+              ConnectPay ensures that financial and cross-border currency hurdles never stop you from attending gatherings and registering for your next semester block.
+            </p>
+
+            <div className="gathering-locations-list">
+              <div className="gathering-location-badge">📍 Accra Gathering Center</div>
+              <div className="gathering-location-badge">📍 Kumasi Gathering Hub</div>
+              <div className="gathering-location-badge">📍 Takoradi Gathering Center</div>
+              <div className="gathering-location-badge">📍 Cape Coast Center</div>
             </div>
 
             <Link to="/request" className="btn btn-hero-primary" style={{ display: 'inline-flex' }}>
-              Start Card Request →
+              Fund Your Next Semester →
             </Link>
           </div>
+
         </div>
       </section>
 
-      {/* CORE FEATURES SECTION */}
-      <section className="features-section container">
-        <div className="section-header text-center">
-          <h2 className="section-title">Designed for <span className="text-gradient">Seamless Student Payments</span></h2>
-          <p className="section-subtitle">Everything you need to receive and manage your virtual school fee card</p>
-        </div>
-
-        <div className="features-grid-3">
-          <div className="feature-card-modern">
-            <div className="feature-icon-box yellow">👤</div>
-            <h3>1. Student Registration</h3>
-            <p>Register securely using your university student ID and email. One account unlocks instant virtual card requests.</p>
-            <Link to="/register" className="card-link">Register Account →</Link>
+      {/* CERTIFICATE-FIRST DEGREE PROGRAMS */}
+      <section className="degrees-section">
+        <div className="container">
+          <div className="section-header text-center">
+            <div className="hero-pill-badge" style={{ background: 'rgba(0, 46, 93, 0.08)', color: 'var(--cp-navy)' }}>
+              <span>📜</span> Certificate-First Career Pathways
+            </div>
+            <h2 className="section-title">Start with a Certificate, <span className="text-gradient">Finish with a Degree</span></h2>
+            <p className="section-subtitle">
+              Earn employable credentials in your very first year (5 courses) that stack into full Associate and Bachelor's degrees awarded by BYU-Idaho and Ensign College.
+            </p>
           </div>
 
-          <div className="feature-card-modern highlight">
-            <div className="feature-icon-box blue">💳</div>
-            <h3>2. Request &amp; Pay Local</h3>
-            <p>Calculate live GHS, NGN, or XOF exchange rates with standard fee protection. Pay via your favorite MoMo or card rail.</p>
-            <Link to="/request" className="card-link">Request Card Now →</Link>
-          </div>
+          <div className="degrees-grid">
+            
+            <div className="degree-card">
+              <div className="degree-icon">💻</div>
+              <h3>Applied Technology &amp; IT</h3>
+              <p>Software development, web and computer programming, system administration, and technical support.</p>
+              <div className="degree-partner">Awarded by BYU-Idaho</div>
+            </div>
 
-          <div className="feature-card-modern">
-            <div className="feature-icon-box green">📊</div>
-            <h3>3. Real-Time Dashboard</h3>
-            <p>Access active card numbers, CVV, expiry dates, transaction status, and instant card status controls anytime.</p>
-            <Link to="/dashboard" className="card-link">View Dashboard →</Link>
+            <div className="degree-card">
+              <div className="degree-icon">📊</div>
+              <h3>Business &amp; Entrepreneurship</h3>
+              <p>Business administration, accounting fundamentals, digital marketing, and project management.</p>
+              <div className="degree-partner">Awarded by BYU-Idaho</div>
+            </div>
+
+            <div className="degree-card">
+              <div className="degree-icon">🏥</div>
+              <h3>Health &amp; Community Care</h3>
+              <p>Community health administration, health data management, and public health coordination.</p>
+              <div className="degree-partner">Awarded by BYU-Idaho</div>
+            </div>
+
+            <div className="degree-card">
+              <div className="degree-icon">🛡️</div>
+              <h3>Professional Communication</h3>
+              <p>Workplace leadership, professional writing, organizational communication, and public speaking.</p>
+              <div className="degree-partner">Awarded by Ensign College</div>
+            </div>
+
           </div>
         </div>
       </section>
 
-      {/* REAL STUDENT STORIES / TESTIMONIALS SECTION */}
+      {/* REAL STUDENT STORIES FROM GHANA GATHERING CENTERS */}
       <section className="testimonials-section">
         <div className="container">
           <div className="section-header text-center">
-            <div className="hero-pill-badge" style={{ marginBottom: '0.75rem' }}>
-              <span>💬</span> Student Community Voices
+            <div className="hero-pill-badge" style={{ marginBottom: '0.75rem', background: 'rgba(0, 46, 93, 0.06)', color: 'var(--cp-navy)' }}>
+              <span>💬</span> Student Success Stories
             </div>
-            <h2 className="section-title">Loved by <span className="text-gradient">BYU Pathway Students</span></h2>
-            <p className="section-subtitle">Read how students across Ghana fund their education smoothly with ConnectPay</p>
+            <h2 className="section-title">Voices from <span className="text-gradient">Ghanaian Students</span></h2>
+            <p className="section-subtitle">Hear how students in Accra, Kumasi, and Takoradi pay for their online degrees</p>
           </div>
 
           <div className="testimonials-grid">
@@ -246,7 +298,7 @@ function Home() {
             <div className="testimonial-card">
               <div className="quote-stars">★★★★★</div>
               <p className="testimonial-text">
-                "Paying my tuition used to take days of trying different bank cards that often failed. With ConnectPay and MTN MoMo, my virtual card was generated in under 15 minutes and my semester fees were confirmed immediately!"
+                "Studying online from home while working in Accra was made possible through BYU-Pathway. But paying in USD was hard until ConnectPay. I used MTN MoMo, got my virtual card in 10 minutes, and registered on my.byupathway.edu immediately!"
               </p>
               <div className="testimonial-author">
                 <img src="/images/avatar-kwame.jpg" alt="Kwame Mensah" className="author-avatar" />
@@ -262,7 +314,7 @@ function Home() {
             <div className="testimonial-card">
               <div className="quote-stars">★★★★★</div>
               <p className="testimonial-text">
-                "The WhatsApp support desk is amazing. Abena answered my questions right away, and I got my receipt and card details directly in my student email. It makes studying with BYU Pathway so much easier."
+                "The weekly gatherings in Kumasi gave me friends and spiritual strength. When tuition deadlines approached, ConnectPay made paying so easy without needing an international bank card. Abena on WhatsApp was so helpful!"
               </p>
               <div className="testimonial-author">
                 <img src="/images/avatar-ama.jpg" alt="Ama Serwaa" className="author-avatar" />
@@ -278,7 +330,7 @@ function Home() {
             <div className="testimonial-card">
               <div className="quote-stars">★★★★★</div>
               <p className="testimonial-text">
-                "Hubtel Mobile Money debit makes everything seamless. I entered my Ghana phone number, approved the prompt on my phone, and my virtual card was active on my dashboard right away. Super reliable!"
+                "Hubtel Mobile Money direct debit was fast and simple. I approved the prompt on my phone in Takoradi, and the virtual card details arrived in my @byupathway.edu inbox within 5 minutes. Perfect platform for students."
               </p>
               <div className="testimonial-author">
                 <img src="/images/student-mobile-pay.jpg" alt="Kofi Boateng" className="author-avatar" />
@@ -294,53 +346,54 @@ function Home() {
         </div>
       </section>
 
-      {/* HOW IT WORKS TIMELINE SECTION */}
+      {/* 5-STEP SIMPLE PAYMENT TIMELINE */}
       <section className="timeline-section">
         <div className="container">
           <div className="section-header text-center">
-            <h2 className="section-title">How It <span className="text-gradient">Works</span></h2>
-            <p className="section-subtitle">5 simple steps to pay your tuition</p>
+            <h2 className="section-title">How to Pay Your <span className="text-gradient">BYU-Pathway Tuition</span></h2>
+            <p className="section-subtitle">5 simple steps from your Mobile Money wallet to your official university ledger</p>
           </div>
 
           <div className="timeline-grid">
             <div className="timeline-step">
               <div className="step-circle">1</div>
-              <h4>Register</h4>
-              <p>Sign up with your BYU student ID and @byupathway.edu email.</p>
+              <h4>Register Account</h4>
+              <p>Sign up with your BYU Student ID and @byupathway.edu email.</p>
             </div>
             <div className="timeline-step">
               <div className="step-circle">2</div>
-              <h4>Submit Request</h4>
-              <p>Specify your required tuition fee amount in USD.</p>
+              <h4>Request Virtual Card</h4>
+              <p>Enter the exact USD tuition amount listed on your student portal.</p>
             </div>
             <div className="timeline-step">
               <div className="step-circle">3</div>
-              <h4>Pay via MoMo</h4>
-              <p>Pay in GHS via MTN MoMo, Telecel Cash, AT, or Hubtel.</p>
+              <h4>Pay in Ghana Cedis</h4>
+              <p>Approve your local MoMo debit (MTN, Telecel, AT) via Hubtel.</p>
             </div>
             <div className="timeline-step">
               <div className="step-circle">4</div>
-              <h4>Instant Card Issue</h4>
-              <p>ConnectPay generates and delivers your USD Virtual Visa Card details.</p>
+              <h4>Receive USD Card</h4>
+              <p>Instant virtual Visa card credentials delivered to your inbox.</p>
             </div>
             <div className="timeline-step">
               <div className="step-circle">5</div>
-              <h4>Complete Payment</h4>
-              <p>Enter card credentials into your university student portal.</p>
+              <h4>Complete Enrollment</h4>
+              <p>Enter the card on my.byupathway.edu to confirm your semester courses.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FOOTER NOTICE */}
+      {/* FOOTER DISCLAIMER */}
       <section className="container disclaimer-banner" style={{ paddingBottom: '3rem' }}>
         <div className="alert alert-info-modern">
           <span className="info-icon">ℹ️</span>
           <div>
-            <strong>Student Community Initiative:</strong> This platform is designed specifically for BYU Pathway students across West Africa to simplify fee payments. Virtual USD cards are active upon assignment and can be managed directly on your dashboard.
+            <strong>Student Community Payment Gateway:</strong> ConnectPay is designed to support BYU-Pathway Worldwide students across Ghana and West Africa in completing their course payments seamlessly. Degrees and certificates are awarded directly by BYU-Idaho and Ensign College.
           </div>
         </div>
       </section>
+
     </div>
   );
 }
