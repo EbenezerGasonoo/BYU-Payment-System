@@ -1,0 +1,543 @@
+/* ============================================================
+   CONNECTPAY STUDENT DASHBOARD STYLES
+   State-of-the-art Fintech Dashboard for BYU-Pathway Students
+   ============================================================ */
+
+.student-dashboard-wrapper {
+  min-height: 85vh;
+  padding: 2rem 0 5rem 0;
+  background: linear-gradient(180deg, rgba(0, 46, 93, 0.03) 0%, rgba(248, 250, 252, 1) 100%);
+}
+
+/* ── Top Profile / Welcome Header ── */
+.sd-header-card {
+  background: linear-gradient(135deg, #002E5D 0%, #001f3f 60%, #0a192f 100%);
+  border-radius: 20px;
+  padding: 2.25rem 2.5rem;
+  color: #ffffff;
+  margin-bottom: 2rem;
+  box-shadow: 0 16px 40px rgba(0, 46, 93, 0.18);
+  position: relative;
+  overflow: hidden;
+}
+
+.sd-header-mesh {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(255, 184, 28, 0.2) 0%, rgba(0, 46, 93, 0) 70%);
+  pointer-events: none;
+}
+
+.sd-header-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.sd-profile-info {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.sd-avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFB81C 0%, #d97706 100%);
+  color: #002E5D;
+  font-size: 1.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(255, 184, 28, 0.35);
+  flex-shrink: 0;
+}
+
+.sd-profile-details h1 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.4rem 0;
+  letter-spacing: -0.02em;
+}
+
+.sd-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.sd-id-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-family: monospace;
+  font-weight: 700;
+  color: #fef3c7;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sd-id-badge:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.sd-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+}
+
+.sd-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.sd-btn-request {
+  background: linear-gradient(135deg, #FFB81C 0%, #f59e0b 100%);
+  color: #002E5D;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0.85rem 1.4rem;
+  border-radius: 12px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 8px 24px rgba(255, 184, 28, 0.35);
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.sd-btn-request:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(255, 184, 28, 0.5);
+  color: #001a35;
+}
+
+.sd-btn-sync {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 0.85rem 1.1rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sd-btn-sync:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ── KPI Grid ── */
+.sd-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2.25rem;
+}
+
+.sd-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sd-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 46, 93, 0.08);
+}
+
+.sd-kpi-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.sd-kpi-icon-box.gold   { background: rgba(255, 184, 28, 0.12); color: #d97706; }
+.sd-kpi-icon-box.green  { background: rgba(16, 185, 129, 0.12); color: #059669; }
+.sd-kpi-icon-box.blue   { background: rgba(0, 46, 93, 0.08);    color: #002E5D; }
+.sd-kpi-icon-box.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+
+.sd-kpi-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sd-kpi-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+}
+
+.sd-kpi-value {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.15;
+}
+
+.sd-kpi-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+/* ── Section Title & Layout ── */
+.sd-main-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1.75rem;
+  margin-bottom: 2.5rem;
+}
+
+@media (max-width: 1024px) {
+  .sd-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sd-section-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.sd-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.sd-section-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #002E5D;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Virtual Card Spotlight ── */
+.sd-active-card-container {
+  background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.sd-card-timer-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 184, 28, 0.15);
+  border: 1px solid rgba(255, 184, 28, 0.3);
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.85rem;
+  color: #fef3c7;
+  font-weight: 700;
+}
+
+.sd-card-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.sd-quick-copy-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 0.65rem 0.5rem;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.sd-quick-copy-btn:hover {
+  background: rgba(255, 184, 28, 0.25);
+  border-color: #FFB81C;
+  color: #FFB81C;
+}
+
+.sd-byu-portal-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #FFB81C;
+  color: #002E5D;
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  text-decoration: none;
+  margin-top: 1rem;
+  transition: all 0.2s ease;
+}
+
+.sd-byu-portal-link:hover {
+  background: #f59e0b;
+  transform: translateY(-2px);
+}
+
+/* Empty Active Card State */
+.sd-no-card-box {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+}
+
+.sd-no-card-icon {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+}
+
+.sd-no-card-box h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #002E5D;
+  margin: 0 0 0.5rem 0;
+}
+
+.sd-no-card-box p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0 0 1.25rem 0;
+  line-height: 1.5;
+}
+
+/* ── Step-by-Step Payment Guide ── */
+.sd-guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sd-guide-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.sd-guide-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #002E5D;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sd-guide-text h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.2rem 0;
+}
+
+.sd-guide-text p {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ── Transactions History Table ── */
+.sd-history-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.sd-filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.sd-filter-tab {
+  background: #f1f5f9;
+  border: none;
+  padding: 0.45rem 0.95rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.sd-filter-tab.active {
+  background: #002E5D;
+  color: #ffffff;
+}
+
+.sd-table-container {
+  overflow-x: auto;
+}
+
+.sd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.sd-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.sd-table td {
+  padding: 1rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #1e293b;
+}
+
+.sd-table tr:hover td {
+  background: #f8fafc;
+}
+
+.sd-token-code {
+  font-family: monospace;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #002E5D;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sd-token-code:hover {
+  background: #e2e8f0;
+}
+
+/* Status Badges */
+.sd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sd-badge.active   { background: rgba(16, 185, 129, 0.15); color: #065f46; border: 1px solid rgba(16, 185, 129, 0.3); }
+.sd-badge.paid     { background: rgba(59, 130, 246, 0.15); color: #1e40af; border: 1px solid rgba(59, 130, 246, 0.3); }
+.sd-badge.pending  { background: rgba(245, 158, 11, 0.15); color: #92400e; border: 1px solid rgba(245, 158, 11, 0.3); }
+.sd-badge.expired  { background: rgba(239, 68, 68, 0.12); color: #991b1b; border: 1px solid rgba(239, 68, 68, 0.25); }
+
+/* Copy Toast */
+.sd-toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 0.85rem 1.5rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-left: 4px solid #FFB81C;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
