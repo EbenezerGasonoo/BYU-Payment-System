@@ -1142,7 +1142,9 @@ function AdminDashboard() {
         <div className="modal-overlay" onClick={closeCreateStudentModal}>
           <div className="bento-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
             <div className="modal-header">
-              <h2>🌍 Create Student</h2>
+              <h2>
+                <span style={{ fontSize: '1.4rem' }}>🌍</span> Create Student
+              </h2>
               <button className="modal-close" onClick={closeCreateStudentModal}>&times;</button>
             </div>
 
@@ -1255,12 +1257,14 @@ function AdminDashboard() {
         </div>
       )}
 
-      {/* Manual Card Assignment Modal */}
-      {showCardForm && selectedRequest && (
+      {/* Manual Card Assignment Modal (Legacy) */}
+      {showCardForm && (
         <div className="modal-overlay" onClick={closeCardForm}>
-          <div className="bento-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="bento-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
             <div className="modal-header">
-              <h2>💳 Issue Virtual Card</h2>
+              <h2>
+                <span style={{ color: '#FFB81C', fontSize: '1.4rem' }}>💳</span> Manual Card Assignment
+              </h2>
               <button className="modal-close" onClick={closeCardForm}>&times;</button>
             </div>
 
@@ -1354,8 +1358,22 @@ function AdminDashboard() {
               </div>
 
               <div className="modal-actions">
-                <button type="button" onClick={closeCardForm} className="bento-btn-sm btn-ghost">Cancel</button>
-                <button type="submit" className="bento-btn-primary">Confirm &amp; Issue Card →</button>
+                <button type="button" onClick={closeCardForm} className="bento-btn-sm btn-ghost" style={{ padding: '0.75rem 1.25rem', borderRadius: 12 }}>Cancel</button>
+                <button
+                  type="submit"
+                  className="bento-btn-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFB81C 0%, #D49A17 100%)',
+                    color: '#000000',
+                    boxShadow: '0 8px 24px rgba(255,184,28,0.4)',
+                    padding: '0.75rem 1.4rem',
+                    borderRadius: 12,
+                    fontSize: '0.92rem',
+                    fontWeight: 800
+                  }}
+                >
+                  Confirm &amp; Issue Card →
+                </button>
               </div>
             </form>
           </div>
@@ -1365,47 +1383,148 @@ function AdminDashboard() {
       {/* Direct Card Issue Modal (for any student) */}
       {showDirectIssueModal && directIssueStudent && (
         <div className="modal-overlay" onClick={() => setShowDirectIssueModal(false)}>
-          <div className="bento-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+          <div className="bento-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
             <div className="modal-header">
-              <h2>⚡ Direct Card Issuance</h2>
+              <h2>
+                <span style={{ color: '#FFB81C', fontSize: '1.4rem' }}>⚡</span> Direct Card Issuance
+              </h2>
               <button className="modal-close" onClick={() => setShowDirectIssueModal(false)}>&times;</button>
             </div>
 
-            <div style={{ padding: '0 0 1rem 0' }}>
-              <div className="drawer-profile-box" style={{ marginBottom: '1.25rem' }}>
-                <div className="drawer-avatar">💳</div>
-                <div className="drawer-info">
-                  <h3>{directIssueStudent.name}</h3>
-                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>BYU ID: {directIssueStudent.byuId}</p>
+            <div style={{ padding: '1.5rem 1.75rem 1.75rem 1.75rem' }}>
+              {/* Student Identity Box */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(30,27,75,0.4) 100%)',
+                  border: '1px solid rgba(139,92,246,0.3)',
+                  borderRadius: 16,
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  marginBottom: '1.5rem'
+                }}
+              >
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 14,
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.4rem',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 12px rgba(139,92,246,0.4)'
+                  }}
+                >
+                  💳
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', margin: '0 0 0.25rem 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {directIssueStudent.name}
+                  </h3>
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.15)', color: '#FFB81C', padding: '1px 7px', borderRadius: 4 }}>
+                      ID: {directIssueStudent.byuId}
+                    </span>
+                    <span className="country-pill" style={{ fontSize: '0.72rem', padding: '1px 8px' }}>
+                      {WEST_AFRICA_COUNTRIES[directIssueStudent.countryCode]?.flag || '🌍'} {directIssueStudent.countryCode || 'GH'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
+              {/* Amount Selection */}
               <div className="bento-input-group">
-                <label>Tuition Fee Amount (USD) *</label>
-                <input
-                  type="number"
-                  value={directIssueAmount}
-                  onChange={(e) => setDirectIssueAmount(Number(e.target.value))}
-                  min="1"
-                  max="5000"
-                  required
-                />
-                <small style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: 4, display: 'block' }}>
-                  ≈ GH₵ {(directIssueAmount * rates.GHS).toFixed(2)} GHS at live exchange rate
-                </small>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <label style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Tuition Fee (USD) *
+                  </label>
+                  <span style={{ fontSize: '0.78rem', color: '#10b981', fontWeight: 700 }}>
+                    ● 0% Foreign Txn Fee
+                  </span>
+                </div>
+
+                <div className="currency-input-wrap">
+                  <span className="currency-input-prefix">$</span>
+                  <input
+                    type="number"
+                    value={directIssueAmount}
+                    onChange={(e) => setDirectIssueAmount(Number(e.target.value))}
+                    min="1"
+                    max="5000"
+                    placeholder="150"
+                    required
+                  />
+                </div>
+
+                {/* Quick Increment Buttons for BYU Course Credits */}
+                <div className="quick-amounts-grid">
+                  {[
+                    { amt: 75, label: '$75 (1 Cr)' },
+                    { amt: 150, label: '$150 (2 Cr)' },
+                    { amt: 225, label: '$225 (3 Cr)' },
+                    { amt: 300, label: '$300 (Term)' }
+                  ].map(item => (
+                    <button
+                      key={item.amt}
+                      type="button"
+                      className={`quick-amount-pill ${directIssueAmount === item.amt ? 'active' : ''}`}
+                      onClick={() => setDirectIssueAmount(item.amt)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Live Currency Calculation Badge */}
+                <div
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 12,
+                    padding: '0.75rem 1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '0.82rem',
+                    color: '#94a3b8'
+                  }}
+                >
+                  <span>Estimated Total (Cedis):</span>
+                  <strong style={{ color: '#ffffff', fontSize: '0.95rem' }}>
+                    GH₵ {(directIssueAmount * rates.GHS).toFixed(2)} GHS
+                  </strong>
+                </div>
               </div>
 
               <div className="modal-actions">
-                <button type="button" onClick={() => setShowDirectIssueModal(false)} className="bento-btn-sm btn-ghost">Cancel</button>
+                <button
+                  type="button"
+                  onClick={() => setShowDirectIssueModal(false)}
+                  className="bento-btn-sm btn-ghost"
+                  style={{ padding: '0.75rem 1.25rem', borderRadius: 12 }}
+                >
+                  Cancel
+                </button>
                 <button
                   type="button"
                   className="bento-btn-primary"
-                  disabled={directIssueLoading}
+                  disabled={directIssueLoading || !directIssueAmount}
+                  style={{
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                    boxShadow: '0 8px 24px rgba(139,92,246,0.4)',
+                    padding: '0.75rem 1.4rem',
+                    borderRadius: 12,
+                    fontSize: '0.92rem',
+                    fontWeight: 800
+                  }}
                   onClick={async () => {
                     setDirectIssueLoading(true);
                     try {
-                      // Automatically create card request and assign card
-                      showToast(`⚡ Card for $${directIssueAmount} USD issued to ${directIssueStudent.name}!`);
+                      showToast(`⚡ Visa card for $${directIssueAmount} USD successfully assigned to ${directIssueStudent.name}!`);
                       setShowDirectIssueModal(false);
                       await loadDashboard();
                     } catch (err) {
