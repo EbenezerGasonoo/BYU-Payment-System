@@ -79,6 +79,15 @@ function StudentRegister() {
         <h1>Student Registration</h1>
         <p className="subtitle">Register to access the virtual card payment system</p>
 
+        {/* Student Community Trust Banner */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: 'rgba(0, 46, 93, 0.04)', padding: '0.85rem 1.15rem', borderRadius: '14px', marginBottom: '1.75rem', border: '1px solid rgba(0, 46, 93, 0.08)' }}>
+          <img src="/images/avatar-ama.jpg" alt="BYU Student Ama" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #FFB81C', flexShrink: 0 }} />
+          <div style={{ fontSize: '0.86rem', color: '#1e293b', lineHeight: '1.4' }}>
+            <strong>"Registration took me less than a minute."</strong>
+            <div style={{ color: '#64748b', fontSize: '0.78rem' }}>Join 1,200+ Ghanaian students using ConnectPay</div>
+          </div>
+        </div>
+
         {message.text && (
           <div className={`alert alert-${message.type}`}>
             {message.text}

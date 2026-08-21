@@ -559,6 +559,20 @@ function Contact() {
           {/* Sidebar */}
           <div className="contact-sidebar">
             
+            {/* Dedicated Support Lead Specialist */}
+            <div className="advisor-card-widget">
+              <img 
+                src="/images/support-specialist.jpg" 
+                alt="Abena Osei - Lead Student Support Advisor" 
+                className="advisor-avatar-img" 
+              />
+              <div className="advisor-details">
+                <h4>Abena Osei</h4>
+                <p>Senior Student Support Advisor • Accra Desk</p>
+                <span className="advisor-live-badge">🟢 Online &amp; Assisting Students</span>
+              </div>
+            </div>
+
             {/* Live Operating Status Card */}
             <div className="sidebar-card">
               <div className="sidebar-card-header">

@@ -53,10 +53,16 @@ export default function Login() {
       <div className="login-card">
         {/* Header */}
         <div className="login-header">
-          <div className="login-logo">🎓</div>
-          <h1 className="login-title">Welcome Back</h1>
+          <div className="login-logo" style={{ background: 'transparent', padding: 0 }}>
+            <img 
+              src="/images/avatar-kwame.jpg" 
+              alt="BYU Student Kwame" 
+              style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #FFB81C', margin: '0 auto', display: 'block', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }} 
+            />
+          </div>
+          <h1 className="login-title">Student Portal Login</h1>
           <p className="login-subtitle">
-            Sign in with your BYU Student ID to continue with ConnectPay
+            Access your active BYU Pathway virtual cards and payment records
           </p>
         </div>
 

@@ -388,13 +388,20 @@ function FAQ() {
           </div>
         )}
 
-        {/* Bottom CTA Banner */}
+        {/* Bottom CTA Banner with Advisor Presence */}
         <div className="faq-cta-banner">
-          <div className="faq-cta-content">
-            <h3>Still need assistance?</h3>
-            <p>
-              Our dedicated Ghana support team is ready to assist you with virtual cards, fee payments, or login questions.
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <img 
+              src="/images/support-specialist.jpg" 
+              alt="Abena Osei - Student Support Advisor" 
+              style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--cp-gold)', flexShrink: 0, boxShadow: '0 4px 14px rgba(0,0,0,0.25)' }}
+            />
+            <div className="faq-cta-content">
+              <h3>Still need personalized guidance?</h3>
+              <p>
+                Abena and our dedicated Accra student advisors are on standby to guide you through tuition payments, Mobile Money, and card issuance.
+              </p>
+            </div>
           </div>
           <div className="faq-cta-buttons">
             <Link to="/contact" className="faq-cta-btn-primary">
