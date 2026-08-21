@@ -58,61 +58,63 @@ function AppContent() {
         </>
       )}
 
-      <nav className="navbar">
-        <div className="container">
-          <div className="nav-brand">
-            <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <h2>⚡ ConnectPay</h2>
-              <p>West Africa Virtual Card Platform</p>
-            </Link>
+      {!isAdminPage && (
+        <nav className="navbar">
+          <div className="container">
+            <div className="nav-brand">
+              <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <h2>⚡ ConnectPay</h2>
+                <p>West Africa Virtual Card Platform</p>
+              </Link>
+            </div>
+
+            {/* Hamburger Menu Button */}
+            <button
+              className={`hamburger ${mobileMenuOpen ? 'active' : ''}`}
+              onClick={toggleMobileMenu}
+              aria-label="Toggle menu"
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+
+            {/* Navigation Links */}
+            <ul className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+              <li><Link to="/" className="home-link" onClick={closeMobileMenu}>Home</Link></li>
+              <li><Link to="/faq" className="faq-link" onClick={closeMobileMenu}>FAQ</Link></li>
+              <li><Link to="/contact" className="contact-link" onClick={closeMobileMenu}>Contact</Link></li>
+
+              {user ? (
+                /* ── LOGGED IN ── */
+                <>
+                  <li><Link to="/request" className="request-link" onClick={closeMobileMenu}>💳 Request Card</Link></li>
+                  <li><Link to="/dashboard" className="dashboard-link" onClick={closeMobileMenu}>📊 Dashboard</Link></li>
+                  <li>
+                    <div className="nav-user-pill">
+                      <span className="nav-user-name">👤 {user.name.split(' ')[0]}</span>
+                      <button className="nav-logout-btn" onClick={handleLogout}>Sign Out</button>
+                    </div>
+                  </li>
+                </>
+              ) : (
+                /* ── LOGGED OUT ── */
+                <>
+                  <li><Link to="/register" className="register-link" onClick={closeMobileMenu}>Register</Link></li>
+                  <li>
+                    <Link to="/login" className="nav-login-btn" onClick={closeMobileMenu}>
+                      Sign In →
+                    </Link>
+                  </li>
+                </>
+              )}
+
+              <li><LanguageToggle currentLang={currentLang} onToggle={setCurrentLang} /></li>
+              <li><InstallButton /></li>
+            </ul>
           </div>
-
-          {/* Hamburger Menu Button */}
-          <button
-            className={`hamburger ${mobileMenuOpen ? 'active' : ''}`}
-            onClick={toggleMobileMenu}
-            aria-label="Toggle menu"
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-
-          {/* Navigation Links */}
-          <ul className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-            <li><Link to="/" className="home-link" onClick={closeMobileMenu}>Home</Link></li>
-            <li><Link to="/faq" className="faq-link" onClick={closeMobileMenu}>FAQ</Link></li>
-            <li><Link to="/contact" className="contact-link" onClick={closeMobileMenu}>Contact</Link></li>
-
-            {user ? (
-              /* ── LOGGED IN ── */
-              <>
-                <li><Link to="/request" className="request-link" onClick={closeMobileMenu}>💳 Request Card</Link></li>
-                <li><Link to="/dashboard" className="dashboard-link" onClick={closeMobileMenu}>📊 Dashboard</Link></li>
-                <li>
-                  <div className="nav-user-pill">
-                    <span className="nav-user-name">👤 {user.name.split(' ')[0]}</span>
-                    <button className="nav-logout-btn" onClick={handleLogout}>Sign Out</button>
-                  </div>
-                </li>
-              </>
-            ) : (
-              /* ── LOGGED OUT ── */
-              <>
-                <li><Link to="/register" className="register-link" onClick={closeMobileMenu}>Register</Link></li>
-                <li>
-                  <Link to="/login" className="nav-login-btn" onClick={closeMobileMenu}>
-                    Sign In →
-                  </Link>
-                </li>
-              </>
-            )}
-
-            <li><LanguageToggle currentLang={currentLang} onToggle={setCurrentLang} /></li>
-            <li><InstallButton /></li>
-          </ul>
-        </div>
-      </nav>
+        </nav>
+      )}
 
       <main className="main-content">
         <Routes>
@@ -149,18 +151,20 @@ function AppContent() {
         </Routes>
       </main>
 
-      <footer className="footer">
-        <div className="container">
-          <div className="footer-content">
-            <div className="footer-links">
-              <Link to="/faq">FAQ</Link>
-              <span className="footer-divider">•</span>
-              <Link to="/contact">Contact</Link>
+      {!isAdminPage && (
+        <footer className="footer">
+          <div className="container">
+            <div className="footer-content">
+              <div className="footer-links">
+                <Link to="/faq">FAQ</Link>
+                <span className="footer-divider">•</span>
+                <Link to="/contact">Contact</Link>
+              </div>
+              <p>&copy; 2025 ConnectPay. West Africa Virtual Card Platform.</p>
             </div>
-            <p>&copy; 2025 ConnectPay. West Africa Virtual Card Platform.</p>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }
