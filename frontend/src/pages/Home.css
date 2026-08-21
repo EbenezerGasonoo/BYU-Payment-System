@@ -1,7 +1,43 @@
 /* ============================================================
-   CONNECTPAY — BYU-PATHWAY WORLDWIDE ONLINE LEARNING THEME
-   Home-like, Spiritual, Academic & Practical West Africa Hub
+   CONNECTPAY — PRODUCT-FIRST FINTECH PLATFORM THEME
+   The #1 Tuition Virtual Card Payment Engine for BYU-Pathway
    ============================================================ */
+
+/* Calculator grid right column */
+.calc-right-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.calc-right-text h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--cp-navy);
+  line-height: 1.2;
+  margin-bottom: 1.25rem;
+}
+
+.calc-right-text p {
+  font-size: 1rem;
+  color: #475569;
+  line-height: 1.65;
+  margin-bottom: 1rem;
+}
+
+/* Growth alert box */
+.growth-alert-box {
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 12px;
+  padding: 0.85rem 1.15rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.88rem;
+  color: #065f46;
+  font-weight: 700;
+}
+
+
 
 /* FX Live Ticker */
 .fx-ticker-bar {
@@ -45,7 +81,7 @@
   color: #FFC844;
 }
 
-/* Hero Modern Section */
+/* Hero Section */
 .hero-modern-section {
   position: relative;
   background: linear-gradient(135deg, #002E5D 0%, #08437d 50%, #001a35 100%);
@@ -93,7 +129,7 @@
 }
 
 .hero-main-title {
-  font-size: 3rem;
+  font-size: 2.9rem;
   font-weight: 800;
   line-height: 1.15;
   color: #ffffff;
@@ -109,7 +145,7 @@
 }
 
 .hero-description {
-  font-size: 1.12rem;
+  font-size: 1.1rem;
   color: rgba(255, 255, 255, 0.88);
   line-height: 1.65;
   margin-bottom: 2rem;
@@ -164,7 +200,7 @@
   transform: translateY(-3px);
 }
 
-/* Trust Metrics Badges */
+/* Trust Metrics */
 .hero-trust-metrics {
   display: flex;
   align-items: center;
@@ -195,7 +231,7 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Hero Right: Photo with Living Room Study Atmosphere */
+/* Hero Right: Card + Visualizer */
 .hero-card-preview {
   display: flex;
   flex-direction: column;
@@ -212,22 +248,17 @@
 
 .hero-student-photo {
   width: 100%;
-  height: 340px;
+  height: 300px;
   object-fit: cover;
   display: block;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.hero-visual-container:hover .hero-student-photo {
-  transform: scale(1.03);
 }
 
 .hero-floating-badge {
   position: absolute;
-  bottom: 1rem;
-  left: 1rem;
-  right: 1rem;
-  background: rgba(0, 30, 60, 0.9);
+  bottom: 0.85rem;
+  left: 0.85rem;
+  right: 0.85rem;
+  background: rgba(0, 30, 60, 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 184, 28, 0.3);
@@ -243,14 +274,14 @@
 .hero-badge-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .hero-badge-left .home-icon {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   background: rgba(255, 184, 28, 0.15);
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -277,7 +308,7 @@
   border-radius: 20px;
 }
 
-/* Regional Payment Rails Banner */
+/* Rails Banner */
 .rails-banner-section {
   background: #ffffff;
   border-bottom: 1px solid var(--cp-border);
@@ -313,10 +344,10 @@
 }
 
 /* ============================================================
-   3 PILLARS OF BYU-PATHWAY WORLDWIDE SECTION
+   CONNECTPAY VALUE PROPOSITION / WHAT WE DO SECTION
    ============================================================ */
 
-.byu-pillars-section {
+.connectpay-features-section {
   padding: 5rem 0;
   background: var(--cp-bg);
 }
@@ -326,7 +357,7 @@
 }
 
 .section-title {
-  font-size: 2.4rem;
+  font-size: 2.3rem;
   font-weight: 800;
   color: var(--cp-navy);
   margin-bottom: 0.65rem;
@@ -348,17 +379,17 @@
   line-height: 1.6;
 }
 
-.pillars-grid {
+.features-grid-4 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
 }
 
-.pillar-card {
+.cp-feature-card {
   background: #ffffff;
   border: 1px solid var(--cp-border);
   border-radius: var(--cp-radius-md);
-  padding: 2.25rem;
+  padding: 2rem 1.5rem;
   box-shadow: var(--cp-shadow-sm);
   display: flex;
   flex-direction: column;
@@ -367,7 +398,7 @@
   overflow: hidden;
 }
 
-.pillar-card::before {
+.cp-feature-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -378,194 +409,295 @@
   transition: background 0.3s ease;
 }
 
-.pillar-card.gold::before { background: var(--cp-gold); }
-.pillar-card.emerald::before { background: #10b981; }
+.cp-feature-card.gold::before { background: var(--cp-gold); }
+.cp-feature-card.green::before { background: #10b981; }
+.cp-feature-card.blue::before { background: #0284c7; }
 
-.pillar-card:hover {
+.cp-feature-card:hover {
   transform: translateY(-5px);
   box-shadow: var(--cp-shadow-md);
 }
 
-.pillar-icon-box {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+.cp-feature-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.75rem;
-  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
-.pillar-icon-box.blue-bg { background: rgba(0, 46, 93, 0.08); color: var(--cp-navy); }
-.pillar-icon-box.gold-bg { background: rgba(255, 184, 28, 0.15); color: #b45309; }
-.pillar-icon-box.green-bg { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.cp-feature-icon.blue-bg { background: rgba(0, 46, 93, 0.08); color: var(--cp-navy); }
+.cp-feature-icon.gold-bg { background: rgba(255, 184, 28, 0.15); color: #b45309; }
+.cp-feature-icon.green-bg { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.cp-feature-icon.cyan-bg { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
 
-.pillar-card h3 {
-  font-size: 1.3rem;
+.cp-feature-card h3 {
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--cp-navy);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
-.pillar-card p {
-  font-size: 0.95rem;
+.cp-feature-card p {
+  font-size: 0.9rem;
   color: #475569;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
+  line-height: 1.55;
+  margin-bottom: 1.25rem;
   flex-grow: 1;
 }
 
-.pillar-tag {
+.cp-feature-tag {
   display: inline-block;
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--cp-navy-mid);
   background: var(--cp-bg);
-  padding: 4px 10px;
-  border-radius: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
   margin-top: auto;
 }
 
 /* ============================================================
-   GATHERING CENTER & COMMUNITY SECTION
+   LIVE TUITION FX CALCULATOR & VIRTUAL CARD PREVIEW
    ============================================================ */
 
-.gathering-section {
+.calculator-showcase-section {
   padding: 5rem 0;
   background: #ffffff;
 }
 
-.gathering-grid {
+.calculator-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3.5rem;
   align-items: center;
 }
 
-.gathering-img-box {
-  position: relative;
+.calculator-card-box {
+  background: var(--cp-bg);
+  border: 1.5px solid var(--cp-border);
   border-radius: var(--cp-radius-lg);
-  overflow: hidden;
-  box-shadow: var(--cp-shadow-lg);
-  border: 3px solid rgba(0, 46, 93, 0.08);
+  padding: 2.25rem;
+  box-shadow: var(--cp-shadow-md);
 }
 
-.gathering-img {
-  width: 100%;
-  height: 440px;
-  object-fit: cover;
-  display: block;
+.calc-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--cp-border);
 }
 
-.gathering-floating-tag {
-  position: absolute;
-  bottom: 1.25rem;
-  left: 1.25rem;
-  background: rgba(0, 46, 93, 0.92);
-  backdrop-filter: blur(12px);
-  color: #ffffff;
-  padding: 0.75rem 1.25rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  border: 1px solid rgba(255, 184, 28, 0.3);
-}
-
-.gathering-text h2 {
-  font-size: 2.3rem;
+.calc-title-row h3 {
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--cp-navy);
-  line-height: 1.2;
+  margin: 0;
+}
+
+.calc-rate-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.calc-input-group {
   margin-bottom: 1.25rem;
 }
 
-.gathering-text p {
-  font-size: 1.05rem;
-  color: #475569;
-  line-height: 1.65;
-  margin-bottom: 1.5rem;
-}
-
-.gathering-locations-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
-}
-
-.gathering-location-badge {
-  background: var(--cp-bg);
-  border: 1px solid var(--cp-border);
-  padding: 0.6rem 0.85rem;
-  border-radius: 10px;
+.calc-input-group label {
+  display: block;
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--cp-navy);
+  margin-bottom: 0.4rem;
+}
+
+.calc-input-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  background: #ffffff;
+  border: 1.5px solid var(--cp-border);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.calc-input-wrapper span {
+  color: var(--cp-muted);
+  margin-right: 0.5rem;
+}
+
+.calc-input-wrapper input {
+  border: none;
+  outline: none;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--cp-navy);
+  width: 100%;
+  font-family: inherit;
+}
+
+.calc-breakdown {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 1px solid var(--cp-border);
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: #475569;
+}
+
+.breakdown-row.total {
+  border-top: 1.5px dashed var(--cp-border);
+  padding-top: 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--cp-navy);
+}
+
+.breakdown-row.total strong {
+  color: #059669;
 }
 
 /* ============================================================
-   CERTIFICATE-FIRST DEGREE PROGRAMS SECTION
+   WHY CONNECTPAY VS TRADITIONAL BANKS (Comparison Table)
    ============================================================ */
 
-.degrees-section {
+.comparison-section {
   padding: 5rem 0;
-  background: linear-gradient(180deg, var(--cp-bg) 0%, #ffffff 100%);
+  background: var(--cp-bg);
 }
 
-.degrees-grid {
+.comparison-table-wrapper {
+  background: #ffffff;
+  border-radius: var(--cp-radius-lg);
+  border: 1px solid var(--cp-border);
+  overflow: hidden;
+  box-shadow: var(--cp-shadow-sm);
+  max-width: 960px;
+  margin: 2.5rem auto 0 auto;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.comparison-table th {
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.comparison-table th:first-child {
+  color: var(--cp-navy);
+}
+
+.comparison-table th.col-connectpay {
+  background: rgba(0, 46, 93, 0.06);
+  color: var(--cp-navy);
+  border-left: 2px solid var(--cp-gold);
+  border-right: 2px solid var(--cp-gold);
+}
+
+.comparison-table th.col-banks {
+  color: var(--cp-muted);
+}
+
+.comparison-table td {
+  padding: 1.1rem 1.5rem;
+  font-size: 0.9rem;
+  border-top: 1px solid var(--cp-border);
+  color: #334155;
+}
+
+.comparison-table td.col-connectpay {
+  background: rgba(0, 46, 93, 0.03);
+  font-weight: 700;
+  color: var(--cp-navy);
+  border-left: 2px solid var(--cp-gold);
+  border-right: 2px solid var(--cp-gold);
+}
+
+.comparison-table td.col-banks {
+  color: #64748b;
+}
+
+/* ============================================================
+   5 STEPS PAYMENT TIMELINE
+   ============================================================ */
+
+.timeline-section {
+  padding: 5rem 0;
+  background: #ffffff;
+}
+
+.timeline-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1.25rem;
   margin-top: 2.5rem;
 }
 
-.degree-card {
-  background: #ffffff;
+.timeline-step {
+  background: var(--cp-bg);
   border: 1px solid var(--cp-border);
   border-radius: var(--cp-radius-md);
-  padding: 1.75rem;
+  padding: 1.75rem 1.25rem;
+  text-align: center;
   box-shadow: var(--cp-shadow-sm);
-  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  position: relative;
 }
 
-.degree-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--cp-shadow-md);
-  border-color: rgba(0, 46, 93, 0.25);
-}
-
-.degree-icon {
-  font-size: 2rem;
+.step-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--cp-navy);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 1rem;
+  box-shadow: 0 4px 14px rgba(0, 46, 93, 0.2);
 }
 
-.degree-card h3 {
-  font-size: 1.1rem;
+.timeline-step h4 {
+  font-size: 1rem;
   font-weight: 700;
   color: var(--cp-navy);
   margin-bottom: 0.5rem;
 }
 
-.degree-card p {
-  font-size: 0.88rem;
+.timeline-step p {
+  font-size: 0.85rem;
   color: var(--cp-muted);
-  line-height: 1.5;
-  margin-bottom: 1rem;
-  flex-grow: 1;
-}
-
-.degree-partner {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--cp-navy-mid);
-  border-top: 1px dashed var(--cp-border);
-  padding-top: 0.75rem;
+  line-height: 1.4;
+  margin: 0;
 }
 
 /* ============================================================
@@ -574,7 +706,7 @@
 
 .testimonials-section {
   padding: 5rem 0;
-  background: #ffffff;
+  background: var(--cp-bg);
   border-top: 1px solid var(--cp-border);
 }
 
@@ -660,80 +792,21 @@
 }
 
 /* ============================================================
-   5 STEPS PAYMENT TIMELINE
+   RESPONSIVE BREAKPOINTS
    ============================================================ */
 
-.timeline-section {
-  padding: 5rem 0;
-  background: var(--cp-bg);
-}
-
-.timeline-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 1.25rem;
-  margin-top: 2.5rem;
-}
-
-.timeline-step {
-  background: #ffffff;
-  border: 1px solid var(--cp-border);
-  border-radius: var(--cp-radius-md);
-  padding: 1.75rem 1.25rem;
-  text-align: center;
-  box-shadow: var(--cp-shadow-sm);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-
-.step-circle {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--cp-navy);
-  color: #ffffff;
-  font-weight: 800;
-  font-size: 1.15rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-  box-shadow: 0 4px 14px rgba(0, 46, 93, 0.2);
-}
-
-.timeline-step h4 {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--cp-navy);
-  margin-bottom: 0.5rem;
-}
-
-.timeline-step p {
-  font-size: 0.85rem;
-  color: var(--cp-muted);
-  line-height: 1.4;
-  margin: 0;
-}
-
-/* Responsive */
 @media (max-width: 1024px) {
   .hero-grid {
     grid-template-columns: 1fr;
     gap: 2.5rem;
   }
 
-  .pillars-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .gathering-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .degrees-grid {
+  .features-grid-4 {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .calculator-grid {
+    grid-template-columns: 1fr;
   }
 
   .testimonials-grid {
@@ -747,14 +820,18 @@
 
 @media (max-width: 640px) {
   .hero-main-title {
-    font-size: 2.2rem;
+    font-size: 2.1rem;
   }
 
-  .degrees-grid {
+  .features-grid-4 {
     grid-template-columns: 1fr;
   }
 
   .timeline-grid {
     grid-template-columns: 1fr;
+  }
+
+  .comparison-table-wrapper {
+    overflow-x: auto;
   }
 }
