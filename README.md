@@ -103,7 +103,7 @@ All guides are in the `docs/` folder:
 ## 🔑 Admin Access
 
 **URL:** https://byupay.vercel.app/admin  
-**Default Admin Key:** `byu-admin-2025-secret-key`  
+**Admin Key:** set via the `ADMIN_KEY` environment variable on Railway (never commit it)  
 *Change this in production!*
 
 ---

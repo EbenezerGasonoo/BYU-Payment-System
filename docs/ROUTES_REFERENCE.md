@@ -54,7 +54,7 @@
 
 | Method | Endpoint | Description | Headers |
 |--------|----------|-------------|---------|
-| `GET` | `/api/admin/requests` | Get all card requests | `x-admin-key: byu-admin-2025-secret-key` |
+| `GET` | `/api/admin/requests` | Get all card requests | `x-admin-key: $ADMIN_KEY` |
 | `GET` | `/api/admin/requests?status=pending` | Filter by status | `x-admin-key: ...` |
 | `POST` | `/api/admin/assign` | Assign real card | `x-admin-key: ...` |
 | `POST` | `/api/admin/assign/mock` | Assign mock card | `x-admin-key: ...` |
@@ -126,7 +126,7 @@ curl -X POST https://byupay.up.railway.app/api/student/register \
 
 # Test admin requests (requires admin key)
 curl https://byupay.up.railway.app/api/admin/requests \
-  -H "x-admin-key: byu-admin-2025-secret-key"
+  -H "x-admin-key: $ADMIN_KEY"
 
 # Test contact submission
 curl -X POST https://byupay.up.railway.app/api/contact/submit \

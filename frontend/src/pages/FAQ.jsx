@@ -1,433 +1,148 @@
-import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import './FAQ.css';
+import { SERVICE, SUPPORT } from '../utils/siteInfo';
+
+const GROUPS = [
+  {
+    title: 'Getting started',
+    items: [
+      {
+        q: 'Who can use ConnectPay?',
+        a: [
+          'BYU-Pathway students with a BYU Student ID and an active @byupathway.edu email address. Payment is by Mobile Money in Ghana.'
+        ]
+      },
+      {
+        q: 'How do I create an account?',
+        a: [
+          'Go to Create account and enter your name, BYU Student ID, Mobile Money number, Pathway email and a password.',
+          'We email a confirmation link to your Pathway address. You need to confirm it before you can request a card.'
+        ]
+      },
+      {
+        q: 'I had an account before passwords were added. How do I sign in?',
+        a: [
+          'Use Forgot password with your BYU Student ID or Pathway email. We email you a 6-digit code, and you can then choose a password.'
+        ]
+      },
+      {
+        q: 'Does it cost anything to sign up?',
+        a: ['No. You only pay when you request a card: the card amount plus the service fee.']
+      }
+    ]
+  },
+  {
+    title: 'Paying and fees',
+    items: [
+      {
+        q: 'How much does it cost?',
+        a: [
+          `A ${SERVICE.feePercent}% service fee on top of the card amount. For a $150 card, you pay the cedi value of $150 plus ${SERVICE.feePercent}%.`,
+          'The total in cedis is shown before you pay. There are no other charges.'
+        ]
+      },
+      {
+        q: 'Which exchange rate do you use?',
+        a: ['The market USD to GHS rate at the moment you submit your request. The amount is then fixed for that request.']
+      },
+      {
+        q: 'Which Mobile Money networks can I pay from?',
+        a: [`${SERVICE.networks.join(', ')}. Payments go through Hubtel, and you approve the prompt on your phone.`]
+      },
+      {
+        q: 'What amount should I request?',
+        a: ['The exact amount shown in USD on your BYU-Pathway payment page. The card is loaded with that amount only.']
+      }
+    ]
+  },
+  {
+    title: 'Your card',
+    items: [
+      {
+        q: 'How long does it take to get my card?',
+        a: [
+          `Usually ${SERVICE.processingTime} after your payment is confirmed, during support hours (${SUPPORT.hours}).`,
+          'You can follow the status in your dashboard.'
+        ]
+      },
+      {
+        q: 'Where do I find the card details?',
+        a: ['In your dashboard after you sign in, and in an email to your Pathway address. You get the card number, expiry date and CVV.']
+      },
+      {
+        q: 'How long is the card valid?',
+        a: [
+          `${SERVICE.cardValidity} after it is issued. This protects the balance from being used by anyone else.`,
+          'Request your card when you are ready to pay, with your BYU-Pathway payment page open.'
+        ]
+      },
+      {
+        q: 'My card expired before I used it. What now?',
+        a: [
+          `Message support on WhatsApp (${SUPPORT.whatsappDisplay}) straight away with your request reference from the dashboard.`
+        ]
+      },
+      {
+        q: 'Can I have more than one card at a time?',
+        a: ['No. You can have one open request at a time. Once a card is used or expires, you can request another.']
+      }
+    ]
+  },
+  {
+    title: 'Account and problems',
+    items: [
+      {
+        q: 'I did not get an email from ConnectPay.',
+        a: [
+          'Check the spam or junk folder of your Pathway inbox. Card details are also shown in your dashboard.',
+          'If you still cannot find it, contact support.'
+        ]
+      },
+      {
+        q: 'How do I change my email or phone number?',
+        a: ['Contact support from the Contact page. We confirm your identity before changing account details.']
+      },
+      {
+        q: 'Is ConnectPay part of BYU-Pathway?',
+        a: [
+          'No. ConnectPay is an independent service that helps students in Ghana pay BYU-Pathway fees. It is not affiliated with or endorsed by BYU-Pathway Worldwide.'
+        ]
+      }
+    ]
+  }
+];
 
 function FAQ() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [openItems, setOpenItems] = useState({ '0-0': true, '1-0': true }); // First questions open by default
-  const [toastMessage, setToastMessage] = useState(null);
-  const [helpfulVotes, setHelpfulVotes] = useState({});
-
-  const handleVote = (key, isHelpful) => {
-    setHelpfulVotes(prev => ({
-      ...prev,
-      [key]: isHelpful ? 'yes' : 'no'
-    }));
-    showToast(isHelpful ? 'Thank you for your feedback! 👍' : 'Feedback recorded. Let us know on the Contact page! 📝');
-  };
-
-  const rawFaqs = [
-    {
-      id: 'getting-started',
-      category: 'Getting Started',
-      icon: '🚀',
-      questions: [
-        {
-          q: 'How do I register for a virtual card?',
-          a: 'Go to the Register page, fill in your name, BYU ID, email, and phone number. After registration, you can immediately request a virtual card from the Request Card page.'
-        },
-        {
-          q: 'What information do I need to register?',
-          a: 'You need your full name, BYU Student ID (7-8 digits, e.g. 12345678), active @byupathway.edu email address, and Ghana phone / WhatsApp number.'
-        },
-        {
-          q: 'Do I need to pay to register an account?',
-          a: 'No! Registration is 100% free. You only pay when requesting and loading a virtual card for your school tuition fees.'
-        }
-      ]
-    },
-    {
-      id: 'virtual-cards',
-      category: 'Virtual Cards',
-      icon: '💳',
-      questions: [
-        {
-          q: 'How long does it take to receive my virtual card?',
-          a: 'Once submitted, requests are processed by our automated system and verified by the admin team within 2-4 business hours. You receive card details via your registered email.'
-        },
-        {
-          q: 'How long is my virtual card valid?',
-          a: 'For security reasons, virtual cards are valid for 4-6 hours once issued. Please complete your tuition payment on the university portal promptly.'
-        },
-        {
-          q: 'What card details will I receive?',
-          a: 'You will receive a 16-digit Visa/Mastercard number, expiration date (MM/YY), and 3-digit CVV security code.'
-        },
-        {
-          q: 'Can I request multiple cards at the same time?',
-          a: 'Students can have one active card request per payment cycle. Once your card is used or expires, you can request another.'
-        }
-      ]
-    },
-    {
-      id: 'payment-security',
-      category: 'Payment & Security',
-      icon: '🔒',
-      questions: [
-        {
-          q: 'Which mobile money networks are supported?',
-          a: 'We support all major Ghanaian Mobile Money providers including MTN MoMo, Telecel Cash, and AT Money via Hubtel Direct Debit.'
-        },
-        {
-          q: 'Is this payment system secure?',
-          a: 'Yes! ConnectPay uses 256-bit encryption, strict TLS protocols, and direct integration with accredited payment gateways in West Africa.'
-        },
-        {
-          q: 'What happens if my card expires before I make payment?',
-          a: 'If your card expires before you use it, simply visit your Student Dashboard and click "Request New Card" or reach out on our live WhatsApp desk.'
-        },
-        {
-          q: 'How do I cancel a pending card request?',
-          a: 'You can contact our support desk via live chat or WhatsApp with your Request Token to request an immediate cancellation.'
-        }
-      ]
-    },
-    {
-      id: 'account-dashboard',
-      category: 'Account & Dashboard',
-      icon: '📊',
-      questions: [
-        {
-          q: 'How do I check my card request status?',
-          a: 'Navigate to the Dashboard page and enter your BYU ID. You will see real-time updates for all pending, active, and completed requests.'
-        },
-        {
-          q: 'I forgot my request token. How can I find it?',
-          a: 'No problem! Just enter your BYU Student ID on the Student Dashboard to view all previous tokens and card records linked to your student profile.'
-        },
-        {
-          q: 'Can I update my email or phone number?',
-          a: 'For security reasons, account credentials must be verified. If your information has changed, please submit a ticket on the Contact page.'
-        }
-      ]
-    },
-    {
-      id: 'technical-help',
-      category: 'Technical Issues',
-      icon: '🛠️',
-      questions: [
-        {
-          q: 'I didn\'t receive my email notification',
-          a: 'Check your spam or junk folder. You can also view your active card details directly by entering your BYU ID in the Student Dashboard.'
-        },
-        {
-          q: 'The portal page is not loading properly',
-          a: 'Ensure you have an active internet connection. Try doing a hard refresh (Ctrl + F5 or Cmd + Shift + R) or clearing browser cache.'
-        },
-        {
-          q: 'Can I use this on my mobile phone?',
-          a: 'Yes! The platform is 100% mobile responsive and can be installed as a Progressive Web App (PWA) on your iOS or Android home screen.'
-        }
-      ]
-    },
-    {
-      id: 'admin-support',
-      category: 'Admin & Operations',
-      icon: '👨‍💼',
-      questions: [
-        {
-          q: 'How do administrators access the portal?',
-          a: 'Go to the Admin page from the navigation bar and enter your authorized administrator secret key.'
-        },
-        {
-          q: 'How are virtual cards assigned to students?',
-          a: 'Admins review pending requests in the Admin Console and generate card details with automated email dispatch.'
-        },
-        {
-          q: 'How does live student chat work for administrators?',
-          a: 'Admins receive live real-time notifications via WebSockets whenever a student sends an inquiry through the portal live chat widget.'
-        }
-      ]
-    }
-  ];
-
-  // Filter FAQs based on category & search query
-  const filteredFaqs = useMemo(() => {
-    return rawFaqs
-      .filter(category => {
-        if (selectedCategory === 'all') return true;
-        return category.id === selectedCategory;
-      })
-      .map(category => {
-        if (!searchQuery.trim()) return category;
-        const query = searchQuery.toLowerCase();
-        const matchedQuestions = category.questions.filter(
-          item => item.q.toLowerCase().includes(query) || item.a.toLowerCase().includes(query)
-        );
-        return {
-          ...category,
-          questions: matchedQuestions
-        };
-      })
-      .filter(category => category.questions.length > 0);
-  }, [rawFaqs, selectedCategory, searchQuery]);
-
-  const totalQuestionCount = useMemo(() => {
-    return filteredFaqs.reduce((acc, cat) => acc + cat.questions.length, 0);
-  }, [filteredFaqs]);
-
-  const toggleQuestion = (catId, qIndex) => {
-    const key = `${catId}-${qIndex}`;
-    setOpenItems(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  const handleExpandAll = () => {
-    const newOpenState = {};
-    filteredFaqs.forEach((cat, catIdx) => {
-      cat.questions.forEach((_, qIdx) => {
-        newOpenState[`${cat.id}-${qIdx}`] = true;
-      });
-    });
-    setOpenItems(newOpenState);
-  };
-
-  const handleCollapseAll = () => {
-    setOpenItems({});
-  };
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
-  };
-
-  const handleCopyQuestion = (question, answer) => {
-    navigator.clipboard.writeText(`Q: ${question}\nA: ${answer}`);
-    showToast('Copied answer to clipboard! 📋');
-  };
-
   return (
-    <div className="faq-page-container">
-      <div className="container">
-        
-        {/* Hero Section */}
-        <div className="faq-hero">
-          <div className="faq-pill-badge">
-            <span>💡</span>
-            CONNECTPAY KNOWLEDGE BASE
-          </div>
-          <h1>
-            Frequently Asked <span className="highlight-text">Questions</span>
-          </h1>
-          <p className="subtitle">
-            Find answers to common questions about BYU Pathway Ghana virtual cards, mobile money tuition payments, and account setup.
+    <>
+      <div className="cp-pagehead">
+        <div className="cp-container">
+          <span className="cp-eyebrow">Help</span>
+          <h1 className="cp-h1">Frequently asked questions</h1>
+          <p className="cp-lead">
+            Can't find your answer? <Link to="/contact">Contact support</Link> or message us on{' '}
+            <a href={SUPPORT.whatsappUrl} target="_blank" rel="noopener noreferrer">WhatsApp</a>.
           </p>
         </div>
-
-        {/* Search & Filter Controls */}
-        <div className="faq-controls-bar">
-          
-          {/* Search Input */}
-          <div className="faq-search-wrapper">
-            <span className="faq-search-icon">🔍</span>
-            <input
-              type="text"
-              className="faq-search-input"
-              placeholder="Search by keyword (e.g., virtual card, mobile money, expiration, token)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button 
-                className="faq-clear-search"
-                onClick={() => setSearchQuery('')}
-                title="Clear search"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Category Filter Pills & Controls */}
-          <div className="faq-filter-row">
-            <div className="faq-category-pills">
-              <button
-                className={`faq-pill-btn ${selectedCategory === 'all' ? 'active' : ''}`}
-                onClick={() => setSelectedCategory('all')}
-              >
-                <span>🌟</span> All Topics
-              </button>
-              {rawFaqs.map(cat => (
-                <button
-                  key={cat.id}
-                  className={`faq-pill-btn ${selectedCategory === cat.id ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat.id)}
-                >
-                  <span>{cat.icon}</span> {cat.category}
-                </button>
-              ))}
-            </div>
-
-            <div className="faq-actions-toggle">
-              <span style={{ fontSize: '0.82rem', color: 'var(--cp-muted)', fontWeight: '600' }}>
-                {totalQuestionCount} {totalQuestionCount === 1 ? 'article' : 'articles'}
-              </span>
-              <button className="faq-toggle-all-btn" onClick={handleExpandAll}>
-                Expand All
-              </button>
-              <button className="faq-toggle-all-btn" onClick={handleCollapseAll}>
-                Collapse All
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-        {/* ============================================================
-            MASONRY GRID ARRANGEMENT
-            ============================================================ */}
-        {filteredFaqs.length === 0 ? (
-          <div className="faq-empty-state">
-            <div className="faq-empty-icon">🔍</div>
-            <h3>No matching questions found</h3>
-            <p>We couldn't find any results for "{searchQuery}". Try a different keyword or contact our support team.</p>
-            <button 
-              className="btn btn-primary"
-              onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
-            >
-              Reset Filters
-            </button>
-          </div>
-        ) : (
-          <div className="faq-masonry-container">
-            {filteredFaqs.map((category) => (
-              <div key={category.id} className="faq-masonry-card">
-                
-                {/* Category Header */}
-                <div className="faq-card-header">
-                  <div className="faq-card-title-group">
-                    <span className="faq-card-icon">{category.icon}</span>
-                    <h2>{category.category}</h2>
-                  </div>
-                  <span className="faq-card-badge">
-                    {category.questions.length} Qs
-                  </span>
-                </div>
-
-                {/* Questions Accordion in this Category */}
-                <div className="faq-items-list">
-                  {category.questions.map((item, qIdx) => {
-                    const isOpen = !!openItems[`${category.id}-${qIdx}`];
-                    return (
-                      <div 
-                        key={qIdx} 
-                        className={`faq-item-card ${isOpen ? 'is-open' : ''}`}
-                      >
-                        <button
-                          type="button"
-                          className="faq-item-question-btn"
-                          onClick={() => toggleQuestion(category.id, qIdx)}
-                          aria-expanded={isOpen}
-                        >
-                          <span>{item.q}</span>
-                          <span className="faq-item-toggle-icon">
-                            {isOpen ? '−' : '+'}
-                          </span>
-                        </button>
-
-                        {isOpen && (
-                          <div className="faq-item-answer-box">
-                            <p>{item.a}</p>
-                            <div className="faq-item-footer">
-                              <div className="faq-vote-group">
-                                <span>Was this helpful?</span>
-                                {helpfulVotes[`${category.id}-${qIdx}`] ? (
-                                  <span className="faq-voted-badge">
-                                    {helpfulVotes[`${category.id}-${qIdx}`] === 'yes' ? '✓ Helpful' : '✓ Recorded'}
-                                  </span>
-                                ) : (
-                                  <div className="faq-vote-btns">
-                                    <button
-                                      type="button"
-                                      className="faq-vote-btn"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleVote(`${category.id}-${qIdx}`, true);
-                                      }}
-                                      title="Yes, this was helpful"
-                                    >
-                                      👍
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="faq-vote-btn"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleVote(`${category.id}-${qIdx}`, false);
-                                      }}
-                                      title="No, I need more help"
-                                    >
-                                      👎
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                              <button 
-                                type="button"
-                                className="faq-copy-link-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCopyQuestion(item.q, item.a);
-                                }}
-                              >
-                                Copy Answer 📋
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Bottom CTA Banner with Advisor Presence */}
-        <div className="faq-cta-banner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-            <img 
-              src="/images/support-specialist.jpg" 
-              alt="Abena Osei - Student Support Advisor" 
-              style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--cp-gold)', flexShrink: 0, boxShadow: '0 4px 14px rgba(0,0,0,0.25)' }}
-            />
-            <div className="faq-cta-content">
-              <h3>Still need personalized guidance?</h3>
-              <p>
-                Abena and our dedicated Accra student advisors are on standby to guide you through tuition payments, Mobile Money, and card issuance.
-              </p>
-            </div>
-          </div>
-          <div className="faq-cta-buttons">
-            <Link to="/contact" className="faq-cta-btn-primary">
-              Contact Support Desk →
-            </Link>
-            <a 
-              href="https://wa.me/233543692272?text=Hello%20ConnectPay%20Support%2C%20I%20have%20a%20question%20about%20the%20BYU%20Pathway%20Virtual%20Card%20system."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="faq-cta-btn-whatsapp"
-            >
-              <span>WhatsApp Live Chat</span>
-              <span>💬</span>
-            </a>
-          </div>
-        </div>
-
       </div>
 
-      {/* Floating Toast Alert */}
-      {toastMessage && (
-        <div className="faq-toast-alert">
-          {toastMessage}
+      <section className="cp-section--tight" style={{ paddingTop: 8, paddingBottom: 80 }}>
+        <div className="cp-container" style={{ maxWidth: 820 }}>
+          {GROUPS.map((group) => (
+            <div key={group.title} className="cp-faq__group">
+              <h2 className="cp-h3">{group.title}</h2>
+              <div className="cp-faq">
+                {group.items.map((item) => (
+                  <details key={item.q}>
+                    <summary>{item.q}</summary>
+                    <div>{item.a.map((para) => <p key={para}>{para}</p>)}</div>
+                  </details>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-    </div>
+      </section>
+    </>
   );
 }
 

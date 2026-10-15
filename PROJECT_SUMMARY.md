@@ -133,7 +133,7 @@ POST   /api/admin/action               - Update request status
 
 - **Backend Port**: 3000
 - **Frontend Port**: 5173
-- **Admin Key**: `byu-admin-2025-secret-key`
+- **Admin Key**: the `ADMIN_KEY` environment variable (not stored in the repo)
 - **Card Expiry**: 12 hours after assignment
 - **Cron Job**: Runs every 5 minutes
 
@@ -186,7 +186,7 @@ npm run dev
    - Amount: 500
 
 3. **Admin assigns card** at `/admin`
-   - Login with: `byu-admin-2025-secret-key`
+   - Login with: the value of `ADMIN_KEY`
    - Click "Assign Mock Card" on pending request
 
 4. **Check dashboard** at `/dashboard`

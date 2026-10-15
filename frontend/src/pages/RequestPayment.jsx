@@ -2,19 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { studentAPI } from '../api/api';
 import { useNavigate } from 'react-router-dom';
 import HubtelPayment from '../components/HubtelPayment';
-import CountryCurrencySelector, { WEST_AFRICA_COUNTRIES } from '../components/CountryCurrencySelector';
 
 function RequestPayment() {
   const [formData, setFormData] = useState({
     byuId: '',
     amount: ''
   });
-  const [selectedCountry, setSelectedCountry] = useState('GH');
-  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [requestToken, setRequestToken] = useState('');
-  const [showHint, setShowHint] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(15.50); // Default GHS to USD rate
@@ -32,12 +28,6 @@ function RequestPayment() {
     const savedName = localStorage.getItem('userName');
     if (savedByuId) {
       setFormData(prev => ({ ...prev, byuId: savedByuId }));
-    }
-
-    // Show hint
-    const hasRequested = localStorage.getItem('hasRequestedCard');
-    if (!hasRequested) {
-      setTimeout(() => setShowHint(true), 800);
     }
 
     // Fetch live exchange rate
@@ -70,7 +60,6 @@ function RequestPayment() {
       ...formData,
       [e.target.name]: e.target.value
     });
-    setShowHint(false);
   };
 
   const handleSubmit = async (e) => {
@@ -214,330 +203,174 @@ function RequestPayment() {
     setPaymentData(null);
   };
 
+  const amountValue = parseFloat(formData.amount) || 0;
+  const estimateGhs = amountValue * exchangeRate;
+  const estimateFee = estimateGhs * (CHARGE_FEE_PERCENT / 100);
+  const studentName = localStorage.getItem('userName') || '';
+
   return (
-    <div className="container">
-      <div className="form-container">
-        {showHint && (
-          <div className="hint-banner hint-animated">
-            <span className="hint-icon">👉</span>
-            <p>Enter your BYU ID and the amount you need for school fees!</p>
-            <button className="hint-close" onClick={() => setShowHint(false)}>✕</button>
-          </div>
-        )}
+    <>
+      <div className="cp-pagehead">
+        <div className="cp-container" style={{ maxWidth: 760 }}>
+          <span className="cp-eyebrow">New request</span>
+          <h1 className="cp-h1">Request a card</h1>
+          <p className="cp-lead">
+            Enter the amount due on your BYU-Pathway payment page. You will see the total in cedis before you pay.
+          </p>
+        </div>
+      </div>
 
-        <h1>Request Virtual Card</h1>
-        <p className="subtitle">Submit a request to receive a virtual card for payment</p>
-
-        {message.text && (
-          <div className={`alert alert-${message.type}`}>
-            {message.text}
-            {requestToken && (
-              <div className="token-box">
-                <strong>Your Request Token:</strong>
-                <code>{requestToken}</code>
-                <p className="small-text">💾 Save this token to track your request</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="form">
-          <div className="form-group">
-            <label htmlFor="byuId">BYU Student ID *</label>
-            <input
-              type="text"
-              id="byuId"
-              name="byuId"
-              value={formData.byuId}
-              onChange={handleChange}
-              required
-              placeholder="e.g., 1234567 or 12345678"
-              pattern="[0-9]{7,8}"
-              title="Please enter your 7-8 digit BYU Student ID"
-            />
-            <small className="field-hint">Enter your 7-8 digit BYU Student ID number</small>
-          </div>
-
-          <CountryCurrencySelector
-            selectedCountry={selectedCountry}
-            onCountryChange={setSelectedCountry}
-            phoneValue={phone}
-            onPhoneChange={setPhone}
-          />
-
-          <div className="form-group">
-            <label htmlFor="amount">Amount to Pay (USD) *</label>
-            <input
-              type="number"
-              id="amount"
-              name="amount"
-              value={formData.amount}
-              onChange={handleChange}
-              required
-              min="1"
-              step="0.01"
-              placeholder="Enter amount in US Dollars"
-            />
-            <small className="field-hint">Enter the amount you need to pay in US Dollars (USD)</small>
-          </div>
-
-          {/* Exchange Rate Calculator */}
-          {formData.amount && (
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(255, 184, 28, 0.1), rgba(255, 200, 68, 0.1))',
-              padding: '1.5rem',
-              borderRadius: '16px',
-              border: '2px solid rgba(255, 184, 28, 0.3)',
-              marginBottom: '1rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>💱</span>
-                <h3 style={{ margin: 0, color: '#002E5D', fontSize: '1.1rem' }}>Exchange Rate Calculator</h3>
-              </div>
-
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#666', fontWeight: '500' }}>Amount in USD:</span>
-                  <span style={{ color: '#002E5D', fontWeight: '700', fontSize: '1.1rem' }}>
-                    ${parseFloat(formData.amount).toFixed(2)} USD
-                  </span>
+      <section style={{ paddingBottom: 80 }}>
+        <div className="cp-container" style={{ maxWidth: 760 }}>
+          {message.text && (
+            <div
+              className={`cp-alert cp-alert--${message.type === 'error' ? 'error' : message.type === 'success' ? 'success' : 'info'}`}
+              style={{ marginBottom: 20 }}
+              role="status"
+            >
+              {message.text}
+              {requestToken && (
+                <div style={{ marginTop: 8 }}>
+                  Request reference: <span className="cp-num">{requestToken}</span>
                 </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    <span style={{ color: '#666', fontWeight: '500' }}>Exchange Rate:</span>
-                    {rateLastUpdated && (
-                      <span style={{ fontSize: '0.75rem', color: '#28a745', fontWeight: '500' }}>
-                        🟢 Live • Updated {rateLastUpdated.toLocaleTimeString()}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ color: '#FFB81C', fontWeight: '700', fontSize: '1.1rem' }}>
-                      1 USD = {exchangeRate.toFixed(2)} GHS
-                    </span>
-                    <button
-                      type="button"
-                      onClick={fetchExchangeRate}
-                      disabled={fetchingRate}
-                      style={{
-                        background: 'rgba(255, 184, 28, 0.2)',
-                        border: '1px solid rgba(255, 184, 28, 0.4)',
-                        borderRadius: '8px',
-                        padding: '0.4rem 0.6rem',
-                        cursor: fetchingRate ? 'not-allowed' : 'pointer',
-                        fontSize: '0.9rem',
-                        transition: 'all 0.3s ease',
-                        fontWeight: '600',
-                        color: '#002E5D'
-                      }}
-                      title="Refresh exchange rate"
-                    >
-                      {fetchingRate ? '⏳' : '🔄'}
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{
-                  borderTop: '2px dashed rgba(255, 184, 28, 0.3)',
-                  paddingTop: '0.75rem',
-                  marginTop: '0.5rem',
-                  display: 'grid',
-                  gap: '0.75rem'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#666', fontWeight: '500' }}>Base Amount (GHS):</span>
-                    <span style={{ color: '#002E5D', fontWeight: '700', fontSize: '1.05rem', fontFamily: 'monospace' }}>
-                      GHS {(parseFloat(formData.amount) * exchangeRate).toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#666', fontWeight: '500' }}>Chargeback Fee ({CHARGE_FEE_PERCENT}%):</span>
-                    <span style={{ color: '#dc3545', fontWeight: '700', fontSize: '1.05rem', fontFamily: 'monospace' }}>
-                      GHS {(parseFloat(formData.amount) * exchangeRate * (CHARGE_FEE_PERCENT / 100)).toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div style={{
-                    borderTop: '2px solid rgba(255, 184, 28, 0.4)',
-                    paddingTop: '0.75rem',
-                    marginTop: '0.25rem'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#002E5D', fontWeight: '700', fontSize: '1.15rem' }}>Total to Pay (GHS):</span>
-                      <span style={{
-                        color: '#28a745',
-                        fontWeight: '800',
-                        fontSize: '1.5rem',
-                        fontFamily: 'monospace'
-                      }}>
-                        GHS {(parseFloat(formData.amount) * exchangeRate * (1 + CHARGE_FEE_PERCENT / 100)).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p style={{
-                margin: '1rem 0 0 0',
-                fontSize: '0.85rem',
-                color: '#856404',
-                fontStyle: 'italic'
-              }}>
-                💡 Total includes a {CHARGE_FEE_PERCENT}% chargeback fee. You will receive a ${parseFloat(formData.amount).toFixed(2)} USD virtual card.
-              </p>
+              )}
             </div>
           )}
 
-          <div className="alert alert-info">
-            <strong>Important:</strong>
-            <ul>
-              <li>Make sure you're registered before requesting a card</li>
-              <li>Enter the amount in USD - calculator shows the GHS equivalent you'll pay</li>
-              <li>A {CHARGE_FEE_PERCENT}% chargeback fee is applied to cover processing costs</li>
-              <li>The admin will be notified of your request</li>
-              <li>You'll receive an email once your card is assigned</li>
-              <li>Cards are valid for 4-6 hours after assignment</li>
-              <li>Use the card only for BYU school fees payment</li>
-            </ul>
-          </div>
+          <form onSubmit={handleSubmit} className="cp-card">
+            <div className="cp-card__body cp-form">
+              {(studentName || formData.byuId) && (
+                <p className="cp-small cp-muted">
+                  Requesting as <strong style={{ color: 'var(--cp-ink)' }}>{studentName}</strong>
+                  {formData.byuId && <> · BYU ID <span className="cp-num">{formData.byuId}</span></>}
+                </p>
+              )}
 
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-                style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-              />
-              <span style={{ color: '#002E5D', fontWeight: '500' }}>
-                I have read and accept the{' '}
-                <button
-                  type="button"
-                  onClick={() => setShowTerms(true)}
-                  style={{
-                    color: '#FFB81C',
-                    textDecoration: 'underline',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '700',
-                    padding: '0'
-                  }}
-                >
-                  Terms and Agreement
-                </button>
-              </span>
-            </label>
-          </div>
-
-          <button type="submit" className="btn btn-primary" disabled={loading || !termsAccepted}>
-            {loading ? 'Processing...' : 'Proceed to Payment'}
-          </button>
-          <p className="small-text" style={{ marginTop: '0.5rem', textAlign: 'center', color: '#666' }}>
-            💳 You will be redirected to complete payment
-          </p>
-        </form>
-      </div>
-
-      {/* Terms and Agreement Modal */}
-      {showTerms && (
-        <div className="welcome-overlay" onClick={() => setShowTerms(false)}>
-          <div className="welcome-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
-            <button className="welcome-close" onClick={() => setShowTerms(false)}>✕</button>
-
-            <div className="welcome-header">
-              <div className="welcome-icon">📋</div>
-              <h1>Terms and Agreement</h1>
-              <p className="welcome-subtitle">Please read carefully before requesting a virtual card</p>
-            </div>
-
-            <div className="welcome-body" style={{ padding: '2rem', maxHeight: '400px', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div>
-                  <h3 style={{ color: '#002E5D', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>1️⃣</span> Payment Purpose
-                  </h3>
-                  <p style={{ color: '#555', lineHeight: '1.6', marginLeft: '2rem' }}>
-                    The payment is solely for payment on the BYU school page. Virtual cards must not be used for any other purpose.
-                  </p>
+              <div className="cp-field">
+                <label htmlFor="amount">Amount due (USD)</label>
+                <div className="cp-money-input">
+                  <span>USD</span>
+                  <input
+                    type="number"
+                    id="amount"
+                    name="amount"
+                    inputMode="decimal"
+                    value={formData.amount}
+                    onChange={handleChange}
+                    required
+                    min="1"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
                 </div>
-
-                <div>
-                  <h3 style={{ color: '#002E5D', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>2️⃣</span> Currency & Exchange Rate
-                  </h3>
-                  <p style={{ color: '#555', lineHeight: '1.6', marginLeft: '2rem' }}>
-                    You enter the amount in US Dollars (USD) needed for your school fees. The system will calculate and show you the Ghana Cedis (GHS) equivalent you need to pay based on the current live exchange rate.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 style={{ color: '#002E5D', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>3️⃣</span> Chargeback Fee
-                  </h3>
-                  <p style={{ color: '#555', lineHeight: '1.6', marginLeft: '2rem' }}>
-                    A {CHARGE_FEE_PERCENT}% chargeback fee is applied to cover transaction and processing costs. This fee is included in the total GHS amount you pay.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 style={{ color: '#002E5D', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>4️⃣</span> Remaining Balances
-                  </h3>
-                  <p style={{ color: '#555', lineHeight: '1.6', marginLeft: '2rem' }}>
-                    Any remaining balances after payment should be raised in a support ticket for the admin to process and send back to the student.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 style={{ color: '#002E5D', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>5️⃣</span> Proper Use
-                  </h3>
-                  <p style={{ color: '#555', lineHeight: '1.6', marginLeft: '2rem' }}>
-                    I will not use this platform for malicious purposes. Any abuse or fraudulent activity will result in immediate account suspension and possible legal action.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 style={{ color: '#002E5D', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>6️⃣</span> Exchange Rate Acceptance
-                  </h3>
-                  <p style={{ color: '#555', lineHeight: '1.6', marginLeft: '2rem' }}>
-                    I accept that the current exchange rate displayed will be used to calculate the GHS amount I need to pay. I understand that exchange rates may fluctuate and the rate shown at the time of request will be applied.
-                  </p>
-                </div>
-
-                <div style={{
-                  background: 'rgba(255, 184, 28, 0.1)',
-                  padding: '1rem',
-                  borderRadius: '12px',
-                  border: '2px solid rgba(255, 184, 28, 0.3)',
-                  marginTop: '1rem'
-                }}>
-                  <p style={{ color: '#856404', fontWeight: '600', margin: 0, lineHeight: '1.6' }}>
-                    ⚠️ <strong>Important:</strong> Virtual cards expire 4-6 hours after assignment. Please complete your payment promptly.
-                  </p>
-                </div>
+                <small>Copy the exact amount from your BYU-Pathway payment page. The card is loaded with this amount.</small>
               </div>
-            </div>
 
-            <div className="welcome-footer">
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <span className="cp-small cp-muted">
+                    {rateLastUpdated ? 'Live rate' : 'Estimated rate'}: <span className="cp-num">1 USD = {exchangeRate.toFixed(2)} GHS</span>
+                  </span>
+                  <button type="button" className="cp-btn cp-btn--ghost" onClick={fetchExchangeRate} disabled={fetchingRate} style={{ minHeight: 32, padding: '0 10px', fontSize: 13 }}>
+                    {fetchingRate ? 'Updating…' : 'Refresh rate'}
+                  </button>
+                </div>
+                <dl className="cp-rows" style={{ marginTop: 8 }}>
+                  <div>
+                    <dt>Tuition in cedis</dt>
+                    <dd>GHS {estimateGhs.toFixed(2)}</dd>
+                  </div>
+                  <div>
+                    <dt>Service fee ({CHARGE_FEE_PERCENT}%)</dt>
+                    <dd>GHS {estimateFee.toFixed(2)}</dd>
+                  </div>
+                  <div className="cp-rows__total">
+                    <dt>Estimated total</dt>
+                    <dd>GHS {(estimateGhs + estimateFee).toFixed(2)}</dd>
+                  </div>
+                </dl>
+                <p className="cp-small cp-muted" style={{ marginTop: 6 }}>
+                  The final amount is calculated when you continue and shown on the payment screen.
+                </p>
+              </div>
+
+              <div className="cp-note">
+                Cards are valid for 4 to 6 hours after they are issued, and should only be used for BYU-Pathway fees.
+                Have your payment page ready. You must confirm your Pathway email before requesting a card.
+              </div>
+
+              <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 15, color: 'var(--cp-ink)' }}>
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  style={{ width: 18, height: 18, marginTop: 2 }}
+                />
+                <span>
+                  I have read and accept the{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowTerms(true)}
+                    style={{ background: 'none', border: 0, padding: 0, color: 'var(--cp-brand)', textDecoration: 'underline', font: 'inherit', cursor: 'pointer' }}
+                  >
+                    terms of use
+                  </button>
+                </span>
+              </label>
+            </div>
+            <div className="cp-card__foot">
+              <button type="submit" className="cp-btn cp-btn--primary cp-btn--lg cp-btn--block" disabled={loading || !termsAccepted}>
+                {loading ? <><span className="cp-spinner" /> Preparing payment…</> : 'Continue to payment'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      {/* Terms of use */}
+      {showTerms && (
+        <div className="cp-modal" role="dialog" aria-modal="true" aria-labelledby="terms-title" onClick={() => setShowTerms(false)}>
+          <div className="cp-modal__panel cp-card" onClick={(e) => e.stopPropagation()}>
+            <div className="cp-card__body">
+              <h2 id="terms-title" className="cp-h2">Terms of use</h2>
+              <ol className="cp-terms">
+                <li>
+                  <h3 className="cp-h3">Payment purpose</h3>
+                  <p>The card is only for payment on the BYU-Pathway payment page. It must not be used for anything else.</p>
+                </li>
+                <li>
+                  <h3 className="cp-h3">Currency and exchange rate</h3>
+                  <p>You enter the amount in US dollars. The amount you pay in Ghana cedis is calculated from the live exchange rate when you submit your request, and that rate applies even if the market moves afterwards.</p>
+                </li>
+                <li>
+                  <h3 className="cp-h3">Service fee</h3>
+                  <p>A {CHARGE_FEE_PERCENT}% fee is added to cover transaction and processing costs. It is included in the total you pay.</p>
+                </li>
+                <li>
+                  <h3 className="cp-h3">Remaining balances</h3>
+                  <p>If any balance is left on the card after payment, raise a support request so it can be processed and returned to you.</p>
+                </li>
+                <li>
+                  <h3 className="cp-h3">Proper use</h3>
+                  <p>Abuse or fraudulent activity leads to immediate account suspension and may lead to legal action.</p>
+                </li>
+                <li>
+                  <h3 className="cp-h3">Card expiry</h3>
+                  <p>Cards expire 4 to 6 hours after they are issued. Complete your payment promptly.</p>
+                </li>
+              </ol>
+            </div>
+            <div className="cp-card__foot" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button type="button" className="cp-btn cp-btn--secondary" onClick={() => setShowTerms(false)}>Close</button>
               <button
-                className="welcome-btn-primary"
+                type="button"
+                className="cp-btn cp-btn--primary"
                 onClick={() => {
                   setTermsAccepted(true);
                   setShowTerms(false);
                 }}
               >
-                I Accept the Terms
-              </button>
-              <button
-                className="welcome-btn-text"
-                onClick={() => setShowTerms(false)}
-              >
-                Close
+                I accept
               </button>
             </div>
           </div>
@@ -552,9 +385,8 @@ function RequestPayment() {
           onCancel={handlePaymentCancel}
         />
       )}
-    </div>
+    </>
   );
 }
 
 export default RequestPayment;
-

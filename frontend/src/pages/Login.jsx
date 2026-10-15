@@ -60,26 +60,17 @@ export default function Login() {
       <div className="login-card">
         {/* Header */}
         <div className="login-header">
-          <div className="login-logo" style={{ background: 'transparent', padding: 0 }}>
-            <img 
-              src="/images/avatar-kwame.jpg" 
-              alt="BYU Student Kwame" 
-              style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #FFB81C', margin: '0 auto', display: 'block', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }} 
-            />
-          </div>
-          <h1 className="login-title">Student Portal Login</h1>
-          <p className="login-subtitle">
-            Access your active BYU Pathway virtual cards and payment records
-          </p>
+          <h1 className="login-title">Sign in</h1>
+          <p className="login-subtitle">Use your BYU Student ID and password.</p>
         </div>
 
         {/* Form */}
         <form className="login-form" onSubmit={handleLogin}>
           {error && (
             <div className="login-error">
-              <span>⚠️</span> {error}
+              {error}
               {needsPassword && (
-                <> <Link to="/forgot-password" style={{ fontWeight: 600 }}>Set your password →</Link></>
+                <> <Link to="/forgot-password" style={{ fontWeight: 600 }}>Set your password</Link></>
               )}
             </div>
           )}
@@ -119,7 +110,7 @@ export default function Login() {
             />
             <div style={{ textAlign: 'right', marginTop: '6px' }}>
               <Link to="/forgot-password" style={{ color: '#002E5D', fontSize: '13px', textDecoration: 'none', fontWeight: '500' }}>
-                🔑 Forgot Password?
+                Forgot password?
               </Link>
             </div>
           </div>
@@ -130,18 +121,18 @@ export default function Login() {
             disabled={loading}
           >
             {loading ? (
-              <><span className="btn-spinner"></span> Verifying…</>
+              <><span className="btn-spinner"></span> Signing in…</>
             ) : (
-              <>Sign In →</>
+              <>Sign in</>
             )}
           </button>
         </form>
 
         {/* Footer */}
         <div className="login-footer">
-          <p>Don't have a ConnectPay account yet?</p>
+          <p>New to ConnectPay?</p>
           <Link to="/register" className="login-register-link">
-            🗒️ Register as a new student
+            Create an account
           </Link>
         </div>
       </div>

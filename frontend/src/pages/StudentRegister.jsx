@@ -1,37 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { studentAPI } from '../api/api';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../utils/AuthContext';
 
+const EMPTY_FORM = { name: '', byuId: '', email: '', phone: '', password: '', confirmPassword: '' };
+
 function StudentRegister() {
-  const [formData, setFormData] = useState({
-    name: '',
-    byuId: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: ''
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [showHint, setShowHint] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  useEffect(() => {
-    // Show hint for first-time visitors
-    const hasRegistered = localStorage.getItem('hasRegistered');
-    if (!hasRegistered) {
-      setTimeout(() => setShowHint(true), 1000);
-    }
-  }, []);
-
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    setShowHint(false);
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
@@ -51,10 +33,9 @@ function StudentRegister() {
     try {
       const { confirmPassword, ...payload } = formData;
       const response = await studentAPI.register(payload);
-      setMessage({ type: 'success', text: response.message });
       localStorage.setItem('hasRegistered', 'true');
 
-      // Log the student in immediately after registration
+      // Sign the student in straight away
       login({
         byuId: formData.byuId,
         name: formData.name,
@@ -62,16 +43,16 @@ function StudentRegister() {
         token: response.token
       });
 
-      setTimeout(() => {
-        alert('Registration successful! Please check your email to verify your account before requesting a card.');
-        navigate('/dashboard');
-      }, 2000);
-
-      setFormData({ name: '', byuId: '', email: '', phone: '', password: '', confirmPassword: '' });
+      setMessage({
+        type: 'success',
+        text: 'Account created. We sent a confirmation link to your Pathway email. Confirm it before requesting a card.'
+      });
+      setFormData(EMPTY_FORM);
+      setTimeout(() => navigate('/dashboard'), 2500);
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error.response?.data?.message || 'Registration failed'
+        text: error.response?.data?.message || 'We could not create your account. Please try again.'
       });
     } finally {
       setLoading(false);
@@ -79,131 +60,88 @@ function StudentRegister() {
   };
 
   return (
-    <div className="container">
-      <div className="form-container">
-        {showHint && (
-          <div className="hint-banner">
-            <span className="hint-icon">💡</span>
-            <p>Start here! Fill in your details to create your student account.</p>
-            <button className="hint-close" onClick={() => setShowHint(false)}>✕</button>
+    <div className="cp-auth">
+      <div className="cp-auth__card cp-auth__card--wide cp-card">
+        <div className="cp-card__body">
+          <div className="cp-auth__head">
+            <h1 className="cp-h2">Create your account</h1>
+            <p>You need your BYU Student ID and your @byupathway.edu email.</p>
           </div>
-        )}
 
-        <h1>Student Registration</h1>
-        <p className="subtitle">Register to access the virtual card payment system</p>
+          {message.text && (
+            <div className={`cp-alert cp-alert--${message.type === 'error' ? 'error' : 'success'}`} style={{ marginBottom: 18 }} role="status">
+              {message.text}
+            </div>
+          )}
 
-        {/* Student Community Trust Banner */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: 'rgba(0, 46, 93, 0.04)', padding: '0.85rem 1.15rem', borderRadius: '14px', marginBottom: '1.75rem', border: '1px solid rgba(0, 46, 93, 0.08)' }}>
-          <img src="/images/avatar-ama.jpg" alt="BYU Student Ama" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #FFB81C', flexShrink: 0 }} />
-          <div style={{ fontSize: '0.86rem', color: '#1e293b', lineHeight: '1.4' }}>
-            <strong>"Registration took me less than a minute."</strong>
-            <div style={{ color: '#64748b', fontSize: '0.78rem' }}>Join 1,200+ Ghanaian students using ConnectPay</div>
-          </div>
+          <form onSubmit={handleSubmit} className="cp-form">
+            <div className="cp-field">
+              <label htmlFor="name">Full name</label>
+              <input id="name" name="name" type="text" autoComplete="name" value={formData.name} onChange={handleChange} required />
+            </div>
+
+            <div className="cp-form__grid">
+              <div className="cp-field">
+                <label htmlFor="byuId">BYU Student ID</label>
+                <input
+                  id="byuId"
+                  name="byuId"
+                  type="text"
+                  inputMode="numeric"
+                  value={formData.byuId}
+                  onChange={handleChange}
+                  required
+                  pattern="[0-9]{7,8}"
+                  title="7 or 8 digits"
+                  placeholder="7 or 8 digits"
+                />
+              </div>
+              <div className="cp-field">
+                <label htmlFor="phone">Mobile Money number</label>
+                <input id="phone" name="phone" type="tel" autoComplete="tel" value={formData.phone} onChange={handleChange} required placeholder="024 000 0000" />
+              </div>
+            </div>
+
+            <div className="cp-field">
+              <label htmlFor="email">Pathway email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                pattern="[a-zA-Z0-9._%+-]+@byupathway\.edu"
+                title="Use your @byupathway.edu address"
+                placeholder="name@byupathway.edu"
+              />
+              <small>Card details are sent here, so use the address you can open.</small>
+            </div>
+
+            <div className="cp-form__grid">
+              <div className="cp-field">
+                <label htmlFor="password">Password</label>
+                <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} value={formData.password} onChange={handleChange} required />
+                <small>At least 8 characters.</small>
+              </div>
+              <div className="cp-field">
+                <label htmlFor="confirmPassword">Confirm password</label>
+                <input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" minLength={8} value={formData.confirmPassword} onChange={handleChange} required />
+              </div>
+            </div>
+
+            <button type="submit" className="cp-btn cp-btn--primary cp-btn--lg cp-btn--block" disabled={loading}>
+              {loading ? <><span className="cp-spinner" /> Creating account…</> : 'Create account'}
+            </button>
+          </form>
         </div>
-
-        {message.text && (
-          <div className={`alert alert-${message.type}`}>
-            {message.text}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="form">
-          <div className="form-group">
-            <label htmlFor="name">Full Name *</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              placeholder="Enter your full name"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="byuId">BYU Student ID *</label>
-            <input
-              type="text"
-              id="byuId"
-              name="byuId"
-              value={formData.byuId}
-              onChange={handleChange}
-              required
-              placeholder="e.g., 1234567 or 12345678"
-              pattern="[0-9]{7,8}"
-              title="Please enter your 7-8 digit BYU Student ID"
-            />
-            <small className="field-hint">Enter your 7-8 digit BYU Student ID number</small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Pathway Email *</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="your.name@byupathway.edu"
-              pattern="[a-zA-Z0-9._%+-]+@byupathway\.edu"
-              title="Please use your Pathway email (@byupathway.edu)"
-            />
-            <small className="field-hint">Must be your @byupathway.edu email address</small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="phone">Phone Number *</label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              required
-              placeholder="+233 XX XXX XXXX"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password *</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={8}
-              autoComplete="new-password"
-              placeholder="At least 8 characters"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password *</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              minLength={8}
-              autoComplete="new-password"
-              placeholder="Re-enter your password"
-            />
-          </div>
-
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Registering...' : 'Register'}
-          </button>
-        </form>
+        <div className="cp-card__foot cp-auth__switch" style={{ marginTop: 0 }}>
+          Already have an account? <Link to="/login">Sign in</Link>
+        </div>
       </div>
     </div>
   );
 }
 
 export default StudentRegister;
-
