@@ -4,7 +4,7 @@
 const axios = require('axios');
 
 const API_URL = 'http://localhost:3000/api';
-const ADMIN_KEY = 'byu-admin-2025-secret-key';
+const ADMIN_KEY = process.env.ADMIN_KEY;
 
 // Test data
 const testStudent = {

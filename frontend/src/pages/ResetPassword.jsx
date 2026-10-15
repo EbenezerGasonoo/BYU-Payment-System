@@ -34,7 +34,7 @@ export default function ResetPassword() {
 
     if (score <= 1) return { score: 20, label: 'Weak', color: '#e53e3e' };
     if (score <= 3) return { score: 60, label: 'Medium', color: '#dd6b20' };
-    return { score: 100, label: 'Strong 🔒', color: '#38a169' };
+    return { score: 100, label: 'Strong', color: '#38a169' };
   };
 
   const strength = getPasswordStrength(newPassword);
@@ -86,10 +86,9 @@ export default function ResetPassword() {
       <div className="login-card">
         {/* Header */}
         <div className="login-header">
-          <div className="login-logo">🔐</div>
-          <h1 className="login-title">Reset Your Password</h1>
+          <h1 className="login-title">Choose a new password</h1>
           <p className="login-subtitle">
-            Create a strong, new password for your ConnectPay account.
+            Use at least 8 characters.
           </p>
         </div>
 
@@ -107,14 +106,14 @@ export default function ResetPassword() {
               className="login-btn"
               style={{ width: '100%' }}
             >
-              Sign In to Your Account →
+              Sign in
             </button>
           </div>
         ) : (
           <form className="login-form" onSubmit={handleSubmit}>
             {error && (
               <div className="login-error">
-                <span>⚠️</span> {error}
+                {error}
               </div>
             )}
 
@@ -236,7 +235,7 @@ export default function ResetPassword() {
               {loading ? (
                 <><span className="btn-spinner"></span> Resetting Password…</>
               ) : (
-                <>Save New Password →</>
+                <>Save password</>
               )}
             </button>
           </form>

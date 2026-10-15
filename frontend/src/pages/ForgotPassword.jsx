@@ -68,18 +68,17 @@ export default function ForgotPassword() {
       <div className="login-card">
         {/* Header */}
         <div className="login-header">
-          <div className="login-logo">🔑</div>
-          <h1 className="login-title">Forgot Password?</h1>
+                    <h1 className="login-title">Reset your password</h1>
           <p className="login-subtitle">
             {step === 1
-              ? 'Enter your BYU Student ID or Pathway email to receive a password reset link & OTP code.'
+              ? 'Enter your BYU Student ID or Pathway email. We will email you a 6-digit code. Use this also if you have never set a password.'
               : 'Check your email for the 6-digit verification code to reset your password.'}
           </p>
         </div>
 
         {error && (
           <div className="login-error">
-            <span>⚠️</span> {error}
+            {error}
           </div>
         )}
 
@@ -107,9 +106,9 @@ export default function ForgotPassword() {
 
             <button type="submit" className="login-btn" disabled={loading}>
               {loading ? (
-                <><span className="btn-spinner"></span> Sending Reset Code…</>
+                <><span className="btn-spinner"></span> Sending…</>
               ) : (
-                <>Send Reset Link & OTP →</>
+                <>Email me a code</>
               )}
             </button>
           </form>
@@ -125,7 +124,7 @@ export default function ForgotPassword() {
               fontSize: '14px',
               color: '#002e5d'
             }}>
-              ✅ {successInfo?.message || 'Verification code sent to your registered email.'}
+              {successInfo?.message || 'Verification code sent to your registered email.'}
             </div>
 
             <div className="login-field">
@@ -157,9 +156,9 @@ export default function ForgotPassword() {
 
             <button type="submit" className="login-btn" disabled={loading}>
               {loading ? (
-                <><span className="btn-spinner"></span> Verifying Code…</>
+                <><span className="btn-spinner"></span> Checking…</>
               ) : (
-                <>Verify Code & Continue →</>
+                <>Continue</>
               )}
             </button>
 

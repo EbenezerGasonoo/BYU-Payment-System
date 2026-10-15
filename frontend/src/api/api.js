@@ -53,6 +53,11 @@ export const studentAPI = {
     return response.data;
   },
 
+  verifyEmail: async (token) => {
+    const response = await axios.get(`${API_BASE_URL}/student/verify-email/${encodeURIComponent(token)}`);
+    return response.data;
+  },
+
   login: async (byuId, password) => {
     const response = await axios.post(`${API_BASE_URL}/student/login`, { byuId, password });
     return response.data;

@@ -48,7 +48,7 @@ Your Railway IP: **208.77.244.86** needs whitelisting
 ## 🎯 Admin Access
 
 **Admin Dashboard:** https://byupay.vercel.app/admin  
-**Admin Key:** `byu-admin-2025-secret-key`
+**Admin Key:** the `ADMIN_KEY` environment variable (not stored in the repo)
 
 ---
 
