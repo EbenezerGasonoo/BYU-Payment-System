@@ -4,8 +4,8 @@
 // SW as "updated" on every navigation. Combined with skipWaiting() +
 // clients.claim() below, that triggered a controllerchange -> page reload
 // cycle on every load.
-const CACHE_VERSION = 'byu-virtual-card-v3';
-const CACHE_NAME = 'byu-virtual-card-v3';
+const CACHE_VERSION = 'byu-virtual-card-v4';
+const CACHE_NAME = 'byu-virtual-card-v4';
 
 // Install event - cache resources
 self.addEventListener('install', (event) => {
@@ -99,7 +99,9 @@ self.addEventListener('fetch', (event) => {
             return cachedResponse;
           }
           return fetch(event.request).then((response) => {
-            if (response && response.status === 200) {
+            // Never cache the SPA fallback page (served for missing files) as a static asset
+            const isHtmlFallback = (response.headers.get('content-type') || '').includes('text/html');
+            if (response && response.status === 200 && !isHtmlFallback) {
               const responseToCache = response.clone();
               caches.open(CACHE_NAME).then((cache) => {
                 cache.put(event.request, responseToCache);
