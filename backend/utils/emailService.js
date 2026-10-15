@@ -1,38 +1,7 @@
-const nodemailer = require('nodemailer');
+const { sendMail, isEmailConfigured, verifyMailer } = require('./mailer');
 
-// Check if email is configured
-const isEmailConfigured = () => {
-  return !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
-};
-
-// Create reusable transporter
-let transporter = null;
-
-if (isEmailConfigured()) {
-  transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'mail.entechnologygh.com',
-    port: parseInt(process.env.EMAIL_PORT || '465', 10),
-    secure: (process.env.EMAIL_PORT || '465') === '465', // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-
-  // Verify transporter connection on startup
-  transporter.verify((error, success) => {
-    if (error) {
-      console.error('❌ Email transporter verification failed:', error.message);
-    } else {
-      console.log('✅ Email transporter is ready');
-    }
-  });
-} else {
-  console.warn('⚠️  Email not configured: EMAIL_USER and/or EMAIL_PASSWORD not set. Emails will not be sent.');
-}
+// Check the configured email provider once on startup
+verifyMailer();
 
 // Send email to admin when student requests card
 const notifyAdminNewRequest = async (student, cardRequest) => {
@@ -76,7 +45,7 @@ const notifyAdminNewRequest = async (student, cardRequest) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Admin notification sent to', process.env.ADMIN_EMAIL, 'Message ID:', info.messageId);
   } catch (error) {
     console.error('❌ Error sending admin notification:', error.message);
@@ -128,7 +97,7 @@ const notifyStudentCardAssigned = async (student, cardRequest) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Student notification sent (card assigned) to', student.email, 'Message ID:', info.messageId);
   } catch (error) {
     console.error('❌ Error sending student notification:', error.message);
@@ -170,7 +139,7 @@ const notifyStudentCardExpired = async (student, cardRequest) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Student notification sent (card expired) to', student.email, 'Message ID:', info.messageId);
   } catch (error) {
     console.error('❌ Error sending expiry notification:', error.message);
@@ -214,7 +183,7 @@ const sendVerificationEmail = async (student, token) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Verification email sent to', student.email, 'Message ID:', info.messageId);
   } catch (error) {
     console.error('❌ Error sending verification email:', error.message);
@@ -277,7 +246,7 @@ const sendPasswordResetEmail = async (student, resetToken, resetCode) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Password reset email sent to', student.email, 'Message ID:', info.messageId);
   } catch (error) {
     console.error('❌ Error sending password reset email:', error.message);
@@ -312,7 +281,7 @@ const sendPasswordChangeConfirmationEmail = async (student) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendMail(mailOptions);
     console.log('✅ Password change confirmation sent to', student.email);
   } catch (error) {
     console.error('❌ Error sending password change confirmation email:', error.message);
@@ -322,8 +291,9 @@ const sendPasswordChangeConfirmationEmail = async (student) => {
 
 // Send welcome email to admin-created student with temp password
 const sendWelcomeEmail = async (student, tempPassword) => {
-  if (!transporter) {
-    console.log('📧 [DEV] Welcome email (no SMTP):', student.email, '| Temp password:', tempPassword);
+  if (!isEmailConfigured()) {
+    // Never log the temporary password
+    console.warn('⚠️  Email not configured. Skipping welcome email for', student.email);
     return;
   }
 
@@ -351,7 +321,7 @@ const sendWelcomeEmail = async (student, tempPassword) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendMail(mailOptions);
     console.log('✅ Welcome email sent to', student.email);
   } catch (error) {
     console.error('❌ Error sending welcome email:', error.message);
