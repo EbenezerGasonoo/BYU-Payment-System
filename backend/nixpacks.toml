@@ -1,5 +1,6 @@
 [phases.setup]
-nixPkgs = ['nodejs-18_x', 'npm-9_x']
+# Mongoose 9 / MongoDB driver 7 require Node >= 20.19 (Node 18 fails with "crypto is not defined")
+nixPkgs = ['nodejs_22']
 
 [phases.install]
 cmds = ['npm install']
