@@ -8,7 +8,9 @@ function StudentRegister() {
     name: '',
     byuId: '',
     email: '',
-    phone: ''
+    phone: '',
+    password: '',
+    confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -34,11 +36,21 @@ function StudentRegister() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setMessage({ type: '', text: '' });
 
+    if (formData.password.length < 8) {
+      setMessage({ type: 'error', text: 'Password must be at least 8 characters long.' });
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setMessage({ type: 'error', text: 'Passwords do not match.' });
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await studentAPI.register(formData);
+      const { confirmPassword, ...payload } = formData;
+      const response = await studentAPI.register(payload);
       setMessage({ type: 'success', text: response.message });
       localStorage.setItem('hasRegistered', 'true');
 
@@ -46,7 +58,8 @@ function StudentRegister() {
       login({
         byuId: formData.byuId,
         name: formData.name,
-        email: formData.email
+        email: formData.email,
+        token: response.token
       });
 
       setTimeout(() => {
@@ -54,7 +67,7 @@ function StudentRegister() {
         navigate('/dashboard');
       }, 2000);
 
-      setFormData({ name: '', byuId: '', email: '', phone: '' });
+      setFormData({ name: '', byuId: '', email: '', phone: '', password: '', confirmPassword: '' });
     } catch (error) {
       setMessage({
         type: 'error',
@@ -150,6 +163,36 @@ function StudentRegister() {
               onChange={handleChange}
               required
               placeholder="+233 XX XXX XXXX"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Password *</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              minLength={8}
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Confirm Password *</label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              minLength={8}
+              autoComplete="new-password"
+              placeholder="Re-enter your password"
             />
           </div>
 

@@ -20,6 +20,7 @@ import ProgressTracker from './components/ProgressTracker';
 import LiveChat from './components/LiveChat';
 import LanguageToggle from './components/LanguageToggle';
 import ProtectedRoute from './components/ProtectedRoute';
+import NotFound from './pages/NotFound';
 import ImpersonationBanner from './components/ImpersonationBanner';
 import { AuthProvider, useAuth } from './utils/AuthContext';
 import { AdminAuthProvider } from './utils/AdminAuthContext';
@@ -148,6 +149,8 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
 
@@ -160,7 +163,7 @@ function AppContent() {
                 <span className="footer-divider">•</span>
                 <Link to="/contact">Contact</Link>
               </div>
-              <p>&copy; 2025 ConnectPay. West Africa Virtual Card Platform.</p>
+              <p>&copy; {new Date().getFullYear()} ConnectPay. West Africa Virtual Card Platform.</p>
             </div>
           </div>
         </footer>

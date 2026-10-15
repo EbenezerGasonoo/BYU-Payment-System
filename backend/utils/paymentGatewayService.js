@@ -30,6 +30,9 @@ let lastFetchTime = 0;
 /**
  * Fetch live exchange rates (or fallback to configured rates)
  */
+// Fake Paystack approvals are only allowed when explicitly enabled (never in production)
+const SIMULATION_ENABLED = process.env.PAYMENT_SIMULATION === 'true';
+
 async function getExchangeRates() {
   const now = Date.now();
   // Cache for 30 minutes
@@ -93,6 +96,9 @@ async function initializePaystackPayment({ email, amountLocal, currency, referen
   const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
   
   if (!PAYSTACK_SECRET_KEY || PAYSTACK_SECRET_KEY.includes('YOUR_')) {
+    if (!SIMULATION_ENABLED) {
+      return { success: false, message: 'Paystack is not configured' };
+    }
     // Sandbox / Test simulation mode
     return {
       success: true,
@@ -151,6 +157,11 @@ async function verifyPaystackPayment(reference) {
   const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
   if (!PAYSTACK_SECRET_KEY || PAYSTACK_SECRET_KEY.includes('YOUR_')) {
+    // Without a key, payments can only be "verified" in explicit simulation mode;
+    // otherwise any request could be marked paid for free
+    if (!SIMULATION_ENABLED) {
+      return { success: false, verified: false, reference };
+    }
     return { success: true, verified: true, status: 'success', reference, simulated: true };
   }
 

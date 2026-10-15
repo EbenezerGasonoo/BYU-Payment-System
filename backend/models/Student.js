@@ -5,6 +5,12 @@ class Student extends Model {
   toJSON() {
     const values = { ...this.get() };
     values._id = String(values.id);
+    // Never serialize credentials or one-time tokens to API clients
+    delete values.password;
+    delete values.verificationToken;
+    delete values.resetPasswordToken;
+    delete values.resetPasswordCode;
+    delete values.resetPasswordExpires;
     return values;
   }
 }

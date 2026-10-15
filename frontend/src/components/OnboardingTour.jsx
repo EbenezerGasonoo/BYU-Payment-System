@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 function OnboardingTour() {
   const [showTour, setShowTour] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
-  const location = useLocation();
 
   const tourSteps = [
     {
@@ -48,14 +47,8 @@ function OnboardingTour() {
     }
   ];
 
-  useEffect(() => {
-    // Check if user has seen the tour before
-    const hasSeenTour = localStorage.getItem('hasSeenTour');
-    
-    if (!hasSeenTour && location.pathname === '/') {
-      setTimeout(() => setShowTour(true), 1000);
-    }
-  }, [location]);
+  // The tour only opens on request (WelcomeModal "take a quick tour" or the help button),
+  // so first-time visitors don't get two popups stacked on top of each other.
 
   const handleNext = () => {
     if (currentStep < tourSteps.length - 1) {

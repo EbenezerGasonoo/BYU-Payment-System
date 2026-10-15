@@ -102,12 +102,13 @@ function RequestPayment() {
         paymentMethod: 'pending' // Will be updated when payment method is selected
       });
 
-      // Now show payment modal with the payment reference
+      // Show the payment modal with the server-computed amounts (the server decides what is charged)
+      const quote = requestResponse.data;
       setPaymentData({
-        amount,
-        amountInGHS,
-        totalPaidGHS,
-        exchangeRate,
+        amount: quote.amount ?? amount,
+        amountInGHS: quote.amountInGHS ?? amountInGHS,
+        totalPaidGHS: quote.totalPaidGHS ?? totalPaidGHS,
+        exchangeRate: quote.exchangeRate ?? exchangeRate,
         byuId: formData.byuId,
         paymentReference: requestResponse.data.paymentReference,
         requestToken: requestResponse.data.requestToken,
