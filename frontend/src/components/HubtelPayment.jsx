@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { studentAPI } from '../api/api';
-import './HubtelPayment.css';
 
 function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   const [paymentMethod, setPaymentMethod] = useState('momo-hubtel'); // Default to Hubtel
@@ -21,7 +20,8 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   } = paymentData;
 
   const initiatePayment = async () => {
-    if (!phoneNumber) {
+    // Hubtel checkout collects the number itself; only the direct MTN prompt needs it here
+    if (paymentMethod === 'momo-direct' && !phoneNumber) {
       setMessage({ type: 'error', text: 'Please enter your mobile money number' });
       return;
     }
@@ -159,381 +159,148 @@ function HubtelPayment({ paymentData, onSuccess, onCancel }) {
   };
 
   const paymentMethods = [
-    { id: 'momo-hubtel', name: 'Mobile Money (Hubtel)', icon: '📱', description: 'Secure payment - MTN, Vodafone, AirtelTigo', disabled: false, comingSoon: false },
-    { id: 'momo-manual', name: 'Manual Mobile Money', icon: '💰', description: 'Pay directly to our account', disabled: false, comingSoon: false }
+    { id: 'momo-hubtel', name: 'Mobile Money through Hubtel', description: 'MTN MoMo, Telecel Cash or AT Money. Confirmed automatically.' },
+    { id: 'momo-manual', name: 'Send Mobile Money manually', description: 'Transfer to our MoMo number. Confirmed by our team.' }
   ];
 
+  const MANUAL_NUMBER = '0594767131';
+  const MANUAL_NAME = 'ENCRYPTION NONCE TECHNOLOGY';
+
   return (
-    <div className="payment-modal-overlay" onClick={onCancel}>
-      <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="payment-close" onClick={onCancel}>✕</button>
+    <div className="cp-modal" role="dialog" aria-modal="true" aria-labelledby="pay-title" onClick={onCancel}>
+      <div className="cp-modal__panel cp-card" onClick={(e) => e.stopPropagation()}>
+        <div className="cp-card__body">
+          <div className="cp-pay__head">
+            <h2 id="pay-title" className="cp-h2">Pay for your card</h2>
+            <button type="button" className="cp-iconbtn" onClick={onCancel} aria-label="Close">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            </button>
+          </div>
 
-        <div className="payment-header">
-          <div className="payment-icon">💳</div>
-          <h2>Complete Payment</h2>
-          <p>Secure payment via Hubtel</p>
-        </div>
+          <dl className="cp-rows" style={{ marginTop: 12 }}>
+            <div>
+              <dt>Card amount</dt>
+              <dd>${amount.toFixed(2)}</dd>
+            </div>
+            <div>
+              <dt>In cedis</dt>
+              <dd>GHS {amountInGHS.toFixed(2)}</dd>
+            </div>
+            <div>
+              <dt>Service fee (5%)</dt>
+              <dd>GHS {(totalPaidGHS - amountInGHS).toFixed(2)}</dd>
+            </div>
+            <div className="cp-rows__total">
+              <dt>Total to pay</dt>
+              <dd>GHS {totalPaidGHS.toFixed(2)}</dd>
+            </div>
+          </dl>
 
-        <div className="payment-summary">
-          <div className="summary-row">
-            <span>Card Amount (USD):</span>
-            <strong>${amount.toFixed(2)}</strong>
-          </div>
-          <div className="summary-row">
-            <span>Amount in GHS:</span>
-            <strong>GHS {amountInGHS.toFixed(2)}</strong>
-          </div>
-          <div className="summary-row" style={{ color: '#dc3545' }}>
-            <span>Processing Fee (5%):</span>
-            <strong>GHS {(totalPaidGHS - amountInGHS).toFixed(2)}</strong>
-          </div>
-          <div className="summary-row total">
-            <span>Total to Pay:</span>
-            <strong>GHS {totalPaidGHS.toFixed(2)}</strong>
-          </div>
-        </div>
+          {message.text && (
+            <div
+              className={`cp-alert cp-alert--${message.type === 'error' ? 'error' : message.type === 'success' ? 'success' : 'info'}`}
+              style={{ marginTop: 16 }}
+              role="status"
+            >
+              {message.text}
+            </div>
+          )}
 
-        {message.text && (
-          <div className={`alert alert-${message.type}`} style={{ margin: '1rem 0' }}>
-            {message.text}
-          </div>
-        )}
-
-        {!showInstructions ? (
-          <>
-            {paymentMethods.length > 1 && (
-              <div className="payment-methods">
-                <h3 style={{ marginBottom: '1rem', color: '#002E5D' }}>Select Payment Method</h3>
-                {paymentMethods.map(method => (
-                <div
-                  key={method.id}
-                  className={`payment-method-card ${paymentMethod === method.id ? 'active' : ''} ${method.disabled ? 'disabled' : ''}`}
-                  onClick={() => !method.disabled && setPaymentMethod(method.id)}
-                  style={{
-                    opacity: method.disabled ? 0.5 : 1,
-                    cursor: method.disabled ? 'not-allowed' : 'pointer',
-                    position: 'relative'
-                  }}
-                >
-                  <div className="method-icon">{method.icon}</div>
-                  <div className="method-info">
-                    <h4>
-                      {method.name}
-                      {method.comingSoon && (
-                        <span style={{
-                          marginLeft: '0.75rem',
-                          fontSize: '0.7rem',
-                          background: 'linear-gradient(135deg, #FFB81C 0%, #FFC844 100%)',
-                          color: '#002E5D',
-                          padding: '0.35rem 0.75rem',
-                          borderRadius: '12px',
-                          fontWeight: '700',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          boxShadow: '0 2px 8px rgba(255, 184, 28, 0.3)',
-                          border: '1px solid rgba(0, 46, 93, 0.2)'
-                        }}>
-                          🚀 Coming Soon
-                        </span>
-                      )}
-                      {method.disabled && !method.comingSoon && (
-                        <span style={{
-                          marginLeft: '0.5rem',
-                          fontSize: '0.75rem',
-                          background: 'rgba(108, 117, 125, 0.2)',
-                          color: '#6c757d',
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '4px',
-                          fontWeight: '600'
-                        }}>
-                          COMING SOON
-                        </span>
-                      )}
-                    </h4>
-                    <p>{method.description}</p>
-                  </div>
-                  <div className="method-radio">
+          {!showInstructions ? (
+            <>
+              <fieldset className="cp-methods">
+                <legend className="cp-h3">How do you want to pay?</legend>
+                {paymentMethods.map((method) => (
+                  <label key={method.id} className={`cp-method ${paymentMethod === method.id ? 'is-active' : ''}`}>
                     <input
                       type="radio"
-                      checked={paymentMethod === method.id && !method.disabled}
-                      onChange={() => !method.disabled && setPaymentMethod(method.id)}
-                      disabled={method.disabled}
+                      name="payment-method"
+                      value={method.id}
+                      checked={paymentMethod === method.id}
+                      onChange={() => setPaymentMethod(method.id)}
                     />
-                  </div>
-                </div>
+                    <span>
+                      <strong>{method.name}</strong>
+                      <span className="cp-small cp-muted">{method.description}</span>
+                    </span>
+                  </label>
                 ))}
-              </div>
-            )}
+              </fieldset>
 
-            {paymentMethod === 'momo-hubtel' ? (
-              <>
-                <div className="form-group" style={{ marginTop: '1rem' }}>
-                  <label>Mobile Money Number (Optional)</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g., 0241234567"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    pattern="[0-9]{10}"
-                  />
-                  <small>Optional: Enter your number for faster checkout</small>
-                </div>
-
-                <div style={{ 
-                  background: 'linear-gradient(135deg, rgba(0, 46, 93, 0.05), rgba(0, 61, 130, 0.05))', 
-                  padding: '1.5rem', 
-                  borderRadius: '12px', 
-                  marginTop: '1rem',
-                  border: '1px solid rgba(0, 46, 93, 0.1)'
-                }}>
-                  <h4 style={{ color: '#002E5D', marginBottom: '0.75rem', fontSize: '1rem', fontWeight: '600' }}>
-                    📱 How Hubtel Payment Works:
-                  </h4>
-                  <ol style={{ margin: 0, paddingLeft: '1.5rem', lineHeight: '1.8', color: '#666', fontSize: '0.9rem' }}>
-                    <li>Click "Proceed to Pay" to open Hubtel checkout</li>
-                    <li>Select your mobile money network (MTN, Vodafone, or AirtelTigo)</li>
-                    <li>Enter your mobile money number and approve payment</li>
-                    <li>You'll be redirected back automatically after payment</li>
+              {paymentMethod === 'momo-hubtel' && (
+                <div className="cp-form" style={{ marginTop: 20 }}>
+                  <div className="cp-field">
+                    <label htmlFor="pay-phone">Mobile Money number <span className="cp-muted">(optional)</span></label>
+                    <input
+                      id="pay-phone"
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="024 123 4567"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                    />
+                    <small>Pre-fills the Hubtel checkout.</small>
+                  </div>
+                  <ol className="cp-howto" style={{ marginTop: 0 }}>
+                    <li>Continue to the Hubtel checkout page.</li>
+                    <li>Choose your network and enter your number.</li>
+                    <li>Approve the prompt on your phone with your PIN.</li>
+                    <li>You are brought back here once it is done.</li>
                   </ol>
                 </div>
+              )}
 
-                <div className="payment-actions" style={{ marginTop: '1.5rem' }}>
-                  <button
-                    className="btn btn-primary"
-                    onClick={initiatePayment}
-                    disabled={processing}
-                  >
-                    {processing ? 'Creating Checkout...' : 'Proceed to Hubtel Checkout'}
-                  </button>
-                  <button className="btn btn-secondary" onClick={onCancel}>
-                    Cancel
-                  </button>
-                </div>
-              </>
-            ) : paymentMethod === 'momo-manual' ? (
-              <div className="payment-instructions" style={{ marginTop: '1.5rem' }}>
-                <div style={{ 
-                  background: 'linear-gradient(135deg, rgba(255, 184, 28, 0.1), rgba(255, 200, 68, 0.1))', 
-                  padding: '1.5rem', 
-                  borderRadius: '12px', 
-                  border: '2px solid rgba(255, 184, 28, 0.3)',
-                  marginBottom: '1.5rem'
-                }}>
-                  <h3 style={{ color: '#002E5D', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>💰</span>
-                    Manual Payment Instructions
-                  </h3>
-                  
-                  <div style={{ background: 'white', padding: '1.25rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                    <p style={{ margin: '0 0 1rem 0', color: '#666', fontSize: '0.95rem' }}>
-                      Send <strong style={{ color: '#002E5D', fontSize: '1.1rem' }}>GHS {totalPaidGHS.toFixed(2)}</strong> via Mobile Money to:
-                    </p>
-                    
-                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(0, 46, 93, 0.05)', borderRadius: '6px' }}>
-                        <span style={{ color: '#666', fontWeight: '500' }}>Mobile Number:</span>
-                        <strong style={{ color: '#002E5D', fontSize: '1.1rem', fontFamily: 'monospace' }}>0594767131</strong>
-                      </div>
-                      
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(0, 46, 93, 0.05)', borderRadius: '6px' }}>
-                        <span style={{ color: '#666', fontWeight: '500' }}>Account Name:</span>
-                        <strong style={{ color: '#002E5D', fontSize: '0.95rem' }}>ENCRYPTION NONCE TECHNOLOGY</strong>
-                      </div>
-                      
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(255, 184, 28, 0.15)', borderRadius: '6px', border: '2px solid rgba(255, 184, 28, 0.3)' }}>
-                        <span style={{ color: '#856404', fontWeight: '600' }}>Reference/Description:</span>
-                        <strong style={{ color: '#856404', fontSize: '1.05rem', fontFamily: 'monospace' }}>{paymentData.byuId}</strong>
-                      </div>
+              {paymentMethod === 'momo-manual' && (
+                <div style={{ marginTop: 20 }}>
+                  <p>Send exactly <strong className="cp-num">GHS {totalPaidGHS.toFixed(2)}</strong> by Mobile Money to:</p>
+                  <dl className="cp-details">
+                    <div className="cp-detail">
+                      <dt>Number</dt>
+                      <dd><span className="cp-num cp-detail__value">{MANUAL_NUMBER}</span></dd>
                     </div>
-                  </div>
-
-                  <div style={{ background: 'rgba(0, 123, 255, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                    <p style={{ margin: '0 0 0.75rem 0', color: '#007bff', fontWeight: '600' }}>
-                      📝 Important Steps:
-                    </p>
-                    <ol style={{ margin: 0, paddingLeft: '1.5rem', lineHeight: '1.8', color: '#333' }}>
-                      <li>Open your Mobile Money app or dial your network's MoMo code</li>
-                      <li>Select "Send Money" or "Transfer"</li>
-                      <li>Enter the number: <strong>0594767131</strong></li>
-                      <li>Enter the amount: <strong>GHS {totalPaidGHS.toFixed(2)}</strong></li>
-                      <li>In the reference/description field, enter your Student ID: <strong>{paymentData.byuId}</strong></li>
-                      <li>Verify the recipient name shows: <strong>ENCRYPTION NONCE TECHNOLOGY</strong></li>
-                      <li>Complete the transaction</li>
-                      <li>Click the button below after payment</li>
-                    </ol>
-                  </div>
-
-                  <div style={{ background: 'rgba(220, 53, 69, 0.1)', padding: '1rem', borderRadius: '8px' }}>
-                    <p style={{ margin: 0, color: '#dc3545', fontWeight: '600', fontSize: '0.9rem' }}>
-                      ⚠️ <strong>IMPORTANT:</strong> You MUST include your Student ID ({paymentData.byuId}) in the reference field for us to verify your payment!
-                    </p>
+                    <div className="cp-detail">
+                      <dt>Account name</dt>
+                      <dd><span className="cp-detail__value">{MANUAL_NAME}</span></dd>
+                    </div>
+                    <div className="cp-detail">
+                      <dt>Reference</dt>
+                      <dd><span className="cp-num cp-detail__value">{paymentData.byuId}</span></dd>
+                    </div>
+                  </dl>
+                  <div className="cp-note" style={{ marginTop: 16 }}>
+                    Put your BYU Student ID (<span className="cp-num">{paymentData.byuId}</span>) in the reference field and check that
+                    the recipient name shows {MANUAL_NAME}. Without the reference we cannot match your payment.
                   </div>
                 </div>
-
-                <div className="payment-actions">
-                  <button 
-                    className="btn btn-success" 
-                    onClick={confirmPayment}
-                  >
-                    ✓ I've Completed the Payment
-                  </button>
-                  <button className="btn btn-secondary" onClick={onCancel}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="form-group" style={{ marginTop: '1rem' }}>
-                  <label>Mobile Money Number *</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g., 0241234567"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    pattern="[0-9]{10}"
-                    required
-                  />
-                  <small>Enter your 10-digit mobile money number</small>
-                </div>
-
-                <div className="payment-actions">
-                  <button
-                    className="btn btn-primary"
-                    onClick={initiatePayment}
-                    disabled={processing}
-                  >
-                    {processing ? 'Processing...' : 'Proceed to Pay'}
-                  </button>
-                  <button className="btn btn-secondary" onClick={onCancel}>
-                    Cancel
-                  </button>
-                </div>
-              </>
-            )}
-          </>
-        ) : (
-          <div className="payment-instructions">
-            <h3 style={{ color: '#002E5D', marginBottom: '1rem' }}>Payment Instructions</h3>
-
-            {paymentMethod === 'momo-hubtel' && (
-              <div className="instruction-card">
-                <h4>📱 Payment Request Sent!</h4>
-                <div style={{ background: 'rgba(40, 167, 69, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>
-                  <p style={{ marginBottom: '0.5rem', color: '#28a745', fontWeight: '700', fontSize: '1.2rem' }}>
-                    ✅ Payment initiated for {phoneNumber}
-                  </p>
-                  <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
-                    Payment processing...
-                  </p>
-                </div>
-                
-                <div style={{ background: 'rgba(0, 123, 255, 0.1)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                  <h4 style={{ margin: '0 0 0.75rem 0', color: '#007bff' }}>⏳ What happens next:</h4>
-                  <ol style={{ margin: 0, paddingLeft: '1.5rem', lineHeight: '1.8' }}>
-                    <li>Hubtel is processing your payment request</li>
-                    <li>You may receive an SMS notification</li>
-                    <li>The payment will be automatically verified</li>
-                    <li>You'll be notified when complete</li>
-                  </ol>
-                </div>
-
-                <div style={{ background: 'rgba(255, 184, 28, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                  <p style={{ margin: 0, color: '#856404', fontWeight: '600', fontSize: '0.95rem' }}>
-                    💡 <strong>Payment Status:</strong>
-                  </p>
-                  <p style={{ marginTop: '0.5rem', marginBottom: 0, color: '#666' }}>
-                    Hubtel will send a callback when the payment is complete. If you've completed the payment, click the button below to verify.
-                  </p>
-                </div>
-
-                <div className="payment-reference">
-                  <strong>Payment Reference:</strong>
-                  <code>{paymentReference}</code>
-                </div>
-                
-                <p className="warning" style={{ marginTop: '1rem' }}>
-                  ⏰ <strong>Note:</strong> Payment processing typically takes less than 30 seconds. You'll receive confirmation automatically.
-                </p>
-              </div>
-            )}
-
-            {paymentMethod === 'momo-direct' && (
-              <div className="instruction-card">
-                <h4>💳 MTN Mobile Money Payment Prompt Sent!</h4>
-                <div style={{ background: 'rgba(40, 167, 69, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>
-                  <p style={{ marginBottom: '0.5rem', color: '#28a745', fontWeight: '700', fontSize: '1.2rem' }}>
-                    ✅ Payment prompt sent to {phoneNumber}
-                  </p>
-                  <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
-                    {checkingStatus ? '🔄 Waiting for payment approval...' : 'Check your MTN phone NOW!'}
-                  </p>
-                </div>
-                
-                <h4 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>What to do now:</h4>
-                <ol>
-                  <li><strong>Check your MTN phone ({phoneNumber})</strong> for a payment notification</li>
-                  <li>You should receive a <strong>pop-up prompt</strong> asking you to approve GHS {totalPaidGHS.toFixed(2)}</li>
-                  <li><strong>Approve the payment</strong> by entering your MTN MOMO PIN</li>
-                  <li>You will receive an <strong>SMS confirmation</strong></li>
-                  <li>Your card request will be <strong>automatically verified and submitted</strong></li>
-                </ol>
-
-                {checkingStatus && (
-                  <div style={{ background: 'rgba(0, 123, 255, 0.1)', padding: '1rem', borderRadius: '8px', marginTop: '1.5rem', marginBottom: '1.5rem', textAlign: 'center' }}>
-                    <p style={{ margin: 0, color: '#007bff', fontWeight: '600' }}>
-                      🔄 Checking payment status...
-                    </p>
-                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: '#666' }}>
-                      Waiting for you to approve the payment on your phone
-                    </p>
-                  </div>
-                )}
-
-                <div style={{ background: 'rgba(255, 184, 28, 0.1)', padding: '1rem', borderRadius: '8px', marginTop: '1.5rem', marginBottom: '1.5rem' }}>
-                  <p style={{ margin: 0, color: '#856404', fontWeight: '600', fontSize: '0.95rem' }}>
-                    💡 <strong>Didn't receive the prompt?</strong>
-                  </p>
-                  <ul style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
-                    <li>Check if you have network signal on your MTN line</li>
-                    <li>Make sure your phone number is correct: {phoneNumber}</li>
-                    <li>Wait a few seconds - the prompt should appear</li>
-                    <li>Check if your MTN MoMo is active and has balance for fees</li>
-                  </ul>
-                </div>
-
-                <div className="payment-reference">
-                  <strong>Payment Reference:</strong>
-                  <code>{paymentReference}</code>
-                  {mtnReferenceId && (
-                    <>
-                      <br /><br />
-                      <strong>MTN Transaction ID:</strong>
-                      <code style={{fontSize: '0.85rem'}}>{mtnReferenceId}</code>
-                    </>
-                  )}
-                </div>
-                
-                <p className="warning" style={{ marginTop: '1rem' }}>
-                  ⏰ <strong>Important:</strong> The payment prompt will expire in 2 minutes. Please approve promptly.
-                </p>
-              </div>
-            )}
-
-            <div className="payment-actions" style={{ marginTop: '2rem' }}>
-              <button className="btn btn-success" onClick={confirmPayment}>
-                ✓ I've Completed Payment
-              </button>
-              <button className="btn btn-secondary" onClick={onCancel}>
-                Cancel
-              </button>
+              )}
+            </>
+          ) : (
+            <div style={{ marginTop: 20 }}>
+              <h3 className="cp-h3">Approve the prompt on your phone</h3>
+              <p style={{ marginTop: 8 }}>
+                A payment request for <strong className="cp-num">GHS {totalPaidGHS.toFixed(2)}</strong> was sent to {phoneNumber}.
+                {checkingStatus ? ' Waiting for your approval…' : ''}
+              </p>
+              <p className="cp-small cp-muted" style={{ marginTop: 8 }}>
+                Reference <span className="cp-num">{paymentReference}</span>. The prompt expires after about 2 minutes.
+              </p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        <div className="cp-card__foot cp-pay__foot">
+          <button type="button" className="cp-btn cp-btn--secondary" onClick={onCancel}>Cancel</button>
+          {showInstructions || paymentMethod === 'momo-manual' ? (
+            <button type="button" className="cp-btn cp-btn--primary" onClick={confirmPayment}>I have paid</button>
+          ) : (
+            <button type="button" className="cp-btn cp-btn--primary" onClick={initiatePayment} disabled={processing}>
+              {processing ? <><span className="cp-spinner" /> Opening checkout…</> : 'Continue to Hubtel'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 export default HubtelPayment;
-
