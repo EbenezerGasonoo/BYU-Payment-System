@@ -1,21 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { ContactMessage } = require('../models');
-const nodemailer = require('nodemailer');
+const { sendMail, isEmailConfigured } = require('../utils/mailer');
 
-// Create reusable transporter matching email configuration
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'mail.entechnologygh.com',
-  port: parseInt(process.env.EMAIL_PORT || '465', 10),
-  secure: (process.env.EMAIL_PORT || '465') === '465',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+// Visitor-supplied text is inserted into HTML emails, so escape it
+const escapeHtml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
 // Submit contact form
 router.post('/submit', async (req, res) => {
@@ -56,7 +50,7 @@ router.post('/submit', async (req, res) => {
     });
 
     // Send email to admin (if email is configured)
-    if (process.env.EMAIL_USER && process.env.ADMIN_EMAIL) {
+    if (isEmailConfigured() && process.env.ADMIN_EMAIL) {
       try {
         const subjectLabels = {
           'general': 'General Inquiry',
@@ -67,25 +61,26 @@ router.post('/submit', async (req, res) => {
           'other': 'Other'
         };
 
-        await transporter.sendMail({
+        await sendMail({
           from: process.env.EMAIL_USER,
           to: process.env.ADMIN_EMAIL,
+          replyTo: email,
           subject: `🔔 New Support Request - ${subjectLabels[subject]}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #002E5D;">New Support Request</h2>
               
               <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <p><strong>From:</strong> ${name}</p>
-                <p><strong>Email:</strong> ${email}</p>
-                ${byuId ? `<p><strong>BYU ID:</strong> ${byuId}</p>` : ''}
+                <p><strong>From:</strong> ${escapeHtml(name)}</p>
+                <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+                ${byuId ? `<p><strong>BYU ID:</strong> ${escapeHtml(byuId)}</p>` : ''}
                 <p><strong>Subject:</strong> ${subjectLabels[subject]}</p>
                 <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
               </div>
               
               <div style="background-color: #fff; padding: 20px; border-left: 4px solid #FFB81C; margin: 20px 0;">
                 <h3 style="color: #002E5D; margin-top: 0;">Message:</h3>
-                <p style="color: #333; line-height: 1.6;">${message}</p>
+                <p style="color: #333; line-height: 1.6;">${escapeHtml(message).replace(/\n/g, '<br>')}</p>
               </div>
               
               <p style="color: #666; font-size: 12px; margin-top: 30px;">
@@ -97,14 +92,14 @@ router.post('/submit', async (req, res) => {
         });
 
         // Send confirmation to user
-        await transporter.sendMail({
+        await sendMail({
           from: process.env.EMAIL_USER,
           to: email,
           subject: '✅ We received your message - Pathway',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #002E5D;">Thank You for Contacting Us!</h2>
-              <p>Hello ${name},</p>
+              <p>Hello ${escapeHtml(name)},</p>
               <p>We've received your message and will respond within 24 hours.</p>
               
               <div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px; margin: 20px 0;">
