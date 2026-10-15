@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { studentAPI } from '../api/api';
 import { useAuth } from '../utils/AuthContext';
 import VirtualCardVisualizer from '../components/VirtualCardVisualizer';
-import axios from 'axios';
 import './StudentDashboard.css';
 
 function StudentDashboard() {
@@ -64,7 +63,7 @@ function StudentDashboard() {
 
   const handleFreezeToggle = async (requestId) => {
     try {
-      const response = await axios.post(`/api/students/cards/${requestId}/freeze`);
+      const response = { data: await studentAPI.freezeCard(requestId) };
       if (response.data?.success) {
         setDashboardData(prev => {
           if (!prev) return prev;

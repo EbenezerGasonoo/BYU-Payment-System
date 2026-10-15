@@ -19,10 +19,47 @@ console.log('🔧 API Configuration:', {
   isProduction
 });
 
+export const STUDENT_TOKEN_KEY = 'studentToken';
+export const SESSION_EXPIRED_EVENT = 'student-session-expired';
+
+const isStudentApiUrl = (url = '') => url.startsWith(`${API_BASE_URL}/student/`);
+
+// Attach the student session token (and the admin key while impersonating) to student API calls
+axios.interceptors.request.use((config) => {
+  if (isStudentApiUrl(config.url)) {
+    const token = localStorage.getItem(STUDENT_TOKEN_KEY);
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    const adminKey = sessionStorage.getItem('adminKey');
+    if (adminKey) config.headers['x-admin-key'] = adminKey;
+  }
+  return config;
+});
+
+// A 401 from a student endpoint means the session is missing or expired
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && isStudentApiUrl(error.config?.url)) {
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Student API calls
 export const studentAPI = {
   register: async (data) => {
     const response = await axios.post(`${API_BASE_URL}/student/register`, data);
+    return response.data;
+  },
+
+  login: async (byuId, password) => {
+    const response = await axios.post(`${API_BASE_URL}/student/login`, { byuId, password });
+    return response.data;
+  },
+
+  freezeCard: async (requestId) => {
+    const response = await axios.post(`${API_BASE_URL}/student/cards/${requestId}/freeze`);
     return response.data;
   },
 

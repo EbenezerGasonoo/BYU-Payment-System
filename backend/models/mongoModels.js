@@ -20,6 +20,15 @@ const studentSchema = new mongoose.Schema({
   deletedAt:          { type: Date, default: null },
 }, { timestamps: true, collection: 'students' });
 
+// Never serialize credentials or one-time tokens to API clients
+const SENSITIVE_STUDENT_FIELDS = ['password', 'verificationToken', 'resetPasswordToken', 'resetPasswordCode', 'resetPasswordExpires'];
+studentSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    SENSITIVE_STUDENT_FIELDS.forEach((field) => delete ret[field]);
+    return ret;
+  }
+});
+
 // ── CardRequest (Mongoose / MongoDB) ─────────────────────────────
 const cardRequestSchema = new mongoose.Schema({
   studentId:          { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
@@ -40,6 +49,20 @@ const cardRequestSchema = new mongoose.Schema({
   paidAt:             { type: Date, default: null },
   hubtelReference:    { type: String, default: null },
   paymentReference:   { type: String, default: null },
+  // Mirrors the SQL CardRequest model — Mongoose strict mode silently drops unknown fields
+  amountInGHS:        { type: Number, default: null },
+  amountLocal:        { type: Number, default: null },
+  chargebackFee:      { type: Number, default: 5 },
+  purpose:            { type: String, default: 'School Fees Payment' },
+  country:            { type: String, default: 'GH' },
+  currency:           { type: String, default: 'GHS' },
+  paymentGateway:     { type: String, default: 'hubtel' },
+  gatewayReference:   { type: String, default: null },
+  hubtelCheckoutId:   { type: String, default: null },
+  mtnReferenceId:     { type: String, default: null },
+  mtnTransactionId:   { type: String, default: null },
+  cardStatus:         { type: String, enum: ['active', 'frozen', 'terminated', 'pending'], default: 'pending' },
+  paymentVerifiedAt:  { type: Date, default: null },
 }, { timestamps: true, collection: 'cardrequests' });
 
 // Attach a virtual 'student' populate hook so existing code that does

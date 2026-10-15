@@ -15,14 +15,31 @@ const paymentGatewayService = require('../utils/paymentGatewayService');
 const cardProviderService = require('../utils/cardProviderService');
 const africasTalkingService = require('../utils/africasTalkingService');
 const crypto = require('crypto');
+const {
+  hashPassword,
+  verifyPassword,
+  validatePasswordStrength,
+  issueToken,
+  requireStudent,
+  canAccessStudent,
+  isLoginLocked,
+  recordFailedLogin,
+  clearLoginAttempts
+} = require('../utils/studentAuth');
+
+const MAX_CARD_AMOUNT_USD = 5000;
+
+// Shared 404 for card requests that don't exist or belong to another student
+const notFoundOrForbidden = (res) =>
+  res.status(404).json({ success: false, message: 'Card request not found' });
 
 // Register new student
 router.post('/register', async (req, res) => {
   try {
-    const { name, byuId, email, phone } = req.body;
+    const { name, byuId, email, phone, password } = req.body;
 
     // Validate required fields
-    if (!name || !byuId || !email || !phone) {
+    if (!name || !byuId || !email || !phone || !password) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
@@ -35,6 +52,11 @@ router.post('/register', async (req, res) => {
         success: false,
         message: 'BYU Student ID must be 7-8 digits'
       });
+    }
+
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return res.status(400).json({ success: false, message: passwordError });
     }
 
     // Validate Pathway email
@@ -63,6 +85,7 @@ router.post('/register', async (req, res) => {
       byuId,
       email,
       phone,
+      password: await hashPassword(password),
       verificationToken,
       isVerified: false
     });
@@ -75,7 +98,9 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Student registered successfully. Please check your email to verify your account.',
-      data: student
+      data: student,
+      student,
+      token: issueToken(student)
     });
   } catch (error) {
     console.error('Error registering student:', error);
@@ -85,6 +110,70 @@ router.post('/register', async (req, res) => {
       error: error.message
     });
   }
+});
+
+// Sign in with BYU ID + password -> session token
+router.post('/login', async (req, res) => {
+  try {
+    const byuId = String(req.body.byuId || '').trim();
+    const { password } = req.body;
+
+    if (!byuId || !password) {
+      return res.status(400).json({ success: false, message: 'BYU Student ID and password are required' });
+    }
+
+    if (isLoginLocked(byuId)) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many sign-in attempts. Please wait 15 minutes or reset your password.'
+      });
+    }
+
+    const student = await Student.findOne({ where: { byuId } });
+    if (!student || student.status === 'deleted') {
+      recordFailedLogin(byuId);
+      return res.status(401).json({ success: false, message: 'Incorrect BYU Student ID or password' });
+    }
+
+    // Accounts created before passwords existed must set one via the emailed reset code
+    if (!student.password) {
+      return res.status(403).json({
+        success: false,
+        code: 'PASSWORD_NOT_SET',
+        message: 'Your account does not have a password yet. Use "Forgot Password" to set one. We will email a code to your Pathway address.'
+      });
+    }
+
+    const { valid, needsRehash } = await verifyPassword(password, student.password);
+    if (!valid) {
+      recordFailedLogin(byuId);
+      return res.status(401).json({ success: false, message: 'Incorrect BYU Student ID or password' });
+    }
+
+    clearLoginAttempts(byuId);
+    if (needsRehash) {
+      student.password = await hashPassword(password);
+      await student.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Signed in successfully',
+      token: issueToken(student),
+      student
+    });
+  } catch (error) {
+    console.error('Error signing in:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Return the signed-in student (used to validate a stored session)
+router.get('/me', requireStudent, (req, res) => {
+  if (!req.student) {
+    return res.status(400).json({ success: false, message: 'No student session' });
+  }
+  res.json({ success: true, student: req.student });
 });
 
 // Verify email endpoint
@@ -117,12 +206,6 @@ router.get('/verify-email/:token', async (req, res) => {
     });
   }
 });
-
-// Helper for hashing passwords
-const hashPassword = (password) => {
-  const salt = 'byu_connectpay_salt_2025';
-  return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
-};
 
 // 1. Forgot password - Request reset link & OTP
 router.post('/forgot-password', async (req, res) => {
@@ -245,11 +328,9 @@ router.post('/reset-password', async (req, res) => {
   try {
     const { token, resetCode, emailOrByuId, newPassword } = req.body;
 
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password must be at least 6 characters long'
-      });
+    const passwordError = validatePasswordStrength(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ success: false, message: passwordError });
     }
 
     let whereClause = {
@@ -284,7 +365,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     // Hash and update password, clear reset fields
-    student.password = hashPassword(newPassword);
+    student.password = await hashPassword(newPassword);
     student.resetPasswordToken = null;
     student.resetPasswordCode = null;
     student.resetPasswordExpires = null;
@@ -310,15 +391,18 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // Request virtual card (with payment)
-router.post('/request-card', async (req, res) => {
+router.post('/request-card', requireStudent, async (req, res) => {
   try {
-    const { byuId, amount, amountInGHS, exchangeRate, totalPaidGHS, paymentMethod } = req.body;
+    const { paymentMethod } = req.body;
+    // Students can only request for themselves; admins (impersonating) name the student
+    const byuId = req.student ? req.student.byuId : String(req.body.byuId || '');
+    const amount = Number(req.body.amount);
 
     // Validate required fields (paymentMethod is optional at this stage)
-    if (!byuId || !amount) {
+    if (!byuId || !Number.isFinite(amount) || amount <= 0 || amount > MAX_CARD_AMOUNT_USD) {
       return res.status(400).json({
         success: false,
-        message: 'BYU ID and amount are required'
+        message: `Please enter an amount between $1 and $${MAX_CARD_AMOUNT_USD}`
       });
     }
 
@@ -368,6 +452,12 @@ router.post('/request-card', async (req, res) => {
     const requestToken = crypto.randomBytes(8).toString('hex').toUpperCase();
     const paymentReference = `BYU-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
+    // Price is computed on the server - never trust client-supplied totals
+    const pricing = await paymentGatewayService.calculateLocalAmount(amount, 'GHS');
+    const amountInGHS = pricing.subtotalLocal;
+    const exchangeRate = pricing.exchangeRate;
+    const totalPaidGHS = pricing.totalLocal;
+
     // Create card request with payment pending
     const cardRequest = await CardRequest.create({
       studentId: student.id,
@@ -390,6 +480,7 @@ router.post('/request-card', async (req, res) => {
         paymentReference,
         amount,
         amountInGHS,
+        exchangeRate,
         totalPaidGHS,
         paymentMethod,
         status: cardRequest.status,
@@ -407,8 +498,16 @@ router.post('/request-card', async (req, res) => {
   }
 });
 
+// Ask Hubtel directly whether a card request's checkout was paid.
+// Client-supplied or callback-supplied "paid" claims are not trusted on their own.
+const isConfirmedByHubtel = async (cardRequest) => {
+  if (!cardRequest.hubtelCheckoutId) return false;
+  const hubtelResult = await checkPaymentStatus(cardRequest.hubtelCheckoutId);
+  return hubtelResult.success && hubtelResult.data.status === 'paid';
+};
+
 // Verify payment and complete card request
-router.post('/verify-payment', async (req, res) => {
+router.post('/verify-payment', requireStudent, async (req, res) => {
   try {
     const { paymentReference, hubtelReference } = req.body;
 
@@ -424,23 +523,30 @@ router.post('/verify-payment', async (req, res) => {
       where: { paymentReference },
       include: [{ model: Student, as: 'student' }]
     });
-    if (!cardRequest) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment reference not found'
-      });
+    if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
+      return notFoundOrForbidden(res);
     }
 
-    // Update payment status to paid
-    cardRequest.paymentStatus = 'paid';
-    cardRequest.paymentVerifiedAt = new Date();
-    if (hubtelReference) {
-      cardRequest.paymentReference = hubtelReference; // Store Hubtel's reference
-    }
-    await cardRequest.save();
+    // Never trust the client: only mark paid once Hubtel confirms the transaction
+    if (cardRequest.paymentStatus !== 'paid') {
+      const confirmed = await isConfirmedByHubtel(cardRequest);
+      if (!confirmed) {
+        return res.status(402).json({
+          success: false,
+          message: 'Payment has not been confirmed by Hubtel yet. Please wait a moment and try again.'
+        });
+      }
 
-    // Send notification to admin about paid request
-    await notifyAdminNewRequest(cardRequest.student, cardRequest);
+      cardRequest.paymentStatus = 'paid';
+      cardRequest.paymentVerifiedAt = new Date();
+      if (hubtelReference) {
+        cardRequest.hubtelReference = hubtelReference;
+      }
+      await cardRequest.save();
+
+      // Send notification to admin about paid request
+      await notifyAdminNewRequest(cardRequest.student, cardRequest);
+    }
 
     res.json({
       success: true,
@@ -464,7 +570,7 @@ router.post('/verify-payment', async (req, res) => {
 });
 
 // Check Payment Status (Polling Endpoint)
-router.get('/check-payment-status/:paymentReference', async (req, res) => {
+router.get('/check-payment-status/:paymentReference', requireStudent, async (req, res) => {
   try {
     const { paymentReference } = req.params;
 
@@ -473,11 +579,8 @@ router.get('/check-payment-status/:paymentReference', async (req, res) => {
       where: { paymentReference },
       include: [{ model: Student, as: 'student' }]
     });
-    if (!cardRequest) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment reference not found'
-      });
+    if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
+      return notFoundOrForbidden(res);
     }
 
     // If already paid, return success immediately
@@ -528,12 +631,12 @@ router.get('/check-payment-status/:paymentReference', async (req, res) => {
 });
 
 // Mark payment as failed
-router.post('/payment-failed', async (req, res) => {
+router.post('/payment-failed', requireStudent, async (req, res) => {
   try {
     const { paymentReference, reason } = req.body;
 
     const cardRequest = await CardRequest.findOne({ where: { paymentReference } });
-    if (cardRequest) {
+    if (cardRequest && canAccessStudent(req, cardRequest.studentId) && cardRequest.paymentStatus !== 'paid') {
       cardRequest.paymentStatus = 'failed';
       cardRequest.status = 'declined';
       await cardRequest.save();
@@ -554,9 +657,16 @@ router.post('/payment-failed', async (req, res) => {
 });
 
 // Initiate Hubtel Payment (Online Checkout)
-router.post('/initiate-hubtel-payment', async (req, res) => {
+router.post('/initiate-hubtel-payment', requireStudent, async (req, res) => {
   try {
-    const { phoneNumber, amount, paymentReference, studentName, studentEmail } = req.body;
+    const { phoneNumber, paymentReference, studentName, studentEmail } = req.body;
+
+    const cardRequest = await CardRequest.findOne({ where: { paymentReference } });
+    if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
+      return notFoundOrForbidden(res);
+    }
+    // Charge the amount stored at request time, not whatever the client sends
+    const amount = cardRequest.totalPaidGHS;
 
     console.log('🎯 Initiating Hubtel Online Checkout:', {
       phoneNumber,
@@ -578,12 +688,9 @@ router.post('/initiate-hubtel-payment', async (req, res) => {
 
     if (result.success) {
       // Update card request with Hubtel checkout ID
-      const cardRequest = await CardRequest.findOne({ where: { paymentReference } });
-      if (cardRequest) {
-        cardRequest.hubtelCheckoutId = result.data.checkoutId;
-        cardRequest.paymentMethod = 'momo-hubtel';
-        await cardRequest.save();
-      }
+      cardRequest.hubtelCheckoutId = result.data.checkoutId;
+      cardRequest.paymentMethod = 'momo-hubtel';
+      await cardRequest.save();
 
       res.json({
         success: true,
@@ -633,7 +740,15 @@ router.post('/hubtel-callback', async (req, res) => {
           include: [{ model: Student, as: 'student' }]
         });
 
-        if (cardRequest) {
+        if (cardRequest && cardRequest.paymentStatus === 'paid') {
+          console.log('ℹ️ Payment already recorded for:', clientReference);
+        } else if (cardRequest) {
+          // The callback is unauthenticated, so confirm with Hubtel before trusting it
+          if (!(await isConfirmedByHubtel(cardRequest))) {
+            console.warn('⚠️ Callback claimed success but Hubtel did not confirm:', clientReference);
+            return res.status(200).send('OK');
+          }
+
           cardRequest.paymentStatus = 'paid';
           cardRequest.paymentVerifiedAt = new Date();
           await cardRequest.save();
@@ -685,9 +800,16 @@ router.get('/hubtel-callback', (req, res) => {
 });
 
 // Initiate MTN MoMo Payment (Request to Pay)
-router.post('/initiate-mtn-payment', async (req, res) => {
+router.post('/initiate-mtn-payment', requireStudent, async (req, res) => {
   try {
-    const { phoneNumber, amount, paymentReference, description } = req.body;
+    const { phoneNumber, paymentReference, description } = req.body;
+
+    const cardRequest = await CardRequest.findOne({ where: { paymentReference } });
+    if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
+      return notFoundOrForbidden(res);
+    }
+    // Charge the amount stored at request time, not whatever the client sends
+    const amount = cardRequest.totalPaidGHS;
 
     console.log('🎯 Initiating MTN MoMo Request to Pay:', {
       phoneNumber,
@@ -705,11 +827,8 @@ router.post('/initiate-mtn-payment', async (req, res) => {
 
     if (result.success) {
       // Update card request with MTN reference ID
-      const cardRequest = await CardRequest.findOne({ where: { paymentReference } });
-      if (cardRequest) {
-        cardRequest.mtnReferenceId = result.data.referenceId;
-        await cardRequest.save();
-      }
+      cardRequest.mtnReferenceId = result.data.referenceId;
+      await cardRequest.save();
 
       res.json({
         success: true,
@@ -739,10 +858,21 @@ router.post('/initiate-mtn-payment', async (req, res) => {
 });
 
 // Check MTN MoMo Payment Status
-router.post('/check-mtn-payment', async (req, res) => {
+router.post('/check-mtn-payment', requireStudent, async (req, res) => {
   try {
-    const { referenceId, paymentReference } = req.body;
+    const { paymentReference } = req.body;
 
+    const cardRequest = await CardRequest.findOne({
+      where: { paymentReference },
+      include: [{ model: Student, as: 'student' }]
+    });
+    if (!cardRequest || !canAccessStudent(req, cardRequest.studentId) || !cardRequest.mtnReferenceId) {
+      return notFoundOrForbidden(res);
+    }
+
+    // Only check the MTN transaction created for this request; a client-supplied
+    // referenceId could point at someone else's (or a smaller) successful payment
+    const referenceId = cardRequest.mtnReferenceId;
     console.log('🔍 Checking MTN MoMo payment status:', referenceId);
 
     const result = await mtnMomoService.checkPaymentStatus(referenceId);
@@ -750,12 +880,7 @@ router.post('/check-mtn-payment', async (req, res) => {
     if (result.success) {
       // If payment is successful, update card request
       if (result.data.status === 'SUCCESSFUL') {
-        const cardRequest = await CardRequest.findOne({
-          where: { paymentReference },
-          include: [{ model: Student, as: 'student' }]
-        });
-
-        if (cardRequest) {
+        if (cardRequest.paymentStatus !== 'paid') {
           cardRequest.paymentStatus = 'paid';
           cardRequest.paymentVerifiedAt = new Date();
           cardRequest.mtnTransactionId = result.data.financialTransactionId;
@@ -790,13 +915,13 @@ router.post('/check-mtn-payment', async (req, res) => {
 });
 
 // Get student dashboard info
-router.get('/dashboard/:byuId', async (req, res) => {
+router.get('/dashboard/:byuId', requireStudent, async (req, res) => {
   try {
     const { byuId } = req.params;
 
     // Find student
     const student = await Student.findOne({ where: { byuId } });
-    if (!student) {
+    if (!student || !canAccessStudent(req, student.id)) {
       return res.status(404).json({
         success: false,
         message: 'Student not found'
@@ -827,7 +952,7 @@ router.get('/dashboard/:byuId', async (req, res) => {
 });
 
 // Get specific card request details
-router.get('/request/:requestToken', async (req, res) => {
+router.get('/request/:requestToken', requireStudent, async (req, res) => {
   try {
     const { requestToken } = req.params;
 
@@ -835,7 +960,7 @@ router.get('/request/:requestToken', async (req, res) => {
       where: { requestToken },
       include: [{ model: Student, as: 'student' }]
     });
-    if (!cardRequest) {
+    if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
       return res.status(404).json({
         success: false,
         message: 'Card request not found'
@@ -871,12 +996,12 @@ router.get('/rates', async (req, res) => {
 });
 
 // POST /api/students/cards/:id/freeze - Toggle virtual card freeze status
-router.post('/cards/:id/freeze', async (req, res) => {
+router.post('/cards/:id/freeze', requireStudent, async (req, res) => {
   try {
     const { id } = req.params;
     const cardRequest = await CardRequest.findByPk(id, { include: [{ model: Student, as: 'student' }] });
     
-    if (!cardRequest || !cardRequest.virtualCardNumber) {
+    if (!cardRequest || !cardRequest.virtualCardNumber || !canAccessStudent(req, cardRequest.studentId)) {
       return res.status(404).json({ success: false, message: 'Active card not found' });
     }
 
@@ -897,7 +1022,7 @@ router.post('/cards/:id/freeze', async (req, res) => {
 });
 
 // POST /api/students/paystack/initialize - Initialize Paystack Payment
-router.post('/paystack/initialize', async (req, res) => {
+router.post('/paystack/initialize', requireStudent, async (req, res) => {
   try {
     const { requestToken, currency = 'GHS', callbackUrl } = req.body;
     const cardRequest = await CardRequest.findOne({
@@ -905,8 +1030,8 @@ router.post('/paystack/initialize', async (req, res) => {
       include: [{ model: Student, as: 'student' }]
     });
 
-    if (!cardRequest) {
-      return res.status(404).json({ success: false, message: 'Card request not found' });
+    if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
+      return notFoundOrForbidden(res);
     }
 
     const calc = await paymentGatewayService.calculateLocalAmount(cardRequest.amount, currency);
@@ -941,7 +1066,7 @@ router.post('/paystack/initialize', async (req, res) => {
 });
 
 // GET /api/students/paystack/verify/:reference - Verify Paystack Payment & Auto-Issue Virtual Card
-router.get('/paystack/verify/:reference', async (req, res) => {
+router.get('/paystack/verify/:reference', requireStudent, async (req, res) => {
   try {
     const { reference } = req.params;
     const cardRequest = await CardRequest.findOne({
@@ -949,8 +1074,8 @@ router.get('/paystack/verify/:reference', async (req, res) => {
       include: [{ model: Student, as: 'student' }]
     });
 
-    if (!cardRequest) {
-      return res.status(404).json({ success: false, message: 'Card request not found' });
+    if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
+      return notFoundOrForbidden(res);
     }
 
     const verifyResult = await paymentGatewayService.verifyPaystackPayment(reference);

@@ -5,6 +5,8 @@ import { studentAPI } from '../api/api';
 
 export default function Login() {
   const [byuId, setByuId] = useState('');
+  const [password, setPassword] = useState('');
+  const [needsPassword, setNeedsPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -20,25 +22,30 @@ export default function Login() {
       setError('Please enter your valid 7–8 digit BYU Student ID.');
       return;
     }
+    if (!password) {
+      setError('Please enter your password.');
+      return;
+    }
     setLoading(true);
     setError('');
+    setNeedsPassword(false);
     try {
-      // Verify the BYU ID exists on the server by loading the dashboard
-      const response = await studentAPI.getDashboard(byuId.trim());
-      const student = response.data?.student || response.student;
-      if (!student) throw new Error('Student not found');
+      const response = await studentAPI.login(byuId.trim(), password);
+      const { student, token } = response;
 
       login({
         byuId: student.byuId,
         name: student.name,
-        email: student.email
+        email: student.email,
+        token
       });
 
       navigate(from, { replace: true });
     } catch (err) {
+      setNeedsPassword(err.response?.data?.code === 'PASSWORD_NOT_SET');
       setError(
         err.response?.data?.message ||
-        'Student not found. Please check your BYU ID or register first.'
+        'Sign in failed. Please check your BYU ID and password.'
       );
     } finally {
       setLoading(false);
@@ -71,6 +78,9 @@ export default function Login() {
           {error && (
             <div className="login-error">
               <span>⚠️</span> {error}
+              {needsPassword && (
+                <> <Link to="/forgot-password" style={{ fontWeight: 600 }}>Set your password →</Link></>
+              )}
             </div>
           )}
 
@@ -91,6 +101,22 @@ export default function Login() {
               autoFocus
             />
             <small className="login-hint">Enter your 7–8 digit BYU Student ID number</small>
+          </div>
+
+          <div className="login-field">
+            <label htmlFor="password" className="login-label">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              className="login-input"
+              placeholder="Your password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              autoComplete="current-password"
+              required
+            />
             <div style={{ textAlign: 'right', marginTop: '6px' }}>
               <Link to="/forgot-password" style={{ color: '#002E5D', fontSize: '13px', textDecoration: 'none', fontWeight: '500' }}>
                 🔑 Forgot Password?
