@@ -92,6 +92,15 @@ function AdminDashboard() {
     expiryDate: '',
     cvv: ''
   });
+  // Mock cards are only offered when the server has CARD_SIMULATION on
+  const [cardSimulation, setCardSimulation] = useState(false);
+
+  useEffect(() => {
+    if (!adminKey) return;
+    adminAPI.verifyKey(adminKey)
+      .then((res) => setCardSimulation(res.cardSimulation === true))
+      .catch(() => setCardSimulation(false));
+  }, [adminKey]);
 
   const loadDashboard = useCallback(async () => {
     if (!adminKey) return;
@@ -784,7 +793,9 @@ function AdminDashboard() {
                             {r.status === 'pending' && (
                               <>
                                 <button onClick={() => openCardForm(r)} className="bento-action-btn indigo">Card</button>
-                                <button onClick={() => handleAssignMock(r._id || r.id)} className="bento-action-btn cyan">Mock</button>
+                                {cardSimulation && (
+                                  <button onClick={() => handleAssignMock(r._id || r.id)} className="bento-action-btn cyan">Mock</button>
+                                )}
                                 <button onClick={() => handleAction(r._id || r.id, 'declined')} className="bento-action-btn red">Decline</button>
                               </>
                             )}

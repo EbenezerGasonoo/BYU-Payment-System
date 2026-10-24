@@ -5,6 +5,10 @@
 
 const axios = require('axios');
 
+// Fake card numbers are only allowed when explicitly enabled (never in production)
+const CARD_SIMULATION_ENABLED = process.env.CARD_SIMULATION === 'true';
+const MAPLERAD_BASE_URL = process.env.MAPLERAD_BASE_URL || 'https://sandbox.api.maplerad.com';
+
 /**
  * Generate ISO-compliant Visa Virtual Card Details
  */
@@ -167,7 +171,7 @@ async function issueVirtualCard({ studentName, amountUsd, email, cardRequestId }
       console.log('💳 Issuing USD Virtual Card via Sudo Africa API...');
       return await issueVirtualCardWithSudo({ studentName, amountUsd, email });
     } catch (err) {
-      console.warn('⚠️ Sudo Africa issuing failed, falling back to ISO generator engine:', err.message);
+      console.warn('⚠️ Sudo Africa issuing failed, trying next provider:', err.message);
     }
   }
 
@@ -175,7 +179,7 @@ async function issueVirtualCard({ studentName, amountUsd, email, cardRequestId }
   if (MAPLERAD_SECRET_KEY && !MAPLERAD_SECRET_KEY.includes('YOUR_')) {
     try {
       const response = await axios.post(
-        'https://sandbox.api.maplerad.com/v1/issuing',
+        `${MAPLERAD_BASE_URL}/v1/issuing`,
         {
           cardholder_name: studentName,
           currency: 'USD',
@@ -201,7 +205,12 @@ async function issueVirtualCard({ studentName, amountUsd, email, cardRequestId }
     }
   }
 
-  // 3. Fallback to automated ISO-compliant card generator engine
+  // 3. No real provider issued a card: leave the request for an admin to assign manually
+  if (!CARD_SIMULATION_ENABLED) {
+    return { success: false, message: 'No card provider available; card must be assigned manually' };
+  }
+
+  // 4. Simulation only: generate a fake ISO-compliant test card
   const mockCard = generateMockVirtualCard(studentName, amountUsd);
   return {
     success: true,
@@ -215,6 +224,7 @@ async function issueVirtualCard({ studentName, amountUsd, email, cardRequestId }
 }
 
 module.exports = {
+  CARD_SIMULATION_ENABLED,
   generateMockVirtualCard,
   issueVirtualCardWithSudo,
   updateSudoCardStatus,

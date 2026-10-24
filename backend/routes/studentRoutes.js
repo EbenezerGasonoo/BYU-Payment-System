@@ -1083,12 +1083,16 @@ router.get('/paystack/verify/:reference', requireStudent, async (req, res) => {
     if (verifyResult.verified) {
       const now = new Date();
       cardRequest.paymentStatus = 'paid';
-      cardRequest.status = 'paid';
       cardRequest.paidAt = now;
       cardRequest.paymentVerifiedAt = now;
 
+      let cardIssued = Boolean(cardRequest.virtualCardNumber);
+      if (cardIssued) {
+        cardRequest.status = 'paid';
+      }
+
       // Auto-issue virtual card if not already assigned
-      if (!cardRequest.virtualCardNumber) {
+      if (!cardIssued) {
         const issuedCard = await cardProviderService.issueVirtualCard({
           studentName: cardRequest.student.name,
           amountUsd: cardRequest.amount,
@@ -1103,6 +1107,7 @@ router.get('/paystack/verify/:reference', requireStudent, async (req, res) => {
           cardRequest.status = 'assigned';
           cardRequest.cardStatus = 'active';
           cardRequest.assignedAt = now;
+          cardIssued = true;
 
           // Dispatch transactional notifications
           sendCardAssignedEmail(cardRequest.student, cardRequest).catch(() => {});
@@ -1114,6 +1119,16 @@ router.get('/paystack/verify/:reference', requireStudent, async (req, res) => {
       }
 
       await cardRequest.save();
+
+      if (!cardIssued) {
+        // No provider issued a card: keep the request pending so an admin assigns a real one
+        notifyAdminNewRequest(cardRequest.student, cardRequest).catch(() => {});
+        return res.json({
+          success: true,
+          message: 'Payment verified. Your card will be assigned shortly.',
+          data: cardRequest
+        });
+      }
 
       return res.json({
         success: true,
