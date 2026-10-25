@@ -1,12 +1,12 @@
 import React from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
-import { colors, WEST_AFRICA_COUNTRIES } from '../theme/colors';
+import { colors, WEST_AFRICA_COUNTRIES, SUPPORTED_COUNTRY_CODES } from '../theme/colors';
 import { Feather } from '@expo/vector-icons';
 
-const CountryPickerModal = ({ visible, onClose, onSelect, selectedCountry }) => {
-  const countries = Object.entries(WEST_AFRICA_COUNTRIES).map(([code, data]) => ({
+const CountryPickerModal = ({ visible, onClose, onSelect, selectedCountry, codes = SUPPORTED_COUNTRY_CODES }) => {
+  const countries = codes.map((code) => ({
     code,
-    ...data,
+    ...WEST_AFRICA_COUNTRIES[code],
   }));
 
   return (

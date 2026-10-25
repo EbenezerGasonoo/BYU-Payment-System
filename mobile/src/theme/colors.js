@@ -18,6 +18,9 @@ export const colors = {
   inputBorder: '#2d2f50',
 };
 
+// Countries students can register and pay from today (pilot: Ghana and Nigeria)
+export const SUPPORTED_COUNTRY_CODES = ['GH', 'NG'];
+
 export const WEST_AFRICA_COUNTRIES = {
   GH: { name: 'Ghana', flag: '🇬🇭', currency: 'GHS', dialCode: '+233' },
   NG: { name: 'Nigeria', flag: '🇳🇬', currency: 'NGN', dialCode: '+234' },

@@ -10,14 +10,31 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { colors, WEST_AFRICA_COUNTRIES } from '../theme/colors';
+import { colors } from '../theme/colors';
+import { studentAPI } from '../api/api';
+import { getStudentCountry } from '../utils/money';
+import CountryPickerModal from '../components/CountryPickerModal';
 
 const SettingsScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, setDirectUser } = useAuth();
+  const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(true);
 
-  const studentCountry = WEST_AFRICA_COUNTRIES[user?.countryCode] || WEST_AFRICA_COUNTRIES.GH;
+  const studentCountry = getStudentCountry(user?.countryCode);
+
+  const changeCountry = async (code) => {
+    if (code === studentCountry.code) return;
+    try {
+      const res = await studentAPI.updateCountry(code);
+      if (res.student) {
+        await setDirectUser(res.student);
+      }
+      Alert.alert('Country updated', res.message || 'Your country was updated.');
+    } catch (err) {
+      Alert.alert('Could not change country', err.response?.data?.message || 'Please try again.');
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out of ConnectPay?', [
@@ -47,15 +64,16 @@ const SettingsScreen = ({ navigation }) => {
       {/* Account Info Section */}
       <Text style={styles.sectionHeader}>Regional Profile</Text>
       <View style={styles.settingsGroup}>
-        <View style={styles.settingItem}>
+        <TouchableOpacity style={styles.settingItemBtn} onPress={() => setCountryModalVisible(true)}>
           <View style={styles.itemLeft}>
             <Text style={styles.flagIcon}>{studentCountry.flag}</Text>
             <View>
               <Text style={styles.itemTitle}>Country</Text>
-              <Text style={styles.itemSub}>{studentCountry.name} ({studentCountry.currency})</Text>
+              <Text style={styles.itemSub}>{studentCountry.name} ({studentCountry.currency}) · Tap to change</Text>
             </View>
           </View>
-        </View>
+          <Feather name="chevron-right" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
 
         <View style={styles.settingItem}>
           <View style={styles.itemLeft}>
@@ -128,7 +146,14 @@ const SettingsScreen = ({ navigation }) => {
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
 
-      <Text style={styles.versionText}>ConnectPay Mobile v1.0.0 • West Africa Edition</Text>
+      <Text style={styles.versionText}>ConnectPay Mobile v1.0.0 • Ghana &amp; Nigeria</Text>
+
+      <CountryPickerModal
+        visible={countryModalVisible}
+        onClose={() => setCountryModalVisible(false)}
+        selectedCountry={studentCountry.code}
+        onSelect={changeCountry}
+      />
     </ScrollView>
   );
 };

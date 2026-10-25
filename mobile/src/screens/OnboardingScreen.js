@@ -12,11 +12,11 @@ const OnboardingScreen = ({ navigation }) => {
         </View>
 
         <Text style={styles.headline}>
-          Virtual USD Cards for BYU Students Across West Africa 💳
+          Virtual USD Cards for BYU Students in Ghana &amp; Nigeria 💳
         </Text>
 
         <Text style={styles.body}>
-          Pay your BYU tuition and course fees easily using Mobile Money, Mobile Banking, and local currencies across Ghana, Nigeria, Senegal &amp; 7+ countries.
+          Pay your BYU tuition and course fees in cedis by Mobile Money or in naira through Paystack.
         </Text>
 
         <View style={styles.featureBox}>

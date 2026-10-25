@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,20 +12,31 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { studentAPI } from '../api/api';
-import { colors, WEST_AFRICA_COUNTRIES } from '../theme/colors';
+import { colors } from '../theme/colors';
+import { FALLBACK_RATES, FEE_PERCENT, formatMoney, getStudentCountry } from '../utils/money';
+import { openCheckout } from '../utils/checkout';
 
 const RequestCardScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [amountUSD, setAmountUSD] = useState('250');
-  const [paymentMethod, setPaymentMethod] = useState('momo-hubtel'); // 'momo-hubtel', 'momo-mtn', 'paystack'
   const [loading, setLoading] = useState(false);
 
-  const studentCountry = WEST_AFRICA_COUNTRIES[user?.countryCode] || WEST_AFRICA_COUNTRIES.GH;
-  const exchangeRates = { GHS: 15.8, NGN: 1550, XOF: 610, XAF: 610, SLL: 22.5, LRD: 195, GMD: 68 };
-  const rate = exchangeRates[studentCountry.currency] || 15.8;
+  const studentCountry = getStudentCountry(user?.countryCode);
+  const paysWithPaystack = studentCountry.currency === 'NGN';
+  const [rate, setRate] = useState(FALLBACK_RATES[studentCountry.currency]);
+
+  // Same rate source the server prices requests with
+  useEffect(() => {
+    setRate(FALLBACK_RATES[studentCountry.currency]);
+    studentAPI.getRates()
+      .then((data) => {
+        if (data?.rates?.[studentCountry.currency]) setRate(data.rates[studentCountry.currency]);
+      })
+      .catch(() => {});
+  }, [studentCountry.currency]);
 
   const numAmount = parseFloat(amountUSD) || 0;
-  const calculatedLocalAmount = (numAmount * rate).toFixed(2);
+  const calculatedLocalAmount = formatMoney(numAmount * rate * (1 + FEE_PERCENT / 100), studentCountry.currency);
 
   const handleRequest = async () => {
     if (!numAmount || numAmount <= 0) {
@@ -35,26 +46,23 @@ const RequestCardScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const res = await studentAPI.requestCard({
-        studentId: user._id || user.id,
-        amount: numAmount,
-        paymentMethod,
-        currency: studentCountry.currency,
-      });
-
-      if (res.success) {
-        Alert.alert(
-          'Request Submitted 🎉',
-          `Your Request Token: ${res.data?.requestToken}\n\nPlease proceed to complete payment.`,
-          [
-            {
-              text: 'Track Status',
-              onPress: () => navigation.navigate('CardStatus', { requestToken: res.data?.requestToken }),
-            },
-          ]
-        );
-      } else {
+      // The server prices the request in the student's currency
+      const res = await studentAPI.requestCard({ amount: numAmount, paymentMethod: 'pending' });
+      if (!res.success) {
         Alert.alert('Request Error', res.message || 'Failed to submit card request.');
+        return;
+      }
+
+      const request = res.data;
+      navigation.navigate('CardStatus', { requestToken: request.requestToken });
+      try {
+        await openCheckout(request, user);
+        Alert.alert(
+          'Finish paying',
+          `Pay ${formatMoney(request.amountLocal ?? request.totalPaidGHS, request.currency)} on the ${paysWithPaystack ? 'Paystack' : 'Hubtel'} page, then come back here. We confirm it automatically.`
+        );
+      } catch (err) {
+        Alert.alert('Payment not started', err.response?.data?.message || err.message || 'Open Card Status to try again.');
       }
     } catch (err) {
       Alert.alert('Error', err.response?.data?.message || 'Failed to submit request.');
@@ -104,47 +112,36 @@ const RequestCardScreen = ({ navigation }) => {
         {/* Currency Conversion Estimate Box */}
         <View style={styles.conversionBox}>
           <View style={styles.conversionRow}>
-            <Text style={styles.convLabel}>Estimated Total ({studentCountry.currency}):</Text>
+            <Text style={styles.convLabel}>Estimated Total incl. {FEE_PERCENT}% fee:</Text>
             <Text style={styles.convValue}>
-              {studentCountry.flag} {studentCountry.currency} {calculatedLocalAmount}
+              {studentCountry.flag} {calculatedLocalAmount}
             </Text>
           </View>
           <Text style={styles.rateText}>
-            Current Rate: 1 USD = {rate} {studentCountry.currency}
+            Current Rate: 1 USD = {Number(rate).toFixed(2)} {studentCountry.currency}. The exact total is fixed when you submit.
           </Text>
         </View>
       </View>
 
-      {/* Payment Method Selector */}
-      <Text style={styles.sectionHeader}>Select Payment Method</Text>
+      {/* Payment method follows the student's country */}
+      <Text style={styles.sectionHeader}>How you pay</Text>
 
-      <TouchableOpacity
-        style={[styles.methodCard, paymentMethod === 'momo-hubtel' && styles.methodCardActive]}
-        onPress={() => setPaymentMethod('momo-hubtel')}
-      >
+      <View style={[styles.methodCard, styles.methodCardActive]}>
         <View style={styles.methodIconBg}>
-          <Feather name="smartphone" size={22} color={colors.accentGreen} />
+          <Feather name={paysWithPaystack ? 'credit-card' : 'smartphone'} size={22} color={paysWithPaystack ? colors.accentIndigo : colors.accentGreen} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.methodTitle}>Mobile Money Direct (Hubtel / MTN / Telecel)</Text>
-          <Text style={styles.methodSub}>Instant prompt on your phone across West Africa</Text>
+          <Text style={styles.methodTitle}>
+            {paysWithPaystack ? 'Paystack checkout (Nigeria)' : 'Mobile Money through Hubtel (Ghana)'}
+          </Text>
+          <Text style={styles.methodSub}>
+            {paysWithPaystack
+              ? 'Pay in naira by card, bank transfer or USSD.'
+              : 'MTN MoMo, Telecel Cash or AT Money. Approve the prompt on your phone.'}
+          </Text>
         </View>
-        <View style={[styles.radioCircle, paymentMethod === 'momo-hubtel' && styles.radioActive]} />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.methodCard, paymentMethod === 'paystack' && styles.methodCardActive]}
-        onPress={() => setPaymentMethod('paystack')}
-      >
-        <View style={styles.methodIconBg}>
-          <Feather name="credit-card" size={22} color={colors.accentIndigo} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.methodTitle}>Paystack Multi-Currency Checkout</Text>
-          <Text style={styles.methodSub}>Card, MoMo, Bank Transfer in GHS, NGN, XOF</Text>
-        </View>
-        <View style={[styles.radioCircle, paymentMethod === 'paystack' && styles.radioActive]} />
-      </TouchableOpacity>
+      </View>
+      <Text style={styles.rateText}>Wrong country? Change it in Settings before requesting.</Text>
 
       <TouchableOpacity
         style={styles.submitBtn}
@@ -155,7 +152,7 @@ const RequestCardScreen = ({ navigation }) => {
           <ActivityIndicator color="#fff" />
         ) : (
           <Text style={styles.submitBtnText}>
-            Confirm &amp; Pay {studentCountry.flag} {studentCountry.currency} {calculatedLocalAmount} →
+            Continue to {paysWithPaystack ? 'Paystack' : 'Hubtel'} →
           </Text>
         )}
       </TouchableOpacity>

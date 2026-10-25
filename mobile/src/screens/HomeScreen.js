@@ -14,6 +14,7 @@ import { studentAPI } from '../api/api';
 import { colors, WEST_AFRICA_COUNTRIES } from '../theme/colors';
 import VirtualCard from '../components/VirtualCard';
 import StatusTimeline from '../components/StatusTimeline';
+import { formatRequestPaid } from '../utils/money';
 
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -143,7 +144,7 @@ const HomeScreen = ({ navigation }) => {
 
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.requestGhs}>
-                {studentCountry.currency} {Number(req.totalPaidGHS || 0).toFixed(2)}
+                {formatRequestPaid(req)}
               </Text>
               <View
                 style={[

@@ -9,8 +9,8 @@ const faqs = [
     a: 'ConnectPay issues a Visa Virtual Card funded in USD. You can use this card directly on the BYU Pathway portal to pay your tuition and course fees.',
   },
   {
-    q: 'Which payment methods are supported in West Africa?',
-    a: 'We support Mobile Money (MTN MoMo, Telecel, AirtelTigo), Paystack, Direct Debit, and bank transfers across Ghana, Nigeria, Senegal, Ivory Coast, Cameroon, Togo, Benin, Sierra Leone, Liberia, and Gambia.',
+    q: 'Which countries and payment methods are supported?',
+    a: 'Ghana and Nigeria for now. In Ghana you pay in cedis by Mobile Money (MTN MoMo, Telecel Cash, AT Money) through Hubtel. In Nigeria you pay in naira through Paystack by card, bank transfer or USSD. More countries are coming.',
   },
   {
     q: 'How long does card generation take?',

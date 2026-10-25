@@ -39,9 +39,12 @@ export const AuthProvider = ({ children }) => {
     throw new Error(response.message || 'Login failed');
   };
 
-  const setDirectUser = async (userData) => {
+  const setDirectUser = async (userData, token) => {
     setUser(userData);
     await SecureStore.setItemAsync('user_data', JSON.stringify(userData));
+    if (token) {
+      await SecureStore.setItemAsync('user_token', token);
+    }
   };
 
   const logout = async () => {

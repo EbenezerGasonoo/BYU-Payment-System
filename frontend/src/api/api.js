@@ -103,6 +103,11 @@ export const studentAPI = {
     return response.data;
   },
 
+  updateCountry: async (countryCode, byuId) => {
+    const response = await axios.patch(`${API_BASE_URL}/student/me/country`, { countryCode, byuId });
+    return response.data;
+  },
+
   getRates: async () => {
     const response = await axios.get(`${API_BASE_URL}/student/rates`);
     return response.data;
