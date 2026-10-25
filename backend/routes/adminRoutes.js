@@ -4,6 +4,7 @@ const { Op, fn, col, literal } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const { Student, CardRequest } = require('../models');
 const { notifyStudentCardAssigned, sendWelcomeEmail } = require('../utils/emailService');
+const { CARD_SIMULATION_ENABLED } = require('../utils/cardProviderService');
 
 // West Africa country reference
 const WEST_AFRICA_COUNTRIES = {
@@ -38,7 +39,7 @@ router.use(verifyAdminKey);
 
 // ── Verify admin key (used by AdminLogin page to validate key) ──
 router.get('/verify', (req, res) => {
-  res.json({ success: true, message: 'Admin key is valid' });
+  res.json({ success: true, message: 'Admin key is valid', cardSimulation: CARD_SIMULATION_ENABLED });
 });
 
 // ── Get a single student by byuId (used for impersonation) ──
@@ -140,8 +141,15 @@ router.post('/assign', async (req, res) => {
   }
 });
 
-// Auto-generate and assign mock card
+// Auto-generate and assign mock card (test environments only)
 router.post('/assign/mock', async (req, res) => {
+  if (!CARD_SIMULATION_ENABLED) {
+    return res.status(403).json({
+      success: false,
+      message: 'Mock cards are disabled. Assign a real card instead.'
+    });
+  }
+
   try {
     const { requestId } = req.body;
 
