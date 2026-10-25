@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { studentAPI } from '../api/api';
 import { useAuth } from '../utils/AuthContext';
 import { SERVICE, SUPPORT } from '../utils/siteInfo';
+import { formatRequestPaid, requestCurrency } from '../utils/countries';
 
 const BYU_PAYMENT_URL = 'https://my.byupathway.edu';
 
@@ -26,7 +27,6 @@ const formatDate = (date) =>
     : '—';
 
 const formatUsd = (value) => `$${(Number(value) || 0).toFixed(2)}`;
-const formatGhs = (value) => (value ? `GHS ${Number(value).toFixed(2)}` : '—');
 
 function useNow(intervalMs = 30000) {
   const [now, setNow] = useState(Date.now());
@@ -144,6 +144,26 @@ function CardDetails({ req, studentName, now, onCopy, onFreeze, freezing }) {
 
 function CurrentRequest({ req, studentName, now, onCopy, onFreeze, freezing, onCancel, cancelling, onRefresh, refreshing }) {
   const state = describeRequest(req).key;
+  const paysWithPaystack = requestCurrency(req) === 'NGN';
+  const [payError, setPayError] = useState('');
+  const [openingCheckout, setOpeningCheckout] = useState(false);
+
+  // Reopen Paystack for a naira request the student left before paying
+  const payWithPaystack = async () => {
+    setPayError('');
+    setOpeningCheckout(true);
+    try {
+      const res = await studentAPI.initializePaystack(req.requestToken);
+      if (res.success && res.authorizationUrl) {
+        window.location.href = res.authorizationUrl;
+        return;
+      }
+      setPayError(res.message || 'Could not open the Paystack checkout.');
+    } catch (err) {
+      setPayError(err.response?.data?.message || 'Could not open the Paystack checkout.');
+    }
+    setOpeningCheckout(false);
+  };
 
   return (
     <section className="cp-card cp-dash__current">
@@ -163,16 +183,29 @@ function CurrentRequest({ req, studentName, now, onCopy, onFreeze, freezing, onC
         {state === 'awaiting' && (
           <div className="cp-dash__state">
             <p>
-              We have not received your Mobile Money payment of{' '}
-              <strong className="cp-num">{formatGhs(req.totalPaidGHS)}</strong> for a{' '}
+              We have not received your {paysWithPaystack ? 'Paystack' : 'Mobile Money'} payment of{' '}
+              <strong className="cp-num">{formatRequestPaid(req)}</strong> for a{' '}
               <strong className="cp-num">{formatUsd(req.amount)}</strong> card yet.
             </p>
-            <p className="cp-small cp-muted">
-              If you approved the Hubtel prompt, it can take a few minutes to confirm. If you sent Mobile Money manually, our
-              team confirms it by hand during support hours, so do not cancel. If you did not pay at all, cancel this
-              request and start a new one.
-            </p>
+            {paysWithPaystack ? (
+              <p className="cp-small cp-muted">
+                If you closed the Paystack page before paying, continue to Paystack to finish. If you were charged but this
+                still shows as unpaid, do not pay again: contact support with your reference.
+              </p>
+            ) : (
+              <p className="cp-small cp-muted">
+                If you approved the Hubtel prompt, it can take a few minutes to confirm. If you sent Mobile Money manually, our
+                team confirms it by hand during support hours, so do not cancel. If you did not pay at all, cancel this
+                request and start a new one.
+              </p>
+            )}
+            {payError && <div className="cp-alert cp-alert--error" role="status">{payError}</div>}
             <div className="cp-actions-row">
+              {paysWithPaystack && (
+                <button type="button" className="cp-btn cp-btn--primary" onClick={payWithPaystack} disabled={openingCheckout}>
+                  {openingCheckout ? 'Opening checkout…' : 'Continue to Paystack'}
+                </button>
+              )}
               <button type="button" className="cp-btn cp-btn--secondary" onClick={onRefresh} disabled={refreshing}>
                 {refreshing ? 'Checking…' : 'Check again'}
               </button>
@@ -252,7 +285,7 @@ function History({ requests }) {
                 <td data-label="Date">{formatDate(req.createdAt)}</td>
                 <td data-label="Reference"><span className="cp-num">{req.requestToken || '—'}</span></td>
                 <td data-label="Card" className="is-num cp-num">{formatUsd(req.amount)}</td>
-                <td data-label="Paid" className="is-num cp-num">{formatGhs(req.totalPaidGHS)}</td>
+                <td data-label="Paid" className="is-num cp-num">{formatRequestPaid(req)}</td>
                 <td data-label="Status"><StatusBadge req={req} /></td>
               </tr>
             ))}
@@ -338,7 +371,7 @@ function StudentDashboard() {
   };
 
   const handleCancel = async () => {
-    if (!current || !window.confirm('Cancel this request? Only do this if you did not send any Mobile Money for it.')) return;
+    if (!current || !window.confirm('Cancel this request? Only do this if you did not pay anything for it.')) return;
     setCancelling(true);
     try {
       await studentAPI.paymentFailed({ paymentReference: current.paymentReference, reason: 'Cancelled by student' });

@@ -103,6 +103,21 @@ export const studentAPI = {
     return response.data;
   },
 
+  getRates: async () => {
+    const response = await axios.get(`${API_BASE_URL}/student/rates`);
+    return response.data;
+  },
+
+  initializePaystack: async (requestToken) => {
+    const response = await axios.post(`${API_BASE_URL}/student/paystack/initialize`, { requestToken });
+    return response.data;
+  },
+
+  verifyPaystack: async (reference) => {
+    const response = await axios.get(`${API_BASE_URL}/student/paystack/verify/${encodeURIComponent(reference)}`);
+    return response.data;
+  },
+
   getDashboard: async (byuId) => {
     const response = await axios.get(`${API_BASE_URL}/student/dashboard/${byuId}`);
     return response.data;

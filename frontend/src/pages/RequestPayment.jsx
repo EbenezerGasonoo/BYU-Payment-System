@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { studentAPI } from '../api/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import HubtelPayment from '../components/HubtelPayment';
+import PaystackPayment from '../components/PaystackPayment';
+import { getCountry, formatMoney } from '../utils/countries';
 
 function RequestPayment() {
   const [formData, setFormData] = useState({
@@ -13,38 +15,72 @@ function RequestPayment() {
   const [requestToken, setRequestToken] = useState('');
   const [showTerms, setShowTerms] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [exchangeRate, setExchangeRate] = useState(15.50); // Default GHS to USD rate
+  const [country, setCountry] = useState(getCountry('GH'));
+  const [exchangeRate, setExchangeRate] = useState(country.fallbackRate);
   const [rateLastUpdated, setRateLastUpdated] = useState(null);
   const [fetchingRate, setFetchingRate] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentData, setPaymentData] = useState(null);
   const CHARGE_FEE_PERCENT = 5; // 5% chargeback fee
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const paymentVerifiedRef = useRef(false);
 
   useEffect(() => {
     // Pre-fill BYU ID if user has registered
     const savedByuId = localStorage.getItem('userByuId');
-    const savedName = localStorage.getItem('userName');
     if (savedByuId) {
       setFormData(prev => ({ ...prev, byuId: savedByuId }));
     }
 
-    // Fetch live exchange rate
-    fetchExchangeRate();
+    // The student's country decides the currency and how they pay
+    let studentCountry = getCountry('GH');
+    const loadCountry = savedByuId
+      ? studentAPI.getDashboard(savedByuId)
+        .then((res) => { studentCountry = getCountry(res.data?.student?.countryCode); })
+        .catch(() => {})
+      : Promise.resolve();
+    loadCountry.then(() => {
+      setCountry(studentCountry);
+      setExchangeRate(studentCountry.fallbackRate);
+      fetchExchangeRate(studentCountry.currency);
+    });
   }, []);
 
-  const fetchExchangeRate = async () => {
+  // Paystack sends the student back to /request?gateway=paystack&reference=...
+  useEffect(() => {
+    const reference = searchParams.get('reference') || searchParams.get('trxref');
+    if (searchParams.get('gateway') !== 'paystack' || !reference) return;
+    setSearchParams({}, { replace: true });
+
+    setLoading(true);
+    setMessage({ type: 'info', text: 'Confirming your payment with Paystack…' });
+    studentAPI.verifyPaystack(reference)
+      .then((res) => {
+        setRequestToken(res.data?.requestToken || '');
+        localStorage.setItem('hasRequestedCard', 'true');
+        setMessage({
+          type: 'success',
+          text: `${res.message || 'Payment verified.'} You can follow your request on the dashboard.`
+        });
+      })
+      .catch((error) => {
+        setMessage({
+          type: 'error',
+          text: error.response?.data?.message || 'We could not confirm your Paystack payment yet. If you paid, check your dashboard or contact support with your reference.'
+        });
+      })
+      .finally(() => setLoading(false));
+  }, [searchParams, setSearchParams]);
+
+  const fetchExchangeRate = async (currency = country.currency) => {
     setFetchingRate(true);
     try {
-      // Using Open Exchange Rate API (free, no API key required)
-      const response = await fetch('https://open.exchangerate-api.com/v6/latest/USD');
-      const data = await response.json();
-
-      if (data && data.rates && data.rates.GHS) {
-        setExchangeRate(data.rates.GHS);
+      // Same rate source the server prices requests with
+      const data = await studentAPI.getRates();
+      if (data?.rates?.[currency]) {
+        setExchangeRate(data.rates[currency]);
         setRateLastUpdated(new Date());
-        console.log('✅ Live exchange rate fetched: 1 USD =', data.rates.GHS, 'GHS');
       }
     } catch (error) {
       console.error('Failed to fetch exchange rate, using default:', error);
@@ -76,18 +112,12 @@ function RequestPayment() {
     setMessage({ type: '', text: '' });
 
     try {
-      // Calculate payment details
       const amount = parseFloat(formData.amount);
-      const amountInGHS = amount * exchangeRate;
-      const totalPaidGHS = amountInGHS * (1 + CHARGE_FEE_PERCENT / 100);
 
-      // First create the card request to get payment reference
+      // Create the card request; the server prices it in the student's currency
       const requestResponse = await studentAPI.requestCard({
         byuId: formData.byuId,
         amount,
-        amountInGHS,
-        exchangeRate,
-        totalPaidGHS,
         paymentMethod: 'pending' // Will be updated when payment method is selected
       });
 
@@ -95,9 +125,12 @@ function RequestPayment() {
       const quote = requestResponse.data;
       setPaymentData({
         amount: quote.amount ?? amount,
-        amountInGHS: quote.amountInGHS ?? amountInGHS,
-        totalPaidGHS: quote.totalPaidGHS ?? totalPaidGHS,
-        exchangeRate: quote.exchangeRate ?? exchangeRate,
+        currency: quote.currency || 'GHS',
+        subtotalLocal: quote.subtotalLocal ?? quote.amountInGHS,
+        amountLocal: quote.amountLocal ?? quote.totalPaidGHS,
+        amountInGHS: quote.amountInGHS,
+        totalPaidGHS: quote.totalPaidGHS,
+        exchangeRate: quote.exchangeRate,
         byuId: formData.byuId,
         paymentReference: requestResponse.data.paymentReference,
         requestToken: requestResponse.data.requestToken,
@@ -204,8 +237,8 @@ function RequestPayment() {
   };
 
   const amountValue = parseFloat(formData.amount) || 0;
-  const estimateGhs = amountValue * exchangeRate;
-  const estimateFee = estimateGhs * (CHARGE_FEE_PERCENT / 100);
+  const estimateLocal = amountValue * exchangeRate;
+  const estimateFee = estimateLocal * (CHARGE_FEE_PERCENT / 100);
   const studentName = localStorage.getItem('userName') || '';
 
   return (
@@ -215,7 +248,7 @@ function RequestPayment() {
           <span className="cp-eyebrow">New request</span>
           <h1 className="cp-h1">Request a card</h1>
           <p className="cp-lead">
-            Enter the amount due on your BYU-Pathway payment page. You will see the total in cedis before you pay.
+            Enter the amount due on your BYU-Pathway payment page. You will see the total in {country.currencyName} before you pay.
           </p>
         </div>
       </div>
@@ -269,24 +302,24 @@ function RequestPayment() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                   <span className="cp-small cp-muted">
-                    {rateLastUpdated ? 'Live rate' : 'Estimated rate'}: <span className="cp-num">1 USD = {exchangeRate.toFixed(2)} GHS</span>
+                    {rateLastUpdated ? 'Live rate' : 'Estimated rate'}: <span className="cp-num">1 USD = {exchangeRate.toFixed(2)} {country.currency}</span>
                   </span>
-                  <button type="button" className="cp-btn cp-btn--ghost" onClick={fetchExchangeRate} disabled={fetchingRate} style={{ minHeight: 32, padding: '0 10px', fontSize: 13 }}>
+                  <button type="button" className="cp-btn cp-btn--ghost" onClick={() => fetchExchangeRate()} disabled={fetchingRate} style={{ minHeight: 32, padding: '0 10px', fontSize: 13 }}>
                     {fetchingRate ? 'Updating…' : 'Refresh rate'}
                   </button>
                 </div>
                 <dl className="cp-rows" style={{ marginTop: 8 }}>
                   <div>
-                    <dt>Tuition in cedis</dt>
-                    <dd>GHS {estimateGhs.toFixed(2)}</dd>
+                    <dt>Tuition in {country.currencyName}</dt>
+                    <dd>{formatMoney(estimateLocal, country.currency)}</dd>
                   </div>
                   <div>
                     <dt>Service fee ({CHARGE_FEE_PERCENT}%)</dt>
-                    <dd>GHS {estimateFee.toFixed(2)}</dd>
+                    <dd>{formatMoney(estimateFee, country.currency)}</dd>
                   </div>
                   <div className="cp-rows__total">
                     <dt>Estimated total</dt>
-                    <dd>GHS {(estimateGhs + estimateFee).toFixed(2)}</dd>
+                    <dd>{formatMoney(estimateLocal + estimateFee, country.currency)}</dd>
                   </div>
                 </dl>
                 <p className="cp-small cp-muted" style={{ marginTop: 6 }}>
@@ -340,7 +373,7 @@ function RequestPayment() {
                 </li>
                 <li>
                   <h3 className="cp-h3">Currency and exchange rate</h3>
-                  <p>You enter the amount in US dollars. The amount you pay in Ghana cedis is calculated from the live exchange rate when you submit your request, and that rate applies even if the market moves afterwards.</p>
+                  <p>You enter the amount in US dollars. The amount you pay in {country.code === 'NG' ? 'Nigerian naira' : 'Ghana cedis'} is calculated from the live exchange rate when you submit your request, and that rate applies even if the market moves afterwards.</p>
                 </li>
                 <li>
                   <h3 className="cp-h3">Service fee</h3>
@@ -377,8 +410,11 @@ function RequestPayment() {
         </div>
       )}
 
-      {/* Hubtel Payment Modal */}
-      {showPayment && paymentData && (
+      {/* Payment modal: Paystack for naira, Hubtel / manual Mobile Money for cedis */}
+      {showPayment && paymentData && paymentData.currency === 'NGN' && (
+        <PaystackPayment paymentData={paymentData} onCancel={handlePaymentCancel} />
+      )}
+      {showPayment && paymentData && paymentData.currency !== 'NGN' && (
         <HubtelPayment
           paymentData={paymentData}
           onSuccess={handlePaymentSuccess}

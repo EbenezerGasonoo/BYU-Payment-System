@@ -324,8 +324,10 @@
 .calc__chip:hover { border-color: var(--cp-ink-2); }
 .calc__chip:active { transform: scale(.96); }
 .calc__chip.is-active { background: var(--cp-brand); border-color: var(--cp-brand); color: #fff; }
+.calc__chips--country { margin-top: 16px; }
 @media (max-width: 480px) {
   .calc__chips { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .calc__chips--country { grid-template-columns: repeat(2, 1fr); }
   .calc__chip { min-width: 0; padding: 0; }
 }
 

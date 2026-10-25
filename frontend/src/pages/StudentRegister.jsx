@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { studentAPI } from '../api/api';
 import { useAuth } from '../utils/AuthContext';
+import { COUNTRY_LIST, getCountry } from '../utils/countries';
 
-const EMPTY_FORM = { name: '', byuId: '', email: '', phone: '', password: '', confirmPassword: '' };
+const EMPTY_FORM = { name: '', countryCode: 'GH', byuId: '', email: '', phone: '', password: '', confirmPassword: '' };
 
 function StudentRegister() {
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -11,6 +12,7 @@ function StudentRegister() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const navigate = useNavigate();
   const { login } = useAuth();
+  const country = getCountry(formData.countryCode);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -80,6 +82,16 @@ function StudentRegister() {
               <input id="name" name="name" type="text" autoComplete="name" value={formData.name} onChange={handleChange} required />
             </div>
 
+            <div className="cp-field">
+              <label htmlFor="countryCode">Country you pay from</label>
+              <select id="countryCode" name="countryCode" value={formData.countryCode} onChange={handleChange} required>
+                {COUNTRY_LIST.map((c) => (
+                  <option key={c.code} value={c.code}>{c.name} ({c.currency})</option>
+                ))}
+              </select>
+              <small>You pay in {country.currencyName} by {country.payWith}. More countries are coming.</small>
+            </div>
+
             <div className="cp-form__grid">
               <div className="cp-field">
                 <label htmlFor="byuId">BYU Student ID</label>
@@ -97,8 +109,8 @@ function StudentRegister() {
                 />
               </div>
               <div className="cp-field">
-                <label htmlFor="phone">Mobile Money number</label>
-                <input id="phone" name="phone" type="tel" autoComplete="tel" value={formData.phone} onChange={handleChange} required placeholder="024 000 0000" />
+                <label htmlFor="phone">{country.phoneLabel}</label>
+                <input id="phone" name="phone" type="tel" autoComplete="tel" value={formData.phone} onChange={handleChange} required placeholder={country.phonePlaceholder} />
               </div>
             </div>
 

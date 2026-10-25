@@ -13,7 +13,7 @@ function SiteFooter() {
               ConnectPay
             </Link>
             <p className="cp-footer__tag">
-              Single-use USD cards for BYU-Pathway tuition, paid with Mobile Money in Ghana.
+              Single-use USD cards for BYU-Pathway tuition, paid with Mobile Money in Ghana or Paystack in Nigeria.
             </p>
           </div>
 
