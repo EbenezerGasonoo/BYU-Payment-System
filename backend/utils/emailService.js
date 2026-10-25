@@ -30,7 +30,8 @@ const notifyAdminNewRequest = async (student, cardRequest) => {
             <p><strong>BYU ID:</strong> ${student.byuId}</p>
             <p><strong>Email:</strong> ${student.email}</p>
             <p><strong>Phone:</strong> ${student.phone}</p>
-            <p><strong>Amount:</strong> GHS ${cardRequest.amount}</p>
+            <p><strong>Card amount:</strong> USD ${cardRequest.amount}</p>
+            <p><strong>Paid:</strong> ${cardRequest.currency || 'GHS'} ${cardRequest.amountLocal ?? cardRequest.totalPaidGHS ?? '-'} (${student.countryCode || 'GH'})</p>
             <p><strong>Request Token:</strong> ${cardRequest.requestToken}</p>
             <p><strong>Request Date:</strong> ${new Date(cardRequest.createdAt).toLocaleString()}</p>
           </div>
@@ -76,7 +77,7 @@ const notifyStudentCardAssigned = async (student, cardRequest) => {
             <p><strong>Card Number:</strong> ${cardRequest.virtualCardNumber}</p>
             <p><strong>Expiry Date:</strong> ${cardRequest.cardExpiryDate}</p>
             <p><strong>CVV:</strong> ${cardRequest.cardCVV}</p>
-            <p><strong>Amount:</strong> GHS ${cardRequest.amount}</p>
+            <p><strong>Card amount:</strong> USD ${cardRequest.amount}</p>
             <p style="color: #d9534f; margin-top: 15px;">
               <strong>⚠️ Important:</strong> This card expires in 4-6 hours at ${new Date(cardRequest.expiresAt).toLocaleString()}
             </p>
@@ -125,7 +126,7 @@ const notifyStudentCardExpired = async (student, cardRequest) => {
           
           <div style="background-color: #f8d7da; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <p><strong>Card Number:</strong> ${cardRequest.virtualCardNumber}</p>
-            <p><strong>Amount:</strong> GHS ${cardRequest.amount}</p>
+            <p><strong>Card amount:</strong> USD ${cardRequest.amount}</p>
             <p><strong>Expired At:</strong> ${new Date().toLocaleString()}</p>
           </div>
           

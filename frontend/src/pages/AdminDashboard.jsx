@@ -5,6 +5,7 @@ import { useAdminAuth } from '../utils/AdminAuthContext';
 import { useImpersonation } from '../utils/ImpersonationContext';
 import { useAuth } from '../utils/AuthContext';
 import AdminChat from '../components/AdminChat';
+import { formatRequestPaid, requestCurrency, requestTotalLocal } from '../utils/countries';
 import './AdminDashboard.css';
 
 // West Africa country reference
@@ -206,13 +207,14 @@ function AdminDashboard() {
 
   const exportRequestsToCSV = () => {
     if (!filteredRequests.length) return;
-    const headers = ['Student Name', 'BYU ID', 'Email', 'Amount USD', 'Total Paid GHS', 'Payment Method', 'Payment Status', 'Card Status', 'Request Token', 'Date'];
+    const headers = ['Student Name', 'BYU ID', 'Email', 'Amount USD', 'Total Paid', 'Currency', 'Payment Method', 'Payment Status', 'Card Status', 'Request Token', 'Date'];
     const rows = filteredRequests.map(r => [
       `"${r.student?.name || ''}"`,
       `"${r.student?.byuId || ''}"`,
       `"${r.student?.email || ''}"`,
       r.amount || 0,
-      r.totalPaidGHS || 0,
+      requestTotalLocal(r) || 0,
+      requestCurrency(r),
       `"${r.paymentMethod || ''}"`,
       `"${r.paymentStatus || ''}"`,
       `"${r.status || ''}"`,
@@ -745,7 +747,7 @@ function AdminDashboard() {
                   <tr>
                     <th>Student & Country</th>
                     <th>Requested USD</th>
-                    <th>Total Paid (GHS)</th>
+                    <th>Total Paid</th>
                     <th>Payment Method</th>
                     <th>Card Status</th>
                     <th>Submitted</th>
@@ -778,7 +780,7 @@ function AdminDashboard() {
                           </div>
                         </td>
                         <td className="amount-highlight">${r.amount || 0} USD</td>
-                        <td className="text-emerald">GHS {Number(r.totalPaidGHS || 0).toFixed(2)}</td>
+                        <td className="text-emerald">{formatRequestPaid(r)}</td>
                         <td>
                           <span className="bento-tag-purple">{(r.paymentMethod || 'momo-hubtel').toUpperCase()}</span>
                         </td>

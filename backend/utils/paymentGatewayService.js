@@ -24,6 +24,19 @@ const COUNTRY_CONFIGS = {
   SL: { name: 'Sierra Leone', currency: 'SLE', flag: '🇸🇱', dialCode: '+232', defaultGateway: 'flutterwave' }
 };
 
+// Countries students can register and pay from today (pilot: Ghana and Nigeria)
+const STUDENT_COUNTRIES = ['GH', 'NG'];
+
+/**
+ * Resolve a student's country to its pilot config; anything unknown or missing is Ghana,
+ * which is what every account created before country selection existed used.
+ */
+function getStudentCountry(countryCode) {
+  const code = String(countryCode || '').toUpperCase();
+  const resolved = STUDENT_COUNTRIES.includes(code) ? code : 'GH';
+  return { code: resolved, ...COUNTRY_CONFIGS[resolved] };
+}
+
 let cachedRates = { ...DEFAULT_RATES };
 let lastFetchTime = 0;
 
@@ -99,10 +112,13 @@ async function initializePaystackPayment({ email, amountLocal, currency, referen
     if (!SIMULATION_ENABLED) {
       return { success: false, message: 'Paystack is not configured' };
     }
-    // Sandbox / Test simulation mode
+    // Sandbox / Test simulation mode: send the student straight back the way Paystack would
+    const returnTo = new URL(callbackUrl || 'https://byupay.vercel.app');
+    returnTo.searchParams.set('reference', reference);
+    returnTo.searchParams.set('status', 'simulated');
     return {
       success: true,
-      authorizationUrl: `${callbackUrl || 'https://byupay.vercel.app'}?paystack_ref=${reference}&status=simulated`,
+      authorizationUrl: returnTo.toString(),
       reference,
       simulated: true,
       message: 'Paystack transaction initialized (Simulation mode)'
@@ -196,6 +212,8 @@ async function verifyPaystackPayment(reference) {
 
 module.exports = {
   COUNTRY_CONFIGS,
+  STUDENT_COUNTRIES,
+  getStudentCountry,
   DEFAULT_RATES,
   getExchangeRates,
   calculateLocalAmount,

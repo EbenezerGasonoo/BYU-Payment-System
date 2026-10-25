@@ -13,8 +13,12 @@ export const SERVICE = {
   feePercent: 5,
   processingTime: '2 to 4 business hours',
   cardValidity: '4 to 6 hours',
+  // Ghana pays by Mobile Money through Hubtel
   networks: ['MTN MoMo', 'Telecel Cash', 'AT Money'],
-  fallbackGhsRate: 15.5
+  // Nigeria pays in naira through Paystack
+  nigeriaMethods: ['card', 'bank transfer', 'USSD'],
+  fallbackGhsRate: 15.5,
+  fallbackNgnRate: 1520
 };
 
 // Support desk is open on weekdays, 9:00–17:00 GMT (Ghana time)

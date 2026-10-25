@@ -8,13 +8,14 @@ const GROUPS = [
       {
         q: 'Who can use ConnectPay?',
         a: [
-          'BYU-Pathway students with a BYU Student ID and an active @byupathway.edu email address. Payment is by Mobile Money in Ghana.'
+          'BYU-Pathway students in Ghana or Nigeria with a BYU Student ID and an active @byupathway.edu email address.',
+          `In Ghana you pay in cedis by Mobile Money. In Nigeria you pay in naira through Paystack by ${SERVICE.nigeriaMethods.join(', ')}. More countries are coming.`
         ]
       },
       {
         q: 'How do I create an account?',
         a: [
-          'Go to Create account and enter your name, BYU Student ID, Mobile Money number, Pathway email and a password.',
+          'Go to Create account and enter your name, country, BYU Student ID, phone number, Pathway email and a password.',
           'We email a confirmation link to your Pathway address. You need to confirm it before you can request a card.'
         ]
       },
@@ -36,17 +37,20 @@ const GROUPS = [
       {
         q: 'How much does it cost?',
         a: [
-          `A ${SERVICE.feePercent}% service fee on top of the card amount. For a $150 card, you pay the cedi value of $150 plus ${SERVICE.feePercent}%.`,
-          'The total in cedis is shown before you pay. There are no other charges.'
+          `A ${SERVICE.feePercent}% service fee on top of the card amount. For a $150 card, you pay the cedi or naira value of $150 plus ${SERVICE.feePercent}%.`,
+          'The total in your currency is shown before you pay. There are no other charges.'
         ]
       },
       {
         q: 'Which exchange rate do you use?',
-        a: ['The market USD to GHS rate at the moment you submit your request. The amount is then fixed for that request.']
+        a: ['The market USD to GHS (Ghana) or USD to NGN (Nigeria) rate at the moment you submit your request. The amount is then fixed for that request.']
       },
       {
-        q: 'Which Mobile Money networks can I pay from?',
-        a: [`${SERVICE.networks.join(', ')}. Payments go through Hubtel, and you approve the prompt on your phone.`]
+        q: 'How can I pay?',
+        a: [
+          `In Ghana: ${SERVICE.networks.join(', ')}. Payments go through Hubtel, and you approve the prompt on your phone.`,
+          `In Nigeria: ${SERVICE.nigeriaMethods.join(', ')} through Paystack. You pay on the Paystack page and are brought back to ConnectPay.`
+        ]
       },
       {
         q: 'What amount should I request?',
@@ -104,7 +108,7 @@ const GROUPS = [
       {
         q: 'Is ConnectPay part of BYU-Pathway?',
         a: [
-          'No. ConnectPay is an independent service that helps students in Ghana pay BYU-Pathway fees. It is not affiliated with or endorsed by BYU-Pathway Worldwide.'
+          'No. ConnectPay is an independent service that helps students in Ghana and Nigeria pay BYU-Pathway fees. It is not affiliated with or endorsed by BYU-Pathway Worldwide.'
         ]
       }
     ]

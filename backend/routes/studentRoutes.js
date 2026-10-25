@@ -33,10 +33,14 @@ const MAX_CARD_AMOUNT_USD = 5000;
 const notFoundOrForbidden = (res) =>
   res.status(404).json({ success: false, message: 'Card request not found' });
 
+// Requests made before multi-currency support have no currency and were priced in cedis
+const isCediRequest = (cardRequest) => (cardRequest.currency || 'GHS') === 'GHS';
+
 // Register new student
 router.post('/register', async (req, res) => {
   try {
     const { name, byuId, email, phone, password } = req.body;
+    const countryCode = String(req.body.countryCode || 'GH').toUpperCase();
 
     // Validate required fields
     if (!name || !byuId || !email || !phone || !password) {
@@ -58,6 +62,14 @@ router.post('/register', async (req, res) => {
     if (passwordError) {
       return res.status(400).json({ success: false, message: passwordError });
     }
+
+    if (!paymentGatewayService.STUDENT_COUNTRIES.includes(countryCode)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ConnectPay is available to students in Ghana and Nigeria for now'
+      });
+    }
+    const country = paymentGatewayService.getStudentCountry(countryCode);
 
     // Validate Pathway email
     if (!email.toLowerCase().endsWith('@byupathway.edu')) {
@@ -85,6 +97,8 @@ router.post('/register', async (req, res) => {
       byuId,
       email,
       phone,
+      countryCode: country.code,
+      preferredCurrency: country.currency,
       password: await hashPassword(password),
       verificationToken,
       isVerified: false
@@ -452,11 +466,13 @@ router.post('/request-card', requireStudent, async (req, res) => {
     const requestToken = crypto.randomBytes(8).toString('hex').toUpperCase();
     const paymentReference = `BYU-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
-    // Price is computed on the server - never trust client-supplied totals
-    const pricing = await paymentGatewayService.calculateLocalAmount(amount, 'GHS');
-    const amountInGHS = pricing.subtotalLocal;
-    const exchangeRate = pricing.exchangeRate;
-    const totalPaidGHS = pricing.totalLocal;
+    // Price is computed on the server in the student's currency - never trust client-supplied totals
+    const country = paymentGatewayService.getStudentCountry(student.countryCode);
+    const pricing = await paymentGatewayService.calculateLocalAmount(amount, country.currency);
+    const { currency, exchangeRate, subtotalLocal, totalLocal } = pricing;
+    // The *GHS columns predate other currencies; they are only filled for cedi requests
+    const amountInGHS = currency === 'GHS' ? subtotalLocal : null;
+    const totalPaidGHS = currency === 'GHS' ? totalLocal : null;
 
     // Create card request with payment pending
     const cardRequest = await CardRequest.create({
@@ -465,6 +481,10 @@ router.post('/request-card', requireStudent, async (req, res) => {
       amountInGHS,
       exchangeRate,
       totalPaidGHS,
+      country: country.code,
+      currency,
+      amountLocal: totalLocal,
+      paymentGateway: country.defaultGateway,
       requestToken,
       paymentReference,
       paymentMethod,
@@ -482,6 +502,11 @@ router.post('/request-card', requireStudent, async (req, res) => {
         amountInGHS,
         exchangeRate,
         totalPaidGHS,
+        country: country.code,
+        currency,
+        subtotalLocal,
+        amountLocal: totalLocal,
+        paymentGateway: country.defaultGateway,
         paymentMethod,
         status: cardRequest.status,
         paymentStatus: cardRequest.paymentStatus,
@@ -665,6 +690,9 @@ router.post('/initiate-hubtel-payment', requireStudent, async (req, res) => {
     if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
       return notFoundOrForbidden(res);
     }
+    if (!isCediRequest(cardRequest)) {
+      return res.status(400).json({ success: false, message: 'Mobile Money through Hubtel is only for payments in Ghana cedis' });
+    }
     // Charge the amount stored at request time, not whatever the client sends
     const amount = cardRequest.totalPaidGHS;
 
@@ -807,6 +835,9 @@ router.post('/initiate-mtn-payment', requireStudent, async (req, res) => {
     const cardRequest = await CardRequest.findOne({ where: { paymentReference } });
     if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
       return notFoundOrForbidden(res);
+    }
+    if (!isCediRequest(cardRequest)) {
+      return res.status(400).json({ success: false, message: 'MTN MoMo is only for payments in Ghana cedis' });
     }
     // Charge the amount stored at request time, not whatever the client sends
     const amount = cardRequest.totalPaidGHS;
@@ -1021,10 +1052,10 @@ router.post('/cards/:id/freeze', requireStudent, async (req, res) => {
   }
 });
 
-// POST /api/students/paystack/initialize - Initialize Paystack Payment
+// POST /api/students/paystack/initialize - Start a Paystack checkout for a priced card request
 router.post('/paystack/initialize', requireStudent, async (req, res) => {
   try {
-    const { requestToken, currency = 'GHS', callbackUrl } = req.body;
+    const { requestToken } = req.body;
     const cardRequest = await CardRequest.findOne({
       where: { requestToken },
       include: [{ model: Student, as: 'student' }]
@@ -1033,44 +1064,64 @@ router.post('/paystack/initialize', requireStudent, async (req, res) => {
     if (!cardRequest || !canAccessStudent(req, cardRequest.studentId)) {
       return notFoundOrForbidden(res);
     }
+    if (cardRequest.paymentStatus === 'paid') {
+      return res.status(400).json({ success: false, message: 'This request is already paid' });
+    }
+    if (cardRequest.status !== 'pending' || cardRequest.paymentStatus === 'failed') {
+      return res.status(400).json({ success: false, message: 'This request was cancelled. Please start a new one.' });
+    }
 
-    const calc = await paymentGatewayService.calculateLocalAmount(cardRequest.amount, currency);
-    cardRequest.currency = currency;
-    cardRequest.amountLocal = calc.totalLocal;
-    cardRequest.exchangeRate = calc.exchangeRate;
-    cardRequest.paymentGateway = 'paystack';
-    await cardRequest.save();
+    // Charge the currency and amount fixed when the request was priced, not a fresh quote
+    const currency = cardRequest.currency || 'GHS';
+    const amountLocal = cardRequest.amountLocal ?? cardRequest.totalPaidGHS;
+    if (!amountLocal) {
+      return res.status(400).json({ success: false, message: 'This request has no price. Please start a new one.' });
+    }
+
+    // Paystack rejects a reused reference, so each checkout attempt gets its own
+    const gatewayReference = `${cardRequest.requestToken}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const frontendUrl = process.env.FRONTEND_URL || req.get('origin') || 'https://byupay.vercel.app';
+    const callbackUrl = `${frontendUrl.replace(/\/$/, '')}/request?gateway=paystack`;
 
     const paystackResult = await paymentGatewayService.initializePaystackPayment({
       email: cardRequest.student.email,
-      amountLocal: calc.totalLocal,
+      amountLocal,
       currency,
-      reference: cardRequest.requestToken,
+      reference: gatewayReference,
       callbackUrl
     });
 
     if (!paystackResult.success) {
-      return res.status(400).json(paystackResult);
+      return res.status(400).json({
+        success: false,
+        message: paystackResult.message || paystackResult.error || 'Could not start the Paystack checkout'
+      });
     }
+
+    cardRequest.paymentGateway = 'paystack';
+    cardRequest.paymentMethod = 'paystack';
+    cardRequest.gatewayReference = gatewayReference;
+    await cardRequest.save();
 
     res.json({
       success: true,
       authorizationUrl: paystackResult.authorizationUrl,
-      reference: cardRequest.requestToken,
+      reference: gatewayReference,
       simulated: paystackResult.simulated,
-      calculation: calc
+      currency,
+      amountLocal
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// GET /api/students/paystack/verify/:reference - Verify Paystack Payment & Auto-Issue Virtual Card
+// GET /api/students/paystack/verify/:reference - Verify a Paystack payment and mark the request paid
 router.get('/paystack/verify/:reference', requireStudent, async (req, res) => {
   try {
     const { reference } = req.params;
     const cardRequest = await CardRequest.findOne({
-      where: { requestToken: reference },
+      where: { [Op.or]: [{ gatewayReference: reference }, { requestToken: reference }] },
       include: [{ model: Student, as: 'student' }]
     });
 
@@ -1078,9 +1129,32 @@ router.get('/paystack/verify/:reference', requireStudent, async (req, res) => {
       return notFoundOrForbidden(res);
     }
 
+    // Already settled (e.g. the student reloaded the callback page)
+    if (cardRequest.paymentStatus === 'paid') {
+      return res.json({ success: true, message: 'Payment already verified.', data: cardRequest });
+    }
+
+    // Only the reference this request's own checkout created may settle it
+    if (cardRequest.gatewayReference !== reference) {
+      return res.status(400).json({ success: false, message: 'Payment verification failed' });
+    }
+
     const verifyResult = await paymentGatewayService.verifyPaystackPayment(reference);
 
     if (verifyResult.verified) {
+      // A real Paystack payment must cover the amount and currency fixed for this request
+      if (!verifyResult.simulated) {
+        const expected = Number(cardRequest.amountLocal ?? cardRequest.totalPaidGHS);
+        const currency = cardRequest.currency || 'GHS';
+        if (verifyResult.currency !== currency || !(verifyResult.amountPaid >= expected - 0.01)) {
+          console.warn('⚠️ Paystack amount mismatch:', { reference, expected, currency, paid: verifyResult.amountPaid, paidCurrency: verifyResult.currency });
+          return res.status(400).json({
+            success: false,
+            message: 'The amount paid does not match this request. Please contact support with your reference.'
+          });
+        }
+      }
+
       const now = new Date();
       cardRequest.paymentStatus = 'paid';
       cardRequest.paidAt = now;
@@ -1110,7 +1184,7 @@ router.get('/paystack/verify/:reference', requireStudent, async (req, res) => {
           cardIssued = true;
 
           // Dispatch transactional notifications
-          sendCardAssignedEmail(cardRequest.student, cardRequest).catch(() => {});
+          notifyStudentCardAssigned(cardRequest.student, cardRequest).catch(() => {});
           africasTalkingService.sendSmsNotification({
             toPhone: cardRequest.student.phone,
             message: `BYU Pathway: Your USD Virtual Card (${issuedCard.cardNumber.slice(-4)}) is active!`
