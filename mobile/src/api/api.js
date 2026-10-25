@@ -65,6 +65,36 @@ export const studentAPI = {
     return res.data;
   },
 
+  updateCountry: async (countryCode) => {
+    const res = await api.patch('/student/me/country', { countryCode });
+    return res.data;
+  },
+
+  getRates: async () => {
+    const res = await api.get('/student/rates');
+    return res.data;
+  },
+
+  initiateHubtelPayment: async (data) => {
+    const res = await api.post('/student/initiate-hubtel-payment', data);
+    return res.data;
+  },
+
+  checkPaymentStatus: async (paymentReference) => {
+    const res = await api.get(`/student/check-payment-status/${encodeURIComponent(paymentReference)}`);
+    return res.data;
+  },
+
+  initializePaystack: async (requestToken) => {
+    const res = await api.post('/student/paystack/initialize', { requestToken });
+    return res.data;
+  },
+
+  verifyPaystack: async (reference) => {
+    const res = await api.get(`/student/paystack/verify/${encodeURIComponent(reference)}`);
+    return res.data;
+  },
+
   initiateMtnPayment: async (data) => {
     const res = await api.post('/student/initiate-mtn-payment', data);
     return res.data;

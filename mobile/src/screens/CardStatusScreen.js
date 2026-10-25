@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,24 +8,69 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  AppState,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { studentAPI } from '../api/api';
 import { colors } from '../theme/colors';
 import StatusTimeline from '../components/StatusTimeline';
 import VirtualCard from '../components/VirtualCard';
+import { useAuth } from '../context/AuthContext';
+import { formatRequestPaid, isAwaitingPayment, requestCurrency } from '../utils/money';
+import { openCheckout } from '../utils/checkout';
 
 const CardStatusScreen = ({ route }) => {
   const initialToken = route.params?.requestToken || '';
   const [tokenInput, setTokenInput] = useState(initialToken);
   const [requestData, setRequestData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (initialToken) {
       handleLookupToken(initialToken);
     }
   }, [initialToken]);
+
+  // Ask the gateway whether an unpaid request has been paid, then reload it
+  const checkPayment = useCallback(async ({ quiet = false } = {}) => {
+    if (!isAwaitingPayment(requestData)) return;
+    setChecking(true);
+    try {
+      if (requestCurrency(requestData) === 'NGN') {
+        if (requestData.gatewayReference) await studentAPI.verifyPaystack(requestData.gatewayReference);
+      } else if (requestData.paymentReference) {
+        await studentAPI.checkPaymentStatus(requestData.paymentReference);
+      }
+    } catch (err) {
+      if (!quiet) Alert.alert('Not confirmed yet', err.response?.data?.message || 'We have not received this payment yet.');
+    }
+    try {
+      const res = await studentAPI.getRequest(requestData.requestToken);
+      if (res.success) setRequestData(res.data);
+    } catch (err) {
+      console.warn('Reload request error:', err);
+    } finally {
+      setChecking(false);
+    }
+  }, [requestData]);
+
+  // Coming back from the Paystack / Hubtel browser page: check straight away
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkPayment({ quiet: true });
+    });
+    return () => sub.remove();
+  }, [checkPayment]);
+
+  const resumeCheckout = async () => {
+    try {
+      await openCheckout(requestData, user);
+    } catch (err) {
+      Alert.alert('Payment not started', err.response?.data?.message || err.message || 'Please try again.');
+    }
+  };
 
   const handleLookupToken = async (tok) => {
     const searchToken = tok || tokenInput;
@@ -106,7 +151,7 @@ const CardStatusScreen = ({ route }) => {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Total Paid:</Text>
               <Text style={[styles.detailValue, { color: colors.accentGreen }]}>
-                {requestData.currency || 'GHS'} {Number(requestData.totalPaidGHS || 0).toFixed(2)}
+                {formatRequestPaid(requestData)}
               </Text>
             </View>
 
@@ -129,6 +174,23 @@ const CardStatusScreen = ({ route }) => {
               </Text>
             </View>
           </View>
+
+          {isAwaitingPayment(requestData) && (
+            <View style={styles.payActions}>
+              <TouchableOpacity style={styles.payBtn} onPress={resumeCheckout}>
+                <Text style={styles.payBtnText}>
+                  Continue to {requestCurrency(requestData) === 'NGN' ? 'Paystack' : 'Hubtel'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.checkBtn} onPress={() => checkPayment()} disabled={checking}>
+                {checking ? (
+                  <ActivityIndicator color={colors.textMain} size="small" />
+                ) : (
+                  <Text style={styles.checkBtnText}>I have paid · Check payment</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
     </ScrollView>
@@ -210,6 +272,36 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   detailValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textMain,
+  },
+  payActions: {
+    gap: 10,
+    marginTop: 14,
+  },
+  payBtn: {
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: colors.accentIndigo,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  payBtnText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  checkBtn: {
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.cardBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkBtnText: {
     fontSize: 14,
     fontWeight: '700',
     color: colors.textMain,

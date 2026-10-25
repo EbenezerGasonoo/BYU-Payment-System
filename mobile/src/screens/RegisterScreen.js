@@ -42,15 +42,12 @@ const RegisterScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const res = await studentAPI.register({
-        ...form,
-        preferredCurrency: selectedCountry.currency,
-      });
+      const res = await studentAPI.register(form);
 
       if (res.success) {
-        Alert.alert('Registration Successful 🎉', 'Welcome to ConnectPay!');
+        Alert.alert('Registration Successful 🎉', 'Confirm the link we emailed to your Pathway address before requesting a card.');
         if (res.student) {
-          await setDirectUser(res.student);
+          await setDirectUser(res.student, res.token);
         }
       } else {
         Alert.alert('Registration Failed', res.message || 'Error creating account.');
@@ -73,7 +70,7 @@ const RegisterScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <Text style={styles.title}>Create Account ✨</Text>
-        <Text style={styles.subtitle}>ConnectPay for West Africa BYU Students</Text>
+        <Text style={styles.subtitle}>ConnectPay for BYU-Pathway students in Ghana and Nigeria</Text>
 
         <View style={styles.form}>
           {/* Country Selector */}
@@ -106,7 +103,7 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.label}>BYU Student ID *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. 123456789"
+              placeholder="7 or 8 digits"
               placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               value={form.byuId}
@@ -119,7 +116,7 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.label}>Pathway Email *</Text>
             <TextInput
               style={styles.input}
-              placeholder="name@byupathway.org"
+              placeholder="name@byupathway.edu"
               placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -133,7 +130,7 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.label}>Phone Number ({selectedCountry.dialCode}) *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. 240000000"
+              placeholder={form.countryCode === 'NG' ? 'e.g. 0803 000 0000' : 'e.g. 024 000 0000'}
               placeholderTextColor={colors.textMuted}
               keyboardType="phone-pad"
               value={form.phone}

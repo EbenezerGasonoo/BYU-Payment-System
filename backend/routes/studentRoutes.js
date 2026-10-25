@@ -190,6 +190,49 @@ router.get('/me', requireStudent, (req, res) => {
   res.json({ success: true, student: req.student });
 });
 
+// Change the signed-in student's country (Ghana or Nigeria); admins name the student by byuId.
+// Blocked while a request is waiting for payment, since that request is already priced.
+router.patch('/me/country', requireStudent, async (req, res) => {
+  try {
+    const countryCode = String(req.body.countryCode || '').toUpperCase();
+    if (!paymentGatewayService.STUDENT_COUNTRIES.includes(countryCode)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ConnectPay is available to students in Ghana and Nigeria for now'
+      });
+    }
+
+    const student = req.student || await Student.findOne({ where: { byuId: String(req.body.byuId || '') } });
+    if (!student || !canAccessStudent(req, student.id)) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const openRequest = await CardRequest.findOne({
+      where: {
+        studentId: student.id,
+        status: { [Op.in]: ['pending', 'assigned'] },
+        paymentStatus: { [Op.in]: ['unpaid', 'pending'] }
+      }
+    });
+    if (openRequest) {
+      return res.status(409).json({
+        success: false,
+        message: 'Finish or cancel your unpaid card request before changing country.'
+      });
+    }
+
+    const country = paymentGatewayService.getStudentCountry(countryCode);
+    student.countryCode = country.code;
+    student.preferredCurrency = country.currency;
+    await student.save();
+
+    res.json({ success: true, message: `Country updated to ${country.name}`, student });
+  } catch (error) {
+    console.error('Error updating country:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Verify email endpoint
 router.get('/verify-email/:token', async (req, res) => {
   try {
@@ -1116,6 +1159,99 @@ router.post('/paystack/initialize', requireStudent, async (req, res) => {
   }
 });
 
+// References currently being settled, so the redirect and the webhook can't settle one twice at once
+const settlingReferences = new Set();
+
+/**
+ * Confirm a Paystack reference with Paystack and settle the card request it belongs to.
+ * Shared by the student's redirect (verify route) and Paystack's webhook.
+ * Returns { ok, status, message }.
+ */
+async function settlePaystackPayment(cardRequest, reference) {
+  if (cardRequest.paymentStatus === 'paid') {
+    return { ok: true, status: 200, message: 'Payment already verified.' };
+  }
+
+  // Only the reference this request's own checkout created may settle it
+  if (cardRequest.gatewayReference !== reference) {
+    return { ok: false, status: 400, message: 'Payment verification failed' };
+  }
+
+  if (settlingReferences.has(reference)) {
+    return { ok: false, status: 409, message: 'Your payment is being confirmed. Please check again in a moment.' };
+  }
+  settlingReferences.add(reference);
+
+  try {
+    const verifyResult = await paymentGatewayService.verifyPaystackPayment(reference);
+    if (!verifyResult.verified) {
+      return { ok: false, status: 400, message: 'Payment verification failed' };
+    }
+
+    // A real Paystack payment must cover the amount and currency fixed for this request
+    if (!verifyResult.simulated) {
+      const expected = Number(cardRequest.amountLocal ?? cardRequest.totalPaidGHS);
+      const currency = cardRequest.currency || 'GHS';
+      if (verifyResult.currency !== currency || !(verifyResult.amountPaid >= expected - 0.01)) {
+        console.warn('⚠️ Paystack amount mismatch:', { reference, expected, currency, paid: verifyResult.amountPaid, paidCurrency: verifyResult.currency });
+        return {
+          ok: false,
+          status: 400,
+          message: 'The amount paid does not match this request. Please contact support with your reference.'
+        };
+      }
+    }
+
+    const now = new Date();
+    cardRequest.paymentStatus = 'paid';
+    cardRequest.paidAt = now;
+    cardRequest.paymentVerifiedAt = now;
+
+    let cardIssued = Boolean(cardRequest.virtualCardNumber);
+    if (cardIssued) {
+      cardRequest.status = 'paid';
+    }
+
+    // Auto-issue virtual card if not already assigned
+    if (!cardIssued) {
+      const issuedCard = await cardProviderService.issueVirtualCard({
+        studentName: cardRequest.student.name,
+        amountUsd: cardRequest.amount,
+        cardRequestId: cardRequest.id
+      });
+
+      if (issuedCard.success) {
+        cardRequest.virtualCardNumber = issuedCard.cardNumber;
+        cardRequest.cardholderName = issuedCard.cardholderName;
+        cardRequest.cardExpiryDate = issuedCard.cardExpiryDate;
+        cardRequest.cardCVV = issuedCard.cvv;
+        cardRequest.status = 'assigned';
+        cardRequest.cardStatus = 'active';
+        cardRequest.assignedAt = now;
+        cardIssued = true;
+
+        // Dispatch transactional notifications
+        notifyStudentCardAssigned(cardRequest.student, cardRequest).catch(() => {});
+        africasTalkingService.sendSmsNotification({
+          toPhone: cardRequest.student.phone,
+          message: `BYU Pathway: Your USD Virtual Card (${issuedCard.cardNumber.slice(-4)}) is active!`
+        }).catch(() => {});
+      }
+    }
+
+    await cardRequest.save();
+
+    if (!cardIssued) {
+      // No provider issued a card: keep the request pending so an admin assigns a real one
+      notifyAdminNewRequest(cardRequest.student, cardRequest).catch(() => {});
+      return { ok: true, status: 200, message: 'Payment verified. Your card will be assigned shortly.' };
+    }
+    return { ok: true, status: 200, message: 'Payment verified and Virtual Card issued successfully!' };
+  } finally {
+    settlingReferences.delete(reference);
+  }
+}
+
 // GET /api/students/paystack/verify/:reference - Verify a Paystack payment and mark the request paid
 router.get('/paystack/verify/:reference', requireStudent, async (req, res) => {
   try {
@@ -1129,91 +1265,58 @@ router.get('/paystack/verify/:reference', requireStudent, async (req, res) => {
       return notFoundOrForbidden(res);
     }
 
-    // Already settled (e.g. the student reloaded the callback page)
-    if (cardRequest.paymentStatus === 'paid') {
-      return res.json({ success: true, message: 'Payment already verified.', data: cardRequest });
+    const result = await settlePaystackPayment(cardRequest, reference);
+    if (!result.ok) {
+      return res.status(result.status).json({ success: false, message: result.message });
     }
-
-    // Only the reference this request's own checkout created may settle it
-    if (cardRequest.gatewayReference !== reference) {
-      return res.status(400).json({ success: false, message: 'Payment verification failed' });
-    }
-
-    const verifyResult = await paymentGatewayService.verifyPaystackPayment(reference);
-
-    if (verifyResult.verified) {
-      // A real Paystack payment must cover the amount and currency fixed for this request
-      if (!verifyResult.simulated) {
-        const expected = Number(cardRequest.amountLocal ?? cardRequest.totalPaidGHS);
-        const currency = cardRequest.currency || 'GHS';
-        if (verifyResult.currency !== currency || !(verifyResult.amountPaid >= expected - 0.01)) {
-          console.warn('⚠️ Paystack amount mismatch:', { reference, expected, currency, paid: verifyResult.amountPaid, paidCurrency: verifyResult.currency });
-          return res.status(400).json({
-            success: false,
-            message: 'The amount paid does not match this request. Please contact support with your reference.'
-          });
-        }
-      }
-
-      const now = new Date();
-      cardRequest.paymentStatus = 'paid';
-      cardRequest.paidAt = now;
-      cardRequest.paymentVerifiedAt = now;
-
-      let cardIssued = Boolean(cardRequest.virtualCardNumber);
-      if (cardIssued) {
-        cardRequest.status = 'paid';
-      }
-
-      // Auto-issue virtual card if not already assigned
-      if (!cardIssued) {
-        const issuedCard = await cardProviderService.issueVirtualCard({
-          studentName: cardRequest.student.name,
-          amountUsd: cardRequest.amount,
-          cardRequestId: cardRequest.id
-        });
-
-        if (issuedCard.success) {
-          cardRequest.virtualCardNumber = issuedCard.cardNumber;
-          cardRequest.cardholderName = issuedCard.cardholderName;
-          cardRequest.cardExpiryDate = issuedCard.cardExpiryDate;
-          cardRequest.cardCVV = issuedCard.cvv;
-          cardRequest.status = 'assigned';
-          cardRequest.cardStatus = 'active';
-          cardRequest.assignedAt = now;
-          cardIssued = true;
-
-          // Dispatch transactional notifications
-          notifyStudentCardAssigned(cardRequest.student, cardRequest).catch(() => {});
-          africasTalkingService.sendSmsNotification({
-            toPhone: cardRequest.student.phone,
-            message: `BYU Pathway: Your USD Virtual Card (${issuedCard.cardNumber.slice(-4)}) is active!`
-          }).catch(() => {});
-        }
-      }
-
-      await cardRequest.save();
-
-      if (!cardIssued) {
-        // No provider issued a card: keep the request pending so an admin assigns a real one
-        notifyAdminNewRequest(cardRequest.student, cardRequest).catch(() => {});
-        return res.json({
-          success: true,
-          message: 'Payment verified. Your card will be assigned shortly.',
-          data: cardRequest
-        });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Payment verified and Virtual Card issued successfully!',
-        data: cardRequest
-      });
-    }
-
-    res.status(400).json({ success: false, message: 'Payment verification failed' });
+    res.json({ success: true, message: result.message, data: cardRequest });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Paystack signs each webhook with HMAC-SHA512 of the raw body using the secret key
+const isValidPaystackSignature = (req) => {
+  const secret = process.env.PAYSTACK_SECRET_KEY;
+  const signature = req.get('x-paystack-signature');
+  if (!secret || secret.includes('YOUR_') || !signature || !req.rawBody) return false;
+  const expected = crypto.createHmac('sha512', secret).update(req.rawBody).digest('hex');
+  const given = Buffer.from(String(signature));
+  const wanted = Buffer.from(expected);
+  return given.length === wanted.length && crypto.timingSafeEqual(given, wanted);
+};
+
+// POST /api/student/paystack/webhook - Paystack server-to-server notice, so a payment settles
+// even when the student closes the tab before being redirected back
+router.post('/paystack/webhook', async (req, res) => {
+  if (!isValidPaystackSignature(req)) {
+    return res.status(401).send('Invalid signature');
+  }
+
+  try {
+    const { event, data } = req.body || {};
+    if (event !== 'charge.success' || !data?.reference) {
+      return res.status(200).send('OK');
+    }
+
+    const cardRequest = await CardRequest.findOne({
+      where: { gatewayReference: data.reference },
+      include: [{ model: Student, as: 'student' }]
+    });
+    if (!cardRequest) {
+      console.warn('⚠️ Paystack webhook for unknown reference:', data.reference);
+      return res.status(200).send('OK');
+    }
+
+    // The event is signed, but settle through Paystack's verify API like every other path
+    const result = await settlePaystackPayment(cardRequest, data.reference);
+    console.log(`📥 Paystack webhook ${data.reference}: ${result.message}`);
+    // 409 means the redirect is settling it right now; anything else is final for this event
+    res.status(result.status === 409 ? 503 : 200).send('OK');
+  } catch (error) {
+    console.error('Paystack webhook error:', error);
+    // A 5xx makes Paystack retry later
+    res.status(500).send('Error');
   }
 });
 

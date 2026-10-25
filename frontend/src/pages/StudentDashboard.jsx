@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { studentAPI } from '../api/api';
 import { useAuth } from '../utils/AuthContext';
 import { SERVICE, SUPPORT } from '../utils/siteInfo';
-import { formatRequestPaid, requestCurrency } from '../utils/countries';
+import { COUNTRY_LIST, formatRequestPaid, getCountry, requestCurrency } from '../utils/countries';
 
 const BYU_PAYMENT_URL = 'https://my.byupathway.edu';
 
@@ -261,6 +261,55 @@ function HowToPay() {
   );
 }
 
+// Students pick where they pay from; older accounts start as Ghana
+function CountrySetting({ student, locked, onSaved }) {
+  const current = getCountry(student?.countryCode);
+  const [value, setValue] = useState(current.code);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => { setValue(current.code); }, [current.code]);
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const res = await studentAPI.updateCountry(value, student?.byuId);
+      onSaved(res.student, res.message);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not change your country. Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="cp-card">
+      <div className="cp-card__body cp-form">
+        <h2 className="cp-h3">Country</h2>
+        <p className="cp-small cp-muted">
+          You pay in {current.currencyName} ({current.currency}) by {current.payWith}.
+        </p>
+        <div className="cp-field">
+          <label htmlFor="dash-country">Country you pay from</label>
+          <select id="dash-country" value={value} onChange={(e) => setValue(e.target.value)} disabled={locked || saving}>
+            {COUNTRY_LIST.map((c) => (
+              <option key={c.code} value={c.code}>{c.name} ({c.currency})</option>
+            ))}
+          </select>
+          {locked && <small>Finish or cancel your unpaid request before changing country.</small>}
+        </div>
+        {error && <div className="cp-alert cp-alert--error" role="status">{error}</div>}
+        {value !== current.code && !locked && (
+          <button type="button" className="cp-btn cp-btn--primary" onClick={save} disabled={saving}>
+            {saving ? 'Saving…' : `Switch to ${getCountry(value).name}`}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function History({ requests }) {
   if (requests.length === 0) return null;
   return (
@@ -450,6 +499,16 @@ function StudentDashboard() {
 
             <aside className="cp-dash__side">
               <HowToPay />
+              {student && (
+                <CountrySetting
+                  student={student}
+                  locked={Boolean(current && describeRequest(current).key === 'awaiting')}
+                  onSaved={(updated, msg) => {
+                    if (updated) setData((prev) => ({ ...prev, student: updated }));
+                    showToast(msg || 'Country updated');
+                  }}
+                />
+              )}
               {totalCompletedUsd > 0 && (
                 <section className="cp-card">
                   <div className="cp-card__body">

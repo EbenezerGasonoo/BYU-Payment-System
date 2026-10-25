@@ -5,7 +5,7 @@ import { useAdminAuth } from '../utils/AdminAuthContext';
 import { useImpersonation } from '../utils/ImpersonationContext';
 import { useAuth } from '../utils/AuthContext';
 import AdminChat from '../components/AdminChat';
-import { formatRequestPaid, requestCurrency, requestTotalLocal } from '../utils/countries';
+import { formatMoney, formatRequestPaid, getCountry, requestCurrency, requestTotalLocal } from '../utils/countries';
 import './AdminDashboard.css';
 
 // West Africa country reference
@@ -1506,9 +1506,12 @@ function AdminDashboard() {
                     color: '#94a3b8'
                   }}
                 >
-                  <span>Estimated Total (Cedis):</span>
+                  <span>Estimated Total ({getCountry(directIssueStudent.countryCode).name}):</span>
                   <strong style={{ color: '#ffffff', fontSize: '0.95rem' }}>
-                    GH₵ {(directIssueAmount * rates.GHS).toFixed(2)} GHS
+                    {(() => {
+                      const { currency } = getCountry(directIssueStudent.countryCode);
+                      return formatMoney(directIssueAmount * (rates[currency] || getCountry(directIssueStudent.countryCode).fallbackRate), currency);
+                    })()}
                   </strong>
                 </div>
               </div>

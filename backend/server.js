@@ -61,7 +61,10 @@ app.get('/api/health', async (req, res) => {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  // Paystack webhook signatures are computed over the exact bytes received
+  verify: (req, res, buf) => { req.rawBody = buf; }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Get server's public IP address (for Hubtel whitelisting)
