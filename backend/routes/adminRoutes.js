@@ -141,6 +141,15 @@ router.post('/assign', async (req, res) => {
       });
     }
 
+    // Store digits only, whatever spacing the admin typed
+    const cardDigits = String(cardNumber).replace(/\D/g, '');
+    if (!/^\d{13,19}$/.test(cardDigits)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Card number must be 13 to 19 digits'
+      });
+    }
+
     const cardRequest = await CardRequest.findByPk(requestId, {
       include: [{ model: Student, as: 'student' }]
     });
@@ -159,7 +168,7 @@ router.post('/assign', async (req, res) => {
     }
 
     // Update card request with manual card details
-    cardRequest.virtualCardNumber = cardNumber;
+    cardRequest.virtualCardNumber = cardDigits;
     cardRequest.cardholderName = cardholderName;
     cardRequest.cardExpiryDate = expiryDate;
     cardRequest.cardCVV = cvv;
