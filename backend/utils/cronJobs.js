@@ -2,6 +2,29 @@ const cron = require('node-cron');
 const { Op } = require('sequelize');
 const { CardRequest, Student } = require('../models');
 const { notifyStudentCardExpired } = require('./emailService');
+const cardIssuers = require('./cardIssuers');
+
+/**
+ * Close an expired card at its issuer when the issuer has an API. Cards from a manual issuer
+ * (or whose provider call fails) are flagged so an admin closes them by hand.
+ */
+async function closeExpiredCard(card) {
+  card.status = 'expired';
+  if (cardIssuers.isApiIssuer(card.issuer)) {
+    const result = await cardIssuers.terminateCard(card);
+    if (result.success) {
+      card.cardStatus = 'terminated';
+      card.needsManualClose = false;
+      return 'terminated';
+    }
+    console.warn(`⚠️ Could not terminate card ${card.providerCardId} at ${card.issuer}; flagging for manual close`);
+  }
+  // Simulated cards are fake and have nothing to close
+  if (card.issuer !== 'simulation') {
+    card.needsManualClose = true;
+  }
+  return 'flagged';
+}
 
 // Run every 5 minutes to check for expired cards
 const startCardExpiryJob = () => {
@@ -24,7 +47,7 @@ const startCardExpiryJob = () => {
         console.log(`⏰ Found ${expiredCards.length} expired card(s)`);
 
         for (const card of expiredCards) {
-          card.status = 'expired';
+          await closeExpiredCard(card);
           await card.save();
 
           await notifyStudentCardExpired(card.student, card);
@@ -41,4 +64,4 @@ const startCardExpiryJob = () => {
   console.log('✅ Card expiry cron job started (runs every 5 minutes)');
 };
 
-module.exports = { startCardExpiryJob };
+module.exports = { startCardExpiryJob, closeExpiredCard };

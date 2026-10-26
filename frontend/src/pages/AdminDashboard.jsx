@@ -5,7 +5,7 @@ import { useAdminAuth } from '../utils/AdminAuthContext';
 import { useImpersonation } from '../utils/ImpersonationContext';
 import { useAuth } from '../utils/AuthContext';
 import AdminChat from '../components/AdminChat';
-import { formatMoney, formatRequestPaid, getCountry, requestCurrency, requestTotalLocal } from '../utils/countries';
+import { COUNTRY_LIST, formatMoney, formatRequestPaid, getCountry, requestCurrency, requestTotalLocal } from '../utils/countries';
 import './AdminDashboard.css';
 
 // West Africa country reference
@@ -27,6 +27,14 @@ const countryLabel = (code) => {
   return c ? `${c.flag} ${c.name}` : (code || '🌍 Unknown');
 };
 
+// Requests made before per-country support carry no country; they came from the student's country
+const requestCountryCode = (r) => (r.country || r.student?.countryCode || 'GH').toUpperCase();
+
+const formatUsd = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const ISSUER_LABELS = { manual: 'Manual assign', sudo: 'Sudo Africa', maplerad: 'Maplerad', simulation: 'Simulation' };
+const issuerLabel = (name) => (name || 'manual').split('+').map((n) => ISSUER_LABELS[n] || n).join(' → ');
+
 function AdminDashboard() {
   const { isAdmin, adminKey, adminLogout } = useAdminAuth();
   const { impersonate } = useImpersonation();
@@ -44,6 +52,11 @@ function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [userFilter, setUserFilter] = useState('active');
   const [countryFilter, setCountryFilter] = useState('all');
+  // '' = all countries; 'GH' / 'NG' narrows dashboard stats and the requests list
+  const [reportCountry, setReportCountry] = useState('');
+  const [floats, setFloats] = useState([]);
+  const [topUpForm, setTopUpForm] = useState({ country: 'GH', amountUsd: '', date: '', note: '' });
+  const [topUpLoading, setTopUpLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
@@ -108,14 +121,16 @@ function AdminDashboard() {
     setLoading(true);
     setError('');
     try {
-      const [requestsData, statsData, countryData] = await Promise.all([
-        adminAPI.getRequests(adminKey, filter),
-        adminAPI.getStats(adminKey),
-        adminAPI.getCountryStats(adminKey)
+      const [requestsData, statsData, countryData, floatData] = await Promise.all([
+        adminAPI.getRequests(adminKey, filter, reportCountry),
+        adminAPI.getStats(adminKey, reportCountry),
+        adminAPI.getCountryStats(adminKey),
+        adminAPI.getFloat(adminKey)
       ]);
       setRequests(requestsData.data || []);
       setStats(statsData.data || null);
       setCountryStats(countryData.data || []);
+      setFloats(floatData.data || []);
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Failed to load dashboard data';
       setError(errorMessage);
@@ -126,7 +141,7 @@ function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [adminKey, filter, adminLogout, navigate]);
+  }, [adminKey, filter, reportCountry, adminLogout, navigate]);
 
   const loadUsers = useCallback(async () => {
     if (!adminKey) return;
@@ -259,6 +274,36 @@ function AdminDashboard() {
       await loadDashboard();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to assign card');
+    }
+  };
+
+  const handleMarkClosed = async (requestId) => {
+    try {
+      await adminAPI.markCardClosed(adminKey, requestId);
+      showToast('✅ Card marked as closed');
+      await loadDashboard();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to mark card closed');
+    }
+  };
+
+  const handleTopUp = async (e) => {
+    e.preventDefault();
+    const amountUsd = Number(topUpForm.amountUsd);
+    if (!(amountUsd > 0)) {
+      showToast('⚠️ Enter the USD amount loaded');
+      return;
+    }
+    setTopUpLoading(true);
+    try {
+      await adminAPI.topUpFloat(adminKey, { ...topUpForm, amountUsd, date: topUpForm.date || undefined });
+      showToast(`✅ ${formatUsd(amountUsd)} added to ${getCountry(topUpForm.country).name} float`);
+      setTopUpForm((f) => ({ ...f, amountUsd: '', note: '' }));
+      await loadDashboard();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to record top-up');
+    } finally {
+      setTopUpLoading(false);
     }
   };
 
@@ -425,6 +470,12 @@ function AdminDashboard() {
   // Wave chart tooltip value = total revenue
   const waveTooltipValue = `$${totalVolume.toLocaleString()}`;
 
+  const countryReports = stats?.byCountry || [];
+  // Only warn once the team has started loading a country's float, so an unused ledger stays quiet
+  const lowFloats = floats.filter((f) => f.lowBalance && f.toppedUp > 0 && (!reportCountry || f.country === reportCountry));
+  const lowFloatCount = lowFloats.length;
+  const manualCloseCount = stats?.needsManualClose ?? 0;
+
   return (
     <div className="bento-app-container">
       {/* ── Left Sidebar Navigation ── */}
@@ -451,6 +502,15 @@ function AdminDashboard() {
             <span className="nav-icon">💳</span>
             <span className="nav-text">Requests</span>
             {requests.length > 0 && <span className="nav-pill">{requests.length}</span>}
+          </button>
+
+          <button
+            className={`nav-item ${activeTab === 'countries' ? 'active' : ''}`}
+            onClick={() => setActiveTab('countries')}
+          >
+            <span className="nav-icon">🌍</span>
+            <span className="nav-text">Countries & Float</span>
+            {lowFloatCount > 0 && <span className="nav-pill" style={{ background: '#e11d48' }}>{lowFloatCount}</span>}
           </button>
 
           <button
@@ -515,6 +575,19 @@ function AdminDashboard() {
               )}
             </div>
 
+            {/* Country scope for stats and the requests list */}
+            <select
+              value={reportCountry}
+              onChange={(e) => setReportCountry(e.target.value)}
+              className="bento-select"
+              title="Show stats and requests for one country"
+            >
+              <option value="">🌍 All countries</option>
+              {COUNTRY_LIST.map((c) => (
+                <option key={c.code} value={c.code}>{countryLabel(c.code)}</option>
+              ))}
+            </select>
+
             {/* Live DB Connection Badge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.35rem 0.85rem', borderRadius: 20, fontSize: '0.8rem', color: '#34d399', fontWeight: 700 }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }}></span>
@@ -555,6 +628,17 @@ function AdminDashboard() {
         </div>
 
         {error && <div className="bento-banner-error">⚠️ {error}</div>}
+
+        {lowFloats.map((f) => (
+          <div key={f.country} className="bento-banner-error" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('countries')}>
+            ⚠️ {countryLabel(f.country)} card float is low: {formatUsd(f.balance)} left (warning below {formatUsd(f.lowBalanceThreshold)}). Record a top-up under Countries & Float.
+          </div>
+        ))}
+        {manualCloseCount > 0 && (
+          <div className="bento-banner-error" style={{ cursor: 'pointer' }} onClick={() => { setFilter('expired'); setActiveTab('requests'); }}>
+            🔒 {manualCloseCount} expired card{manualCloseCount === 1 ? '' : 's'} must be closed by hand with the card source.
+          </div>
+        )}
 
         {/* Dynamic Tab Switcher Content */}
         {activeTab === 'chat' ? (
@@ -715,6 +799,169 @@ function AdminDashboard() {
               </table>
             </div>
           </div>
+        ) : activeTab === 'countries' ? (
+          /* ── Countries & Float Tab: one report and one USD card float per country ── */
+          <div className="bento-card-full">
+            <div className="bento-card-header">
+              <h2>Countries & Card Float</h2>
+              <div className="bento-actions-group">
+                <button onClick={loadDashboard} className="bento-btn-sm btn-indigo" disabled={loading}>
+                  {loading ? '...' : '🔄 Refresh Data'}
+                </button>
+              </div>
+            </div>
+
+            <div className="bento-table-wrapper">
+              <table className="bento-table">
+                <thead>
+                  <tr>
+                    <th>Country</th>
+                    <th>Card Issuer</th>
+                    <th>Requests</th>
+                    <th>Paid</th>
+                    <th>Cards Issued</th>
+                    <th>USD Volume</th>
+                    <th>Local Collected</th>
+                    <th>Fees Earned</th>
+                    <th>Card Float</th>
+                    <th>Needs Manual Close</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {countryReports.length === 0 ? (
+                    <tr>
+                      <td colSpan="10" className="bento-table-empty">No country data yet.</td>
+                    </tr>
+                  ) : (
+                    countryReports.map((c) => (
+                      <tr key={c.countryCode}>
+                        <td className="table-name-bold">{countryLabel(c.countryCode)}</td>
+                        <td>
+                          <span className="bento-tag-purple">{issuerLabel(c.issuer)}</span>
+                          {!c.issuerIsApi && c.issuer !== 'manual' && (
+                            <div className="table-sub-info">no keys set, assigning manually</div>
+                          )}
+                        </td>
+                        <td>{c.requests}</td>
+                        <td>{c.paid}</td>
+                        <td>{c.cardsIssued}</td>
+                        <td className="amount-highlight">{formatUsd(c.usdVolume)}</td>
+                        <td className="text-emerald">{formatMoney(c.localCollected, c.currency)}</td>
+                        <td>
+                          {formatUsd(c.feesEarnedUsd)}
+                          <div className="table-sub-info">{formatMoney(c.feesEarnedLocal, c.currency)}</div>
+                        </td>
+                        <td>
+                          <span className={`bento-badge ${c.floatLowBalance ? 'bento-badge-rose' : 'bento-badge-emerald'}`}>
+                            {formatUsd(c.floatBalance)}
+                          </span>
+                          {c.floatLowBalance && <div className="table-sub-info">⚠️ below {formatUsd(c.floatLowBalanceThreshold)}</div>}
+                        </td>
+                        <td className={c.needsManualClose > 0 ? 'text-rose font-semibold' : 'text-muted'}>{c.needsManualClose}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bento-card-header" style={{ marginTop: '1.5rem' }}>
+              <h2>Record a Float Top-up</h2>
+            </div>
+            <form onSubmit={handleTopUp} className="bento-actions-group" style={{ flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end' }}>
+              <div className="bento-input-group">
+                <label>Country</label>
+                <select
+                  value={topUpForm.country}
+                  onChange={(e) => setTopUpForm({ ...topUpForm, country: e.target.value })}
+                  className="bento-select"
+                >
+                  {COUNTRY_LIST.map((c) => (
+                    <option key={c.code} value={c.code}>{countryLabel(c.code)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="bento-input-group">
+                <label>Amount (USD)</label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="1000.00"
+                  value={topUpForm.amountUsd}
+                  onChange={(e) => setTopUpForm({ ...topUpForm, amountUsd: e.target.value })}
+                />
+              </div>
+              <div className="bento-input-group">
+                <label>Date</label>
+                <input
+                  type="date"
+                  value={topUpForm.date}
+                  onChange={(e) => setTopUpForm({ ...topUpForm, date: e.target.value })}
+                />
+              </div>
+              <div className="bento-input-group" style={{ flex: 1, minWidth: 200 }}>
+                <label>Note</label>
+                <input
+                  type="text"
+                  maxLength={255}
+                  placeholder="e.g. Wire to card source, ref 1234"
+                  value={topUpForm.note}
+                  onChange={(e) => setTopUpForm({ ...topUpForm, note: e.target.value })}
+                />
+              </div>
+              <button type="submit" className="bento-btn-sm btn-indigo" disabled={topUpLoading}>
+                {topUpLoading ? '...' : '+ Add Top-up'}
+              </button>
+            </form>
+
+            {floats.map((f) => (
+              <div key={f.country} style={{ marginTop: '1.5rem' }}>
+                <div className="bento-card-header">
+                  <h2>
+                    {countryLabel(f.country)} float: {formatUsd(f.balance)}
+                    <span className="text-muted" style={{ fontSize: '0.8rem', marginLeft: '0.75rem' }}>
+                      {formatUsd(f.toppedUp)} loaded · {formatUsd(f.debited)} on cards
+                    </span>
+                  </h2>
+                </div>
+                <div className="bento-table-wrapper">
+                  <table className="bento-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Amount (USD)</th>
+                        <th>Note</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {f.entries.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="bento-table-empty">No float entries yet.</td>
+                        </tr>
+                      ) : (
+                        f.entries.map((e) => (
+                          <tr key={e._id || e.id}>
+                            <td className="text-muted">{formatDate(e.entryDate)}</td>
+                            <td>
+                              <span className={`bento-badge ${e.type === 'topup' ? 'bento-badge-emerald' : 'bento-badge-indigo'}`}>
+                                {e.type === 'topup' ? 'TOP-UP' : 'CARD'}
+                              </span>
+                            </td>
+                            <td className={e.amountUsd >= 0 ? 'text-emerald' : 'text-rose'}>
+                              {e.amountUsd >= 0 ? '+' : '−'}{formatUsd(Math.abs(e.amountUsd))}
+                            </td>
+                            <td>{e.note || '—'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : activeTab === 'requests' ? (
           /* ── Requests Detailed Tab ── */
           <div className="bento-card-full">
@@ -767,7 +1014,13 @@ function AdminDashboard() {
                         <td>
                           <div className="table-name-bold">{r.student?.name || 'Unknown Student'}</div>
                           <div className="table-sub-info">
-                            <span className="country-pill-xs">{countryLabel(r.student?.countryCode || 'GH')}</span>
+                            <span className="country-pill-xs">{countryLabel(requestCountryCode(r))}</span>
+                            {r.issuer && r.issuer !== 'manual' && (
+                              <>
+                                <span className="sub-divider">•</span>
+                                <span>{issuerLabel(r.issuer)}</span>
+                              </>
+                            )}
                             <span className="sub-divider">•</span>
                             ID: <code>{r.student?.byuId || 'N/A'}</code>
                             <span className="sub-divider">•</span>
@@ -811,6 +1064,15 @@ function AdminDashboard() {
 
                             {r.status === 'paid' && <span className="text-emerald font-semibold">✓ Completed</span>}
                             {r.status === 'expired' && <span className="text-rose font-semibold">⏰ Expired</span>}
+                            {r.needsManualClose && (
+                              <button
+                                onClick={() => handleMarkClosed(r._id || r.id)}
+                                className="bento-action-btn amber"
+                                title="Close this card with the card source, then mark it closed here"
+                              >
+                                Close by hand ✓
+                              </button>
+                            )}
                             {r.status === 'declined' && <span className="text-muted font-semibold">✗ Declined</span>}
                           </div>
                         </td>

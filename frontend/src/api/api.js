@@ -151,9 +151,10 @@ export const studentAPI = {
 
 // Admin API calls
 export const adminAPI = {
-  getRequests: async (adminKey, status = '') => {
-    const url = status ? `${API_BASE_URL}/admin/requests?status=${status}` : `${API_BASE_URL}/admin/requests`;
-    const response = await axios.get(url, {
+  // country: 'GH' | 'NG' narrows the list to one country; '' means all
+  getRequests: async (adminKey, status = '', country = '') => {
+    const response = await axios.get(`${API_BASE_URL}/admin/requests`, {
+      params: { ...(status && { status }), ...(country && { country }) },
       headers: { 'x-admin-key': adminKey }
     });
     return response.data;
@@ -180,8 +181,32 @@ export const adminAPI = {
     return response.data;
   },
 
-  getStats: async (adminKey) => {
+  getStats: async (adminKey, country = '') => {
     const response = await axios.get(`${API_BASE_URL}/admin/stats`, {
+      params: country ? { country } : {},
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
+  },
+
+  // USD card float per country (balance, low-balance warning, recent entries)
+  getFloat: async (adminKey) => {
+    const response = await axios.get(`${API_BASE_URL}/admin/float`, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
+  },
+
+  topUpFloat: async (adminKey, data) => {
+    const response = await axios.post(`${API_BASE_URL}/admin/float/topup`, data, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
+  },
+
+  // Record that an expired card from a manual issuer was closed by hand
+  markCardClosed: async (adminKey, requestId) => {
+    const response = await axios.post(`${API_BASE_URL}/admin/requests/${requestId}/manual-close`, {}, {
       headers: { 'x-admin-key': adminKey }
     });
     return response.data;

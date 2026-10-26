@@ -1,13 +1,13 @@
 /**
  * Automated USD Virtual Card Issuing Provider Engine
- * Supports Sudo Africa API (https://sudo.africa) with Maplerad and ISO Mock fallback
+ * Dispatches to each country's issuer (utils/cardIssuers), with an ISO mock fallback for simulation only
  */
 
-const axios = require('axios');
+const cardIssuers = require('./cardIssuers');
+const sudoIssuer = require('./cardIssuers/sudo');
 
 // Fake card numbers are only allowed when explicitly enabled (never in production)
 const CARD_SIMULATION_ENABLED = process.env.CARD_SIMULATION === 'true';
-const MAPLERAD_BASE_URL = process.env.MAPLERAD_BASE_URL || 'https://sandbox.api.maplerad.com';
 
 /**
  * Generate ISO-compliant Visa Virtual Card Details
@@ -54,167 +54,52 @@ function generateMockVirtualCard(cardholderName, amountUsd) {
 }
 
 /**
- * Issue a Virtual USD Card via Sudo Africa API
- * Docs: https://docs.sudo.africa
+ * Issue a Virtual USD Card via Sudo Africa API with the global keys (kept for existing callers)
  */
-async function issueVirtualCardWithSudo({ studentName, amountUsd, email }) {
-  const SUDO_API_KEY = process.env.SUDO_API_KEY;
-  const SUDO_ENV = process.env.SUDO_ENV || 'sandbox'; // 'sandbox' or 'live'
-  const baseUrl = SUDO_ENV === 'live' 
-    ? 'https://api.sudo.africa/v2' 
-    : 'https://sandbox.sudo.africa/v2';
-
-  const nameParts = (studentName || 'Student User').trim().split(' ');
-  const firstName = nameParts[0] || 'Student';
-  const lastName = nameParts.slice(1).join(' ') || 'User';
-
-  try {
-    // Step 1: Create or find Customer on Sudo Africa
-    const customerResponse = await axios.post(
-      `${baseUrl}/customers`,
-      {
-        type: 'individual',
-        name: { firstName, lastName },
-        email: email || `student_${Date.now()}@connectpay.africa`,
-        status: 'active'
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${SUDO_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const customerId = customerResponse.data?.data?._id || customerResponse.data?._id;
-
-    // Step 2: Create Virtual USD Card under Customer
-    const cardResponse = await axios.post(
-      `${baseUrl}/cards`,
-      {
-        customerId: customerId,
-        currency: 'USD',
-        type: 'virtual',
-        brand: 'Visa',
-        issuer: 'sudo',
-        status: 'active',
-        amount: parseFloat(amountUsd)
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${SUDO_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const cardData = cardResponse.data?.data || cardResponse.data;
-
-    return {
-      success: true,
-      provider: 'sudo-africa',
-      cardId: cardData._id || cardData.id,
-      cardNumber: cardData.pan || cardData.cardNumber,
-      cardholderName: `${firstName} ${lastName}`.toUpperCase(),
-      expiryDate: `${cardData.expiryMonth}/${cardData.expiryYear?.toString().slice(-2)}`,
-      cvv: cardData.cvv,
-      brand: cardData.brand || 'VISA',
-      status: cardData.status === 'active' ? 'active' : 'inactive'
-    };
-  } catch (error) {
-    console.error('⚠️ Sudo Africa API Error:', error.response?.data || error.message);
-    throw error;
-  }
-}
+const issueVirtualCardWithSudo = (details) =>
+  sudoIssuer.issue(details, sudoIssuer.credentialsFrom(process.env, 'GH', { allowGlobal: true }));
 
 /**
- * Freeze or Unfreeze a Sudo Africa Virtual Card
+ * Freeze or Unfreeze a Sudo Africa Virtual Card with the global keys (kept for existing callers)
  */
 async function updateSudoCardStatus(cardId, status) {
-  const SUDO_API_KEY = process.env.SUDO_API_KEY;
-  const SUDO_ENV = process.env.SUDO_ENV || 'sandbox';
-  const baseUrl = SUDO_ENV === 'live' 
-    ? 'https://api.sudo.africa/v2' 
-    : 'https://sandbox.sudo.africa/v2';
-
-  if (!SUDO_API_KEY) return { success: false, message: 'Sudo API key not set' };
-
-  try {
-    const sudoStatus = status === 'frozen' || status === 'inactive' ? 'inactive' : 'active';
-    await axios.put(
-      `${baseUrl}/cards/${cardId}/status`,
-      { status: sudoStatus },
-      {
-        headers: {
-          Authorization: `Bearer ${SUDO_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    return { success: true, status: sudoStatus };
-  } catch (error) {
-    console.error('⚠️ Sudo Africa Freeze Error:', error.response?.data || error.message);
-    return { success: false, error: error.message };
-  }
+  const creds = sudoIssuer.credentialsFrom(process.env, 'GH', { allowGlobal: true });
+  if (!sudoIssuer.isConfigured(creds)) return { success: false, message: 'Sudo API key not set' };
+  return sudoIssuer.setFrozen(cardId, status === 'frozen' || status === 'inactive', creds);
 }
 
 /**
- * Issue a Virtual USD Card automatically upon verified payment
+ * Issue a Virtual USD Card automatically upon verified payment, through the issuer
+ * configured for the request's country (see utils/cardIssuers)
  */
-async function issueVirtualCard({ studentName, amountUsd, email, cardRequestId }) {
-  const SUDO_API_KEY = process.env.SUDO_API_KEY;
-  const MAPLERAD_SECRET_KEY = process.env.MAPLERAD_SECRET_KEY;
+async function issueVirtualCard({ studentName, amountUsd, email, cardRequestId, country }) {
+  const { country: cc, candidates } = cardIssuers.resolveCountryIssuer(country);
 
-  // 1. Try Sudo Africa API if API Key is set
-  if (SUDO_API_KEY && !SUDO_API_KEY.includes('YOUR_')) {
+  // 1. Try the country's API issuer(s) in order
+  for (const { adapter, creds } of candidates) {
     try {
-      console.log('💳 Issuing USD Virtual Card via Sudo Africa API...');
-      return await issueVirtualCardWithSudo({ studentName, amountUsd, email });
-    } catch (err) {
-      console.warn('⚠️ Sudo Africa issuing failed, trying next provider:', err.message);
-    }
-  }
-
-  // 2. Try Maplerad API if configured
-  if (MAPLERAD_SECRET_KEY && !MAPLERAD_SECRET_KEY.includes('YOUR_')) {
-    try {
-      const response = await axios.post(
-        `${MAPLERAD_BASE_URL}/v1/issuing`,
-        {
-          cardholder_name: studentName,
-          currency: 'USD',
-          amount: Math.round(amountUsd * 100),
-          brand: 'VISA'
-        },
-        { headers: { Authorization: `Bearer ${MAPLERAD_SECRET_KEY}` } }
-      );
-      if (response.data && response.data.status) {
-        const card = response.data.data;
-        return {
-          success: true,
-          provider: 'maplerad',
-          cardNumber: card.card_number,
-          cardholderName: card.cardholder_name,
-          expiryDate: `${card.expiry_month}/${card.expiry_year}`,
-          cvv: card.cvv,
-          status: 'active'
-        };
+      console.log(`💳 Issuing USD Virtual Card for ${cc} via ${adapter.name}...`);
+      const card = await adapter.issue({ studentName, amountUsd, email, cardRequestId }, creds);
+      if (card && card.success) {
+        return { ...card, issuer: adapter.name, country: cc };
       }
     } catch (err) {
-      console.warn('Maplerad API card issuing error, using provider fallback:', err.message);
+      console.warn(`⚠️ ${adapter.name} issuing failed for ${cc}, trying next option:`, err.message);
     }
   }
 
-  // 3. No real provider issued a card: leave the request for an admin to assign manually
+  // 2. No real provider issued a card: leave the request for an admin to assign manually
   if (!CARD_SIMULATION_ENABLED) {
-    return { success: false, message: 'No card provider available; card must be assigned manually' };
+    return { success: false, issuer: 'manual', country: cc, message: 'No card provider available; card must be assigned manually' };
   }
 
-  // 4. Simulation only: generate a fake ISO-compliant test card
+  // 3. Simulation only: generate a fake ISO-compliant test card
   const mockCard = generateMockVirtualCard(studentName, amountUsd);
   return {
     success: true,
     provider: 'auto-issuing-engine',
+    issuer: 'simulation',
+    country: cc,
     cardNumber: mockCard.cardNumber,
     cardholderName: mockCard.cardholderName,
     expiryDate: mockCard.expiryDate,

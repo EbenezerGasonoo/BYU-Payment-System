@@ -4,7 +4,7 @@ try {
 } catch (e) {}
 
 const mongoose = require('mongoose');
-const { MongoStudent, MongoCardRequest, MongoContactMessage, MongoChatMessage } = require('./mongoModels');
+const { MongoStudent, MongoCardRequest, MongoContactMessage, MongoChatMessage, MongoFloatEntry } = require('./mongoModels');
 
 /**
  * Normalizes Sequelize `where` query into a MongoDB filter object.
@@ -160,10 +160,12 @@ const StudentAdapter        = createModelWrapper(MongoStudent, 'Student');
 const CardRequestAdapter    = createModelWrapper(MongoCardRequest, 'CardRequest');
 const ContactMessageAdapter = createModelWrapper(MongoContactMessage, 'ContactMessage');
 const ChatMessageAdapter    = createModelWrapper(MongoChatMessage, 'ChatMessage');
+const FloatEntryAdapter     = createModelWrapper(MongoFloatEntry, 'FloatEntry');
 
 module.exports = {
   StudentAdapter,
   CardRequestAdapter,
   ContactMessageAdapter,
-  ChatMessageAdapter
+  ChatMessageAdapter,
+  FloatEntryAdapter
 };

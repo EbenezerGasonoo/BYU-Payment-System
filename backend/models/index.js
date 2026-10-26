@@ -4,11 +4,13 @@ const SqlStudent = require('./Student');
 const SqlCardRequest = require('./CardRequest');
 const SqlContactMessage = require('./ContactMessage');
 const SqlChatMessage = require('./ChatMessage');
+const SqlFloatEntry = require('./FloatEntry');
 const {
   StudentAdapter,
   CardRequestAdapter,
   ContactMessageAdapter,
-  ChatMessageAdapter
+  ChatMessageAdapter,
+  FloatEntryAdapter
 } = require('./mongoAdapter');
 
 SqlStudent.hasMany(SqlCardRequest, {
@@ -50,6 +52,7 @@ const Student        = createProxy(StudentAdapter,        SqlStudent);
 const CardRequest    = createProxy(CardRequestAdapter,    SqlCardRequest);
 const ContactMessage = createProxy(ContactMessageAdapter, SqlContactMessage);
 const ChatMessage    = createProxy(ChatMessageAdapter,    SqlChatMessage);
+const FloatEntry     = createProxy(FloatEntryAdapter,     SqlFloatEntry);
 
 module.exports = {
   sequelize,
@@ -57,6 +60,7 @@ module.exports = {
   CardRequest,
   ContactMessage,
   ChatMessage,
+  FloatEntry,
   syncModels
 };
 

@@ -102,6 +102,25 @@ CardRequest.init(
       type: DataTypes.STRING(128),
       allowNull: true
     },
+    // Issuer that issued the card ('manual', 'sudo', 'maplerad', 'simulation') and its card id there
+    issuer: {
+      type: DataTypes.STRING(32),
+      allowNull: true
+    },
+    providerCardId: {
+      type: DataTypes.STRING(128),
+      allowNull: true
+    },
+    // Set when a card expired but its issuer has no API, so someone must close it by hand
+    needsManualClose: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    manualClosedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     cardStatus: {
       type: DataTypes.ENUM('active', 'frozen', 'terminated', 'pending'),
       allowNull: false,

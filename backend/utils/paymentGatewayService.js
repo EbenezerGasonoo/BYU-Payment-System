@@ -75,10 +75,13 @@ async function getExchangeRates() {
   return cachedRates;
 }
 
+// Processing fee added on top of the card's USD amount
+const CARD_FEE_PERCENT = 5;
+
 /**
  * Calculate total local currency amount for USD virtual card request (USD + processing fee)
  */
-async function calculateLocalAmount(usdAmount, currency = 'GHS', feePercentage = 5) {
+async function calculateLocalAmount(usdAmount, currency = 'GHS', feePercentage = CARD_FEE_PERCENT) {
   const rates = await getExchangeRates();
   const rate = rates[currency.toUpperCase()] || DEFAULT_RATES[currency.toUpperCase()] || 1.0;
   
@@ -211,6 +214,7 @@ async function verifyPaystackPayment(reference) {
 }
 
 module.exports = {
+  CARD_FEE_PERCENT,
   COUNTRY_CONFIGS,
   STUDENT_COUNTRIES,
   getStudentCountry,
