@@ -5,6 +5,10 @@ const bcrypt = require('bcryptjs');
 const { Student, CardRequest } = require('../models');
 const { notifyStudentCardAssigned, sendWelcomeEmail } = require('../utils/emailService');
 const { CARD_SIMULATION_ENABLED } = require('../utils/cardProviderService');
+const cardIssuers = require('../utils/cardIssuers');
+const cardFloatService = require('../utils/cardFloatService');
+const { closeExpiredCard } = require('../utils/cronJobs');
+const { STUDENT_COUNTRIES, CARD_FEE_PERCENT } = require('../utils/paymentGatewayService');
 
 // West Africa country reference
 const WEST_AFRICA_COUNTRIES = {
@@ -19,6 +23,47 @@ const WEST_AFRICA_COUNTRIES = {
   LR: { name: 'Liberia',      flag: '🇱🇷', currency: 'LRD' },
   GM: { name: 'Gambia',       flag: '🇬🇲', currency: 'GMD' },
 };
+
+// Requests made before per-country support carry no country; they came from the student's country (Ghana by default)
+const requestCountry = (r) => String(r.country || r.student?.countryCode || 'GH').toUpperCase();
+
+// ?country=GH|NG narrows admin lists and stats to one pilot country; anything else means all
+const countryFilterFrom = (req) => {
+  const code = String(req.query.country || '').toUpperCase();
+  return STUDENT_COUNTRIES.includes(code) ? code : null;
+};
+
+const isPaid = (r) => r.paymentStatus === 'paid' || r.status === 'paid';
+const localTotal = (r) => Number(r.amountLocal ?? r.totalPaidGHS ?? 0);
+const round2 = (n) => Math.round(n * 100) / 100;
+
+/** Per-country operations report built from the country's requests and float */
+function buildCountryReport(country, requests, float) {
+  const paid = requests.filter(isPaid);
+  const localCollected = paid.reduce((s, r) => s + localTotal(r), 0);
+  const usdVolume = paid.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+  const issuer = cardIssuers.resolveCountryIssuer(country);
+  return {
+    countryCode: country,
+    ...(WEST_AFRICA_COUNTRIES[country] || { name: country, flag: '🌍', currency: 'USD' }),
+    issuer: issuer.issuer,
+    issuerSource: issuer.source,
+    issuerIsApi: issuer.candidates.length > 0,
+    requests: requests.length,
+    pending: requests.filter((r) => r.status === 'pending').length,
+    paid: paid.length,
+    cardsIssued: requests.filter((r) => r.virtualCardNumber).length,
+    usdVolume: round2(usdVolume),
+    localCollected: round2(localCollected),
+    feesEarnedUsd: round2(usdVolume * CARD_FEE_PERCENT / 100),
+    // The fee is CARD_FEE_PERCENT on top of the USD amount, so it is that share of the local total
+    feesEarnedLocal: round2(localCollected * CARD_FEE_PERCENT / (100 + CARD_FEE_PERCENT)),
+    floatBalance: float ? float.balance : 0,
+    floatLowBalance: float ? float.lowBalance : false,
+    floatLowBalanceThreshold: float ? float.lowBalanceThreshold : null,
+    needsManualClose: requests.filter((r) => r.needsManualClose).length
+  };
+}
 
 // Middleware to verify admin key
 const verifyAdminKey = (req, res, next) => {
@@ -61,6 +106,7 @@ router.get('/users/by-byu/:byuId', async (req, res) => {
 router.get('/requests', async (req, res) => {
   try {
     const { status } = req.query;
+    const country = countryFilterFrom(req);
 
     const where = status ? { status } : undefined;
     const requests = await CardRequest.findAll({
@@ -71,7 +117,7 @@ router.get('/requests', async (req, res) => {
 
     res.json({
       success: true,
-      data: requests
+      data: country ? requests.filter((r) => requestCountry(r) === country) : requests
     });
   } catch (error) {
     console.error('Error fetching requests:', error);
@@ -117,11 +163,15 @@ router.post('/assign', async (req, res) => {
     cardRequest.cardholderName = cardholderName;
     cardRequest.cardExpiryDate = expiryDate;
     cardRequest.cardCVV = cvv;
+    cardRequest.country = requestCountry(cardRequest);
+    cardRequest.issuer = 'manual';
+    cardRequest.providerCardId = null;
     cardRequest.status = 'assigned';
     cardRequest.assignedAt = new Date();
     cardRequest.expiresAt = new Date(Date.now() + 5 * 60 * 60 * 1000); // 5 hours from now
 
     await cardRequest.save();
+    await cardFloatService.safeDebitForCard(cardRequest);
 
     // Notify student
     await notifyStudentCardAssigned(cardRequest.student, cardRequest);
@@ -188,6 +238,8 @@ router.post('/assign/mock', async (req, res) => {
     cardRequest.virtualCardNumber = cardNumber;
     cardRequest.cardExpiryDate = expiryDate;
     cardRequest.cardCVV = cvv;
+    cardRequest.country = requestCountry(cardRequest);
+    cardRequest.issuer = 'simulation';
     cardRequest.status = 'assigned';
     cardRequest.assignedAt = new Date();
     cardRequest.expiresAt = new Date(Date.now() + 5 * 60 * 60 * 1000); // 5 hours from now
@@ -284,6 +336,10 @@ router.post('/action', async (req, res) => {
       });
     }
 
+    // Expiring a card by hand closes it the same way the 5-hour expiry job does
+    if (action === 'expired' && cardRequest.virtualCardNumber && cardRequest.status !== 'expired') {
+      await closeExpiredCard(cardRequest);
+    }
     cardRequest.status = action;
     if (action === 'paid') {
       cardRequest.paidAt = new Date();
@@ -310,16 +366,35 @@ router.post('/action', async (req, res) => {
 // Get admin dashboard statistics
 router.get('/stats', async (req, res) => {
   try {
-    const totalRequests = await CardRequest.count();
-    const pendingRequests = await CardRequest.count({ where: { status: 'pending' } });
-    const assignedRequests = await CardRequest.count({ where: { status: 'assigned' } });
-    const paidRequests = await CardRequest.count({ where: { status: 'paid' } });
-    const expiredRequests = await CardRequest.count({ where: { status: 'expired' } });
-    const totalStudents = await Student.count({ where: { status: { [Op.ne]: 'deleted' } } });
+    const country = countryFilterFrom(req);
+    const allRequests = await CardRequest.findAll({ include: [{ model: Student, as: 'student' }] });
+    const scoped = country ? allRequests.filter((r) => requestCountry(r) === country) : allRequests;
+    const countStatus = (status) => scoped.filter((r) => r.status === status).length;
+
+    const totalRequests = scoped.length;
+    const pendingRequests = countStatus('pending');
+    const assignedRequests = countStatus('assigned');
+    const paidRequests = countStatus('paid');
+    const expiredRequests = countStatus('expired');
+    const students = await Student.findAll({ where: { status: { [Op.ne]: 'deleted' } } });
+    const totalStudents = country
+      ? students.filter((s) => String(s.countryCode || 'GH').toUpperCase() === country).length
+      : students.length;
 
     // Calculate total revenue from paid requests
-    const paidRequestsData = await CardRequest.findAll({ where: { status: 'paid' } });
-    const totalRevenue = paidRequestsData.reduce((sum, request) => sum + (Number(request.amount) || 0), 0);
+    const totalRevenue = scoped
+      .filter((r) => r.status === 'paid')
+      .reduce((sum, request) => sum + (Number(request.amount) || 0), 0);
+
+    // Separate report for each pilot country (issuer, money in, cards out, float)
+    const floats = await cardFloatService.getFloatSummary(null, { recent: 0 });
+    const byCountry = STUDENT_COUNTRIES
+      .filter((code) => !country || code === country)
+      .map((code) => buildCountryReport(
+        code,
+        allRequests.filter((r) => requestCountry(r) === code),
+        floats.find((f) => f.country === code)
+      ));
 
     // Students grouped by countryCode
     const studentsByCountryRaw = await Student.findAll({
@@ -357,6 +432,9 @@ router.get('/stats', async (req, res) => {
         expiredRequests,
         totalStudents,
         totalRevenue,
+        country: country || 'all',
+        needsManualClose: scoped.filter((r) => r.needsManualClose).length,
+        byCountry,
         studentsByCountry,
         requestsByCountry
       }
@@ -368,6 +446,64 @@ router.get('/stats', async (req, res) => {
       message: 'Server error',
       error: error.message
     });
+  }
+});
+
+// Mark an expired card from a manual issuer as closed by hand
+router.post('/requests/:id/manual-close', async (req, res) => {
+  try {
+    const cardRequest = await CardRequest.findByPk(req.params.id);
+    if (!cardRequest) {
+      return res.status(404).json({ success: false, message: 'Card request not found' });
+    }
+    if (!cardRequest.needsManualClose) {
+      return res.status(400).json({ success: false, message: 'This card is not waiting to be closed' });
+    }
+    cardRequest.needsManualClose = false;
+    cardRequest.manualClosedAt = new Date();
+    cardRequest.cardStatus = 'terminated';
+    await cardRequest.save();
+    res.json({ success: true, message: 'Card marked as closed', data: cardRequest });
+  } catch (error) {
+    console.error('Error marking card closed:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// USD card float per country: balance, low-balance warning and recent ledger entries
+router.get('/float', async (req, res) => {
+  try {
+    const data = await cardFloatService.getFloatSummary(countryFilterFrom(req));
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching card float:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Record USD loaded onto a country's card float
+router.post('/float/topup', async (req, res) => {
+  try {
+    const country = String(req.body.country || '').toUpperCase();
+    const amountUsd = Number(req.body.amountUsd);
+    const { date, note } = req.body;
+
+    if (!STUDENT_COUNTRIES.includes(country)) {
+      return res.status(400).json({ success: false, message: `Country must be one of ${STUDENT_COUNTRIES.join(', ')}` });
+    }
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0 || amountUsd > 1000000) {
+      return res.status(400).json({ success: false, message: 'Amount must be a positive USD amount' });
+    }
+    if (date && Number.isNaN(new Date(date).getTime())) {
+      return res.status(400).json({ success: false, message: 'Date is not valid' });
+    }
+
+    const entry = await cardFloatService.recordTopUp({ country, amountUsd, entryDate: date, note });
+    const [summary] = await cardFloatService.getFloatSummary(country);
+    res.status(201).json({ success: true, message: 'Top-up recorded', data: { entry, float: summary } });
+  } catch (error) {
+    console.error('Error recording float top-up:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
 

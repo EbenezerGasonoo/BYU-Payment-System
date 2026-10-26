@@ -13,6 +13,8 @@ const { initiatePayment, checkPaymentStatus } = require('../utils/hubtelService'
 const mtnMomoService = require('../utils/mtnMomoService');
 const paymentGatewayService = require('../utils/paymentGatewayService');
 const cardProviderService = require('../utils/cardProviderService');
+const cardIssuers = require('../utils/cardIssuers');
+const cardFloatService = require('../utils/cardFloatService');
 const africasTalkingService = require('../utils/africasTalkingService');
 const crypto = require('crypto');
 const {
@@ -28,6 +30,8 @@ const {
 } = require('../utils/studentAuth');
 
 const MAX_CARD_AMOUNT_USD = 5000;
+// Issued cards stay usable for 5 hours, the same window as manually assigned ones
+const CARD_LIFETIME_MS = 5 * 60 * 60 * 1000;
 
 // Shared 404 for card requests that don't exist or belong to another student
 const notFoundOrForbidden = (res) =>
@@ -528,6 +532,8 @@ router.post('/request-card', requireStudent, async (req, res) => {
       currency,
       amountLocal: totalLocal,
       paymentGateway: country.defaultGateway,
+      // The issuer this country is set up to use; replaced by whoever actually provides the card
+      issuer: cardIssuers.resolveCountryIssuer(country.code).issuer,
       requestToken,
       paymentReference,
       paymentMethod,
@@ -1080,8 +1086,19 @@ router.post('/cards/:id/freeze', requireStudent, async (req, res) => {
     }
 
     const currentStatus = cardRequest.cardStatus || 'active';
+    if (currentStatus === 'terminated') {
+      return res.status(400).json({ success: false, message: 'This card has been closed' });
+    }
     const newStatus = currentStatus === 'frozen' ? 'active' : 'frozen';
-    
+
+    // Cards from an API issuer are frozen at the provider first; manual cards are database-only
+    if (cardIssuers.isApiIssuer(cardRequest.issuer)) {
+      const result = await cardIssuers.setCardFrozen(cardRequest, newStatus === 'frozen');
+      if (!result.success && !result.manual) {
+        return res.status(502).json({ success: false, message: 'Could not reach the card provider. Please try again.' });
+      }
+    }
+
     cardRequest.cardStatus = newStatus;
     await cardRequest.save();
 
@@ -1217,17 +1234,22 @@ async function settlePaystackPayment(cardRequest, reference) {
       const issuedCard = await cardProviderService.issueVirtualCard({
         studentName: cardRequest.student.name,
         amountUsd: cardRequest.amount,
-        cardRequestId: cardRequest.id
+        cardRequestId: cardRequest.id,
+        country: cardRequest.country || cardRequest.student.countryCode
       });
+      cardRequest.country = issuedCard.country;
+      cardRequest.issuer = issuedCard.issuer;
 
       if (issuedCard.success) {
         cardRequest.virtualCardNumber = issuedCard.cardNumber;
         cardRequest.cardholderName = issuedCard.cardholderName;
-        cardRequest.cardExpiryDate = issuedCard.cardExpiryDate;
+        cardRequest.cardExpiryDate = issuedCard.expiryDate;
         cardRequest.cardCVV = issuedCard.cvv;
+        cardRequest.providerCardId = issuedCard.cardId ? String(issuedCard.cardId) : null;
         cardRequest.status = 'assigned';
         cardRequest.cardStatus = 'active';
         cardRequest.assignedAt = now;
+        cardRequest.expiresAt = new Date(now.getTime() + CARD_LIFETIME_MS);
         cardIssued = true;
 
         // Dispatch transactional notifications
@@ -1240,6 +1262,9 @@ async function settlePaystackPayment(cardRequest, reference) {
     }
 
     await cardRequest.save();
+    if (cardIssued && cardRequest.status === 'assigned') {
+      await cardFloatService.safeDebitForCard(cardRequest);
+    }
 
     if (!cardIssued) {
       // No provider issued a card: keep the request pending so an admin assigns a real one

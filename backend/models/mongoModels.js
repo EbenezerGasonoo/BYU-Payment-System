@@ -63,6 +63,12 @@ const cardRequestSchema = new mongoose.Schema({
   mtnTransactionId:   { type: String, default: null },
   cardStatus:         { type: String, enum: ['active', 'frozen', 'terminated', 'pending'], default: 'pending' },
   paymentVerifiedAt:  { type: Date, default: null },
+  // Issuer that issued the card ('manual', 'sudo', 'maplerad', 'simulation') and its card id there
+  issuer:             { type: String, default: null },
+  providerCardId:     { type: String, default: null },
+  // Set when a card expired but its issuer has no API, so someone must close it by hand
+  needsManualClose:   { type: Boolean, default: false },
+  manualClosedAt:     { type: Date, default: null },
 }, { timestamps: true, collection: 'cardrequests' });
 
 // Attach a virtual 'student' populate hook so existing code that does
@@ -93,9 +99,21 @@ const chatMessageSchema = new mongoose.Schema({
   byuId:     { type: String, default: null },
 }, { timestamps: true, collection: 'chatmessages' });
 
+// ── FloatEntry (Mongoose / MongoDB) ──────────────────────────────
+// One line of a country's USD card float: positive top-ups, negative card debits
+const floatEntrySchema = new mongoose.Schema({
+  country:       { type: String, required: true },
+  type:          { type: String, enum: ['topup', 'debit'], required: true },
+  amountUsd:     { type: Number, required: true },
+  entryDate:     { type: Date, default: Date.now },
+  note:          { type: String, default: '' },
+  cardRequestId: { type: String, default: null },
+}, { timestamps: true, collection: 'floatentries' });
+
 const MongoStudent        = mongoose.model('Student',        studentSchema);
 const MongoCardRequest    = mongoose.model('CardRequest',    cardRequestSchema);
 const MongoContactMessage = mongoose.model('ContactMessage', contactMessageSchema);
 const MongoChatMessage    = mongoose.model('ChatMessage',    chatMessageSchema);
+const MongoFloatEntry     = mongoose.model('FloatEntry',     floatEntrySchema);
 
-module.exports = { MongoStudent, MongoCardRequest, MongoContactMessage, MongoChatMessage };
+module.exports = { MongoStudent, MongoCardRequest, MongoContactMessage, MongoChatMessage, MongoFloatEntry };
