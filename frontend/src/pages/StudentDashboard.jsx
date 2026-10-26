@@ -96,7 +96,8 @@ function CopyRow({ label, value, display, secret, onCopy }) {
 function CardDetails({ req, studentName, now, onCopy, onFreeze, freezing }) {
   const remaining = timeLeft(req.expiresAt, now);
   const frozen = req.cardStatus === 'frozen';
-  const number = req.virtualCardNumber || '';
+  // Digits only: cards entered with spaces would otherwise be regrouped wrongly
+  const number = String(req.virtualCardNumber || '').replace(/\D/g, '');
   const grouped = number.replace(/(.{4})/g, '$1 ').trim();
 
   return (
