@@ -63,6 +63,9 @@ const cardRequestSchema = new mongoose.Schema({
   mtnTransactionId:   { type: String, default: null },
   cardStatus:         { type: String, enum: ['active', 'frozen', 'terminated', 'pending'], default: 'pending' },
   paymentVerifiedAt:  { type: Date, default: null },
+  // Staff confirmation of a manual Mobile Money payment: the MoMo transaction ID and any note
+  manualPaymentReference: { type: String, default: null },
+  paymentNote:        { type: String, default: null },
   // Issuer that issued the card ('manual', 'sudo', 'maplerad', 'simulation') and its card id there
   issuer:             { type: String, default: null },
   providerCardId:     { type: String, default: null },

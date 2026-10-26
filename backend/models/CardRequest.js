@@ -130,6 +130,15 @@ CardRequest.init(
       type: DataTypes.DATE,
       allowNull: true
     },
+    // Staff confirmation of a manual Mobile Money payment: the MoMo transaction ID and any note
+    manualPaymentReference: {
+      type: DataTypes.STRING(128),
+      allowNull: true
+    },
+    paymentNote: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
     requestToken: {
       type: DataTypes.STRING(64),
       allowNull: false,
