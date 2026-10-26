@@ -29,6 +29,8 @@ const countryLabel = (code) => {
 
 // Requests made before per-country support carry no country; they came from the student's country
 const requestCountryCode = (r) => (r.country || r.student?.countryCode || 'GH').toUpperCase();
+// Cards may only be assigned once the money is in (gateway-confirmed or confirmed by staff)
+const isPaymentConfirmed = (r) => r.paymentStatus === 'paid';
 
 const formatUsd = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -108,6 +110,11 @@ function AdminDashboard() {
   });
   // Mock cards are only offered when the server has CARD_SIMULATION on
   const [cardSimulation, setCardSimulation] = useState(false);
+
+  // "Payment received" dialog for manual Mobile Money payments
+  const [paymentConfirmRequest, setPaymentConfirmRequest] = useState(null);
+  const [paymentConfirmForm, setPaymentConfirmForm] = useState({ reference: '', note: '', checked: false });
+  const [paymentConfirmLoading, setPaymentConfirmLoading] = useState(false);
 
   useEffect(() => {
     if (!adminKey) return;
@@ -343,6 +350,30 @@ function AdminDashboard() {
     }
   };
 
+  const openPaymentConfirm = (request) => {
+    setPaymentConfirmRequest(request);
+    setPaymentConfirmForm({ reference: '', note: '', checked: false });
+  };
+
+  const handleConfirmPayment = async (e) => {
+    e.preventDefault();
+    if (!paymentConfirmForm.checked) return;
+    setPaymentConfirmLoading(true);
+    try {
+      await adminAPI.confirmPayment(adminKey, paymentConfirmRequest._id || paymentConfirmRequest.id, {
+        reference: paymentConfirmForm.reference,
+        note: paymentConfirmForm.note
+      });
+      showToast('✅ Payment marked as received. You can now assign the card.');
+      setPaymentConfirmRequest(null);
+      await loadDashboard();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to confirm payment');
+    } finally {
+      setPaymentConfirmLoading(false);
+    }
+  };
+
   const handleAction = async (requestId, action) => {
     try {
       await adminAPI.updateAction(adminKey, { requestId, action });
@@ -435,6 +466,7 @@ function AdminDashboard() {
   const totalStudents = stats?.totalStudents ?? 0;
   const totalRequests = stats?.totalRequests ?? 0;
   const paidCount = stats?.paidRequests ?? 0;
+  const paymentsReceived = stats?.paymentsReceived ?? paidCount;
   const assignedCount = stats?.assignedRequests ?? 0;
   const pendingCount = stats?.pendingRequests ?? 0;
   const expiredCount = stats?.expiredRequests ?? 0;
@@ -1041,15 +1073,36 @@ function AdminDashboard() {
                           <span className={`bento-badge ${getStatusBadge(r.status)}`}>
                             {(r.status || 'pending').toUpperCase()}
                           </span>
+                          {r.status === 'pending' && (
+                            isPaymentConfirmed(r)
+                              ? <span className="payment-flag paid">✓ Payment received</span>
+                              : <span className="payment-flag unpaid">Awaiting payment</span>
+                          )}
                         </td>
                         <td className="text-muted">{formatDate(r.createdAt)}</td>
                         <td>
                           <div className="bento-flex-actions">
                             {r.status === 'pending' && (
                               <>
-                                <button onClick={() => openCardForm(r)} className="bento-action-btn indigo">Card</button>
+                                {!isPaymentConfirmed(r) && (
+                                  <button onClick={() => openPaymentConfirm(r)} className="bento-action-btn green">Confirm payment received</button>
+                                )}
+                                <button
+                                  onClick={() => openCardForm(r)}
+                                  className="bento-action-btn indigo"
+                                  disabled={!isPaymentConfirmed(r)}
+                                  title={isPaymentConfirmed(r) ? 'Assign a USD card' : 'Confirm the payment was received before assigning a card'}
+                                >
+                                  Card
+                                </button>
                                 {cardSimulation && (
-                                  <button onClick={() => handleAssignMock(r._id || r.id)} className="bento-action-btn cyan">Mock</button>
+                                  <button
+                                    onClick={() => handleAssignMock(r._id || r.id)}
+                                    className="bento-action-btn cyan"
+                                    disabled={!isPaymentConfirmed(r)}
+                                  >
+                                    Mock
+                                  </button>
                                 )}
                                 <button onClick={() => handleAction(r._id || r.id, 'declined')} className="bento-action-btn red">Decline</button>
                               </>
@@ -1096,7 +1149,7 @@ function AdminDashboard() {
               </div>
               <div className="kpi-value">${totalVolume.toLocaleString()}</div>
               <div className="kpi-footer">
-                <span className="kpi-trend green">↑ {paidCount} paid requests</span>
+                <span className="kpi-trend green">↑ {paymentsReceived} payments received</span>
                 {/* SVG Sparkline 1 */}
                 <svg className="sparkline-svg" viewBox="0 0 120 30" preserveAspectRatio="none">
                   <defs>
@@ -1648,6 +1701,70 @@ function AdminDashboard() {
                   }}
                 >
                   Confirm &amp; Issue Card →
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm a manual Mobile Money payment was received */}
+      {paymentConfirmRequest && (
+        <div className="modal-overlay" onClick={() => setPaymentConfirmRequest(null)}>
+          <div className="bento-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <div className="modal-header">
+              <h2>Confirm payment received</h2>
+              <button className="modal-close" onClick={() => setPaymentConfirmRequest(null)}>&times;</button>
+            </div>
+
+            <form onSubmit={handleConfirmPayment} className="modal-form">
+              <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.5 }}>
+                {paymentConfirmRequest.student?.name || 'This student'} should have sent{' '}
+                <strong>{formatRequestPaid(paymentConfirmRequest)}</strong> for a{' '}
+                <strong>${paymentConfirmRequest.amount || 0} USD</strong> card.
+                Check your Mobile Money statement before confirming.
+              </p>
+
+              <div className="bento-input-group">
+                <label>MoMo transaction ID (optional)</label>
+                <input
+                  type="text"
+                  value={paymentConfirmForm.reference}
+                  onChange={(e) => setPaymentConfirmForm({ ...paymentConfirmForm, reference: e.target.value })}
+                  placeholder="e.g. 7612345678"
+                  maxLength="128"
+                />
+              </div>
+
+              <div className="bento-input-group">
+                <label>Note (optional)</label>
+                <input
+                  type="text"
+                  value={paymentConfirmForm.note}
+                  onChange={(e) => setPaymentConfirmForm({ ...paymentConfirmForm, note: e.target.value })}
+                  placeholder="Who checked it, sender number, etc."
+                  maxLength="500"
+                />
+              </div>
+
+              <label className="confirm-check">
+                <input
+                  type="checkbox"
+                  checked={paymentConfirmForm.checked}
+                  onChange={(e) => setPaymentConfirmForm({ ...paymentConfirmForm, checked: e.target.checked })}
+                />
+                <span>I have checked that {formatRequestPaid(paymentConfirmRequest)} was received for this request.</span>
+              </label>
+
+              <div className="modal-actions">
+                <button type="button" onClick={() => setPaymentConfirmRequest(null)} className="bento-btn-sm btn-ghost" style={{ padding: '0.75rem 1.25rem', borderRadius: 12 }}>Cancel</button>
+                <button
+                  type="submit"
+                  className="bento-btn-primary"
+                  disabled={!paymentConfirmForm.checked || paymentConfirmLoading}
+                  style={{ padding: '0.75rem 1.4rem', borderRadius: 12, fontSize: '0.92rem', fontWeight: 800, opacity: paymentConfirmForm.checked ? 1 : 0.5 }}
+                >
+                  {paymentConfirmLoading ? 'Saving...' : 'Mark payment received'}
                 </button>
               </div>
             </form>

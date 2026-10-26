@@ -1005,6 +1005,14 @@
 .bento-action-btn.green { background: var(--bento-accent-green); color: #ffffff; }
 .bento-action-btn.amber { background: var(--bento-accent-yellow); color: #ffffff; }
 .bento-action-btn:hover { filter: brightness(1.15); }
+.bento-action-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+
+.payment-flag { display: block; margin-top: 4px; font-size: 0.7rem; font-weight: 700; }
+.payment-flag.unpaid { color: #f59e0b; }
+.payment-flag.paid { color: #10b981; }
+
+.confirm-check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.85rem; line-height: 1.4; cursor: pointer; }
+.confirm-check input { margin-top: 3px; }
 
 .bento-table-empty {
   text-align: center;

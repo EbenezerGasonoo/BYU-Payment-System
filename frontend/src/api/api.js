@@ -204,6 +204,14 @@ export const adminAPI = {
     return response.data;
   },
 
+  // Record that a manual Mobile Money payment was received, so a card can be assigned
+  confirmPayment: async (adminKey, requestId, data) => {
+    const response = await axios.post(`${API_BASE_URL}/admin/requests/${requestId}/confirm-payment`, data, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    return response.data;
+  },
+
   // Record that an expired card from a manual issuer was closed by hand
   markCardClosed: async (adminKey, requestId) => {
     const response = await axios.post(`${API_BASE_URL}/admin/requests/${requestId}/manual-close`, {}, {

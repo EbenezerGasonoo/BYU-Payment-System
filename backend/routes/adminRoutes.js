@@ -34,6 +34,18 @@ const countryFilterFrom = (req) => {
 };
 
 const isPaid = (r) => r.paymentStatus === 'paid' || r.status === 'paid';
+const isAwaitingPayment = (r) => r.status === 'pending' && !isPaid(r);
+
+// A card may only go to a request whose money has been received (gateway-confirmed or confirmed by staff)
+const refuseUnpaid = (cardRequest, res) => {
+  if (cardRequest.paymentStatus === 'paid') return false;
+  res.status(409).json({
+    success: false,
+    code: 'PAYMENT_NOT_CONFIRMED',
+    message: 'Payment for this request has not been confirmed. Confirm the payment was received before assigning a card.'
+  });
+  return true;
+};
 const localTotal = (r) => Number(r.amountLocal ?? r.totalPaidGHS ?? 0);
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -51,6 +63,7 @@ function buildCountryReport(country, requests, float) {
     issuerIsApi: issuer.candidates.length > 0,
     requests: requests.length,
     pending: requests.filter((r) => r.status === 'pending').length,
+    awaitingPayment: requests.filter(isAwaitingPayment).length,
     paid: paid.length,
     cardsIssued: requests.filter((r) => r.virtualCardNumber).length,
     usdVolume: round2(usdVolume),
@@ -157,6 +170,7 @@ router.post('/assign', async (req, res) => {
         message: 'Card request is not pending'
       });
     }
+    if (refuseUnpaid(cardRequest, res)) return;
 
     // Update card request with manual card details
     cardRequest.virtualCardNumber = cardNumber;
@@ -226,6 +240,7 @@ router.post('/assign/mock', async (req, res) => {
         message: 'Card request is not pending'
       });
     }
+    if (refuseUnpaid(cardRequest, res)) return;
 
     // Generate mock card details
     const cardNumber = '4' + Math.floor(Math.random() * 1e15).toString().padStart(15, '0');
@@ -383,7 +398,7 @@ router.get('/stats', async (req, res) => {
 
     // Calculate total revenue from paid requests
     const totalRevenue = scoped
-      .filter((r) => r.status === 'paid')
+      .filter(isPaid)
       .reduce((sum, request) => sum + (Number(request.amount) || 0), 0);
 
     // Separate report for each pilot country (issuer, money in, cards out, float)
@@ -430,6 +445,9 @@ router.get('/stats', async (req, res) => {
         assignedRequests,
         paidRequests,
         expiredRequests,
+        paymentsReceived: scoped.filter(isPaid).length,
+        awaitingPayment: scoped.filter(isAwaitingPayment).length,
+        awaitingCard: scoped.filter((r) => r.status === 'pending' && isPaid(r)).length,
         totalStudents,
         totalRevenue,
         country: country || 'all',
@@ -446,6 +464,42 @@ router.get('/stats', async (req, res) => {
       message: 'Server error',
       error: error.message
     });
+  }
+});
+
+// Record a manual Mobile Money payment as received; the request stays pending so a card can be assigned
+router.post('/requests/:id/confirm-payment', async (req, res) => {
+  try {
+    const reference = String(req.body.reference || '').trim();
+    const note = String(req.body.note || '').trim();
+    if (reference.length > 128 || note.length > 500) {
+      return res.status(400).json({ success: false, message: 'Reference must be at most 128 characters and note at most 500' });
+    }
+
+    const cardRequest = await CardRequest.findByPk(req.params.id);
+    if (!cardRequest) {
+      return res.status(404).json({ success: false, message: 'Card request not found' });
+    }
+    if (cardRequest.paymentStatus === 'paid') {
+      return res.status(409).json({ success: false, message: 'Payment for this request is already confirmed' });
+    }
+    if (cardRequest.status !== 'pending') {
+      return res.status(409).json({ success: false, message: `Cannot confirm payment for a ${cardRequest.status} request` });
+    }
+
+    const now = new Date();
+    cardRequest.paymentStatus = 'paid';
+    cardRequest.paymentMethod = 'momo-manual';
+    cardRequest.paidAt = now;
+    cardRequest.paymentVerifiedAt = now;
+    cardRequest.manualPaymentReference = reference || null;
+    cardRequest.paymentNote = note || null;
+    await cardRequest.save();
+
+    res.json({ success: true, message: 'Payment marked as received', data: cardRequest });
+  } catch (error) {
+    console.error('Error confirming payment:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
 
