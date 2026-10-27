@@ -6,6 +6,18 @@ try {
 const mongoose = require('mongoose');
 const { MongoStudent, MongoCardRequest, MongoContactMessage, MongoChatMessage, MongoFloatEntry } = require('./mongoModels');
 
+// Sequelize field operators this adapter supports, by Op symbol name
+const FIELD_OPERATORS = {
+  eq: '$eq',
+  ne: '$ne',
+  in: '$in',
+  notIn: '$nin',
+  gt: '$gt',
+  gte: '$gte',
+  lt: '$lt',
+  lte: '$lte'
+};
+
 /**
  * Normalizes Sequelize `where` query into a MongoDB filter object.
  */
@@ -15,27 +27,25 @@ function translateWhere(where) {
 
   for (const key of Object.keys(where)) {
     const val = where[key];
-    if (val && typeof val === 'object') {
-      // Check for Symbol keys from Sequelize Op (e.g. Op.ne, Op.or, Op.and)
+    if (val && typeof val === 'object' && !(val instanceof Date)) {
+      // Sequelize Op symbols (Op.in, Op.gte, ...) → MongoDB operators, matched by exact name.
+      // Several operators on one field are combined, e.g. { [Op.gte]: a, [Op.lt]: b }.
       const symbols = Object.getOwnPropertySymbols(val);
       if (symbols.length > 0) {
+        const condition = {};
         for (const sym of symbols) {
-          const symStr = sym.toString();
-          if (symStr.includes('ne')) {
-            filter[key] = { $ne: val[sym] };
-          } else if (symStr.includes('or')) {
-            filter.$or = val[sym].map(translateWhere);
-          } else if (symStr.includes('and')) {
-            filter.$and = val[sym].map(translateWhere);
-          } else if (symStr.includes('gt')) {
-            filter[key] = { $gt: val[sym] };
-          } else if (symStr.includes('lt')) {
-            filter[key] = { $lt: val[sym] };
-          } else if (symStr.includes('gte')) {
-            filter[key] = { $gte: val[sym] };
-          } else if (symStr.includes('lte')) {
-            filter[key] = { $lte: val[sym] };
+          const op = sym.description;
+          if (op === 'or' || op === 'and') {
+            filter[`$${op}`] = val[sym].map((part) => translateWhere({ [key]: part }));
+          } else if (FIELD_OPERATORS[op]) {
+            condition[FIELD_OPERATORS[op]] = val[sym];
+          } else {
+            // Fail loudly: silently dropping a condition matches far more documents than intended
+            throw new Error(`Unsupported query operator "${op}" on field "${key}" in the MongoDB adapter`);
           }
+        }
+        if (Object.keys(condition).length > 0) {
+          filter[key === 'id' ? '_id' : key] = condition;
         }
       } else {
         filter[key] = val;
@@ -52,11 +62,11 @@ function translateWhere(where) {
   // Handle top-level symbols (like Op.or)
   const topSymbols = Object.getOwnPropertySymbols(where);
   for (const sym of topSymbols) {
-    const symStr = sym.toString();
-    if (symStr.includes('or')) {
-      filter.$or = where[sym].map(translateWhere);
-    } else if (symStr.includes('and')) {
-      filter.$and = where[sym].map(translateWhere);
+    const op = sym.description;
+    if (op === 'or' || op === 'and') {
+      filter[`$${op}`] = where[sym].map(translateWhere);
+    } else {
+      throw new Error(`Unsupported top-level query operator "${op}" in the MongoDB adapter`);
     }
   }
 
@@ -167,5 +177,6 @@ module.exports = {
   CardRequestAdapter,
   ContactMessageAdapter,
   ChatMessageAdapter,
-  FloatEntryAdapter
+  FloatEntryAdapter,
+  translateWhere
 };
